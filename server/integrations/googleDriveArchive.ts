@@ -246,14 +246,14 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
   return created;
 }
 
-/** Publication serves the authorized process source through the Portal; Drive remains private. */
-export async function preparePrivatePublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
+/** Bind publication to the original; anonymous access is granted only after completion. */
+export async function preparePublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!/^[a-f0-9]{64}$/i.test(input.sha256||''))throw new Error('O arquivo autorizado precisa de um hash SHA-256 válido.');
-  const source=await downloadDrivePdf(input.accessToken,input.sourceFileId,{processId:input.processId,artifactType:input.artifactType});
-  if(createHash('sha256').update(source.pdf).digest('hex')!==input.sha256!.toLowerCase())throw new Error('O arquivo mudou desde a autorização de publicação.');
+  const source=await (await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.sourceFileId)}?fields=id,mimeType,trashed,appProperties,sha256Checksum&supportsAllDrives=true`,input.accessToken)).json();
+  if(source.id!==input.sourceFileId||source.trashed||source.mimeType!=='application/pdf'||source.appProperties?.portal!=='portal-tcc'||source.appProperties?.portalProcessId!==input.processId||source.appProperties?.artifactType!==input.artifactType||String(source.sha256Checksum||'').toLowerCase()!==input.sha256!.toLowerCase())throw Error('O PDF difere do arquivo autorizado para publicação.');
   const kind=input.artifactType==='TRABALHO_COMPLETO'?'trabalho-completo':'resumo-expandido';
-  return {id:input.sourceFileId,webViewLink:`/api/public/processes/${encodeURIComponent(input.processId)}/files/${kind}/download`,name:source.fileName,sha256:input.sha256!,version:input.version||1};
+  return {id:input.sourceFileId,webViewLink:`/api/public/processes/${encodeURIComponent(input.processId)}/files/${kind}/download`,sha256:input.sha256!,version:input.version||1};
 }
 
 export async function withdrawDriveFilePublicAccess(accessToken:string,fileId:string):Promise<{removed:number}>{
@@ -290,7 +290,7 @@ export async function withdrawManyPublicDriveFiles(accessToken:string,fileIds:st
  if(results.some(result=>result.status==='rejected'))throw Error('Há retiradas de acesso pendentes no Google Drive. Repita a operação para concluir.');
 }
 
-export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string}){
+export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string;publicReadOptional?:boolean}){
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return{ok:false,issues:['ID de arquivo inválido.']};
   const issues:string[]=[];
   try{
@@ -305,16 +305,21 @@ export async function inspectPortalDriveArtifact(input:{accessToken:string;fileI
     const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
     const broad=permissions.filter(isUnsafePrivateContainerPermission);
     const hasPublicReader=permissions.some((permission:any)=>permission.type==='anyone'&&permission.role==='reader');
-    if(input.expectPublic&&!hasPublicReader)issues.push('Cópia autorizada não possui leitura pública.');
+    if(input.expectPublic&&!input.publicReadOptional&&!hasPublicReader)issues.push('Cópia autorizada não possui leitura pública.');
     if(!input.expectPublic&&broad.length)issues.push('Arquivo privado possui compartilhamento amplo.');
     if(input.expectPublic&&broad.some((permission:any)=>permission.type!=='anyone'||permission.role!=='reader'))issues.push('Cópia pública possui permissão ampla além de anyone:reader.');
     return{ok:issues.length===0,issues,name:String(metadata.name||'')};
   }catch(error){return{ok:false,issues:[error instanceof Error?error.message:'Falha ao inspecionar arquivo no Drive.']};}
 }
 
-export async function downloadDrivePdf(accessToken:string,fileId:string,expected?:{processId?:string;artifactType?:string;signatureJobId?:string;formType?:string;formVersion?:number}):Promise<{pdf:Buffer;fileName:string}>{
+export async function downloadDrivePdf(accessToken:string,fileId:string,expected?:{processId?:string;artifactType?:string;signatureJobId?:string;formType?:string;formVersion?:number;allowPublicRead?:boolean;expectedSha256?:string},legacyAcademicSha256?:string):Promise<{pdf:Buffer;fileName:string}>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(fileId))throw new Error('Identificador de arquivo inválido.');
-  await assertPrivateContainer(accessToken,fileId);
+  const legacyPublic=!expected&&/^[a-f0-9]{64}$/i.test(legacyAcademicSha256||'');
+  const publicAcademic=legacyPublic||expected?.allowPublicRead===true&&Boolean(expected.processId)&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(expected.artifactType||'')&&/^[a-f0-9]{64}$/i.test(expected.expectedSha256||'');
+  if(publicAcademic){
+    const acl=await listDriveFilePermissions(accessToken,fileId);
+    if(acl.some(p=>isUnsafePrivateContainerPermission(p)&&!(p.type==='anyone'&&p.role==='reader')))throw Error('Compartilhamento amplo não permitido no PDF.');
+  }else await assertPrivateContainer(accessToken,fileId);
   const metadataResponse=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,trashed,appProperties,parents&supportsAllDrives=true`,accessToken);
   const metadata=await metadataResponse.json();
   if(metadata.trashed||metadata.mimeType!=='application/pdf')throw new Error('O arquivo solicitado não é um PDF disponível.');
@@ -330,6 +335,7 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
   let pdf:Buffer;
   try{pdf=await readBoundedResponse(contentResponse,50*1024*1024);}
   catch(error){if(error instanceof ResponseSizeError)throw new Error('O PDF armazenado ultrapassa o limite seguro de 50 MB ou possui tamanho inválido.');throw error;}
+  if(publicAcademic&&createHash('sha256').update(pdf).digest('hex')!==String(legacyPublic?legacyAcademicSha256:expected!.expectedSha256).toLowerCase())throw Error('O PDF difere do arquivo autorizado para publicação.');
   if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O arquivo armazenado não é um PDF válido.');
   const storedSha256=String(metadata.appProperties?.sha256||'').toLowerCase();
   if(storedSha256&&createHash('sha256').update(pdf).digest('hex')!==storedSha256)throw new Error('O conteúdo do PDF no Drive diverge do hash registrado pelo portal.');
@@ -337,15 +343,17 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
 }
 
 /** Resolve browser links without downloading PDF bytes or changing Drive permissions. */
-export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;fileId:string;email:string;processId:string;artifactType:string;signatureJobId?:string;expectedSha256?:string}):Promise<{view:string;download:string}|null>{
+export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;fileId:string;email:string;processId:string;artifactType:string;signatureJobId?:string;expectedSha256?:string;allowPublicRead?:boolean}):Promise<{view:string;download:string}|null>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return null;
   const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
-  if(permissions.some(isUnsafePrivateContainerPermission))throw new Error('Arquivo privado possui compartilhamento amplo no Google Drive.');
+  const publicAcademic=input.allowPublicRead===true&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(input.artifactType)&&/^[a-f0-9]{64}$/i.test(input.expectedSha256||'');
+  if(permissions.some(p=>isUnsafePrivateContainerPermission(p)&&!(publicAcademic&&p.type==='anyone'&&p.role==='reader')))throw new Error('Arquivo privado possui compartilhamento amplo no Google Drive.');
   // Portal membership alone does not grant access to the Google account.
-  if(!permissions.some(p=>p.type==='user'&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileOrganizer','writer','commenter','reader'].includes(p.role)))return null;
-  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,mimeType,trashed,appProperties,webViewLink,webContentLink&supportsAllDrives=true`,input.accessToken);
+  if(!(publicAcademic&&permissions.some(p=>p.type==='anyone'&&p.role==='reader'))&&!permissions.some(p=>p.type==='user'&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileOrganizer','writer','commenter','reader'].includes(p.role)))return null;
+  const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,mimeType,trashed,appProperties,sha256Checksum,webViewLink,webContentLink&supportsAllDrives=true`,input.accessToken);
   const file=await response.json(),properties=file.appProperties||{};
   if(file.id!==input.fileId||file.trashed||file.mimeType!=='application/pdf'||properties.portal!=='portal-tcc'||properties.portalProcessId!==input.processId||properties.artifactType!==input.artifactType||(input.signatureJobId&&properties.portalSignatureJobId!==input.signatureJobId))throw new Error('O arquivo do Drive não corresponde ao documento solicitado.');
+  if(publicAcademic&&String(file.sha256Checksum||'').toLowerCase()!==input.expectedSha256!.toLowerCase())return null;
   if(input.expectedSha256&&String(properties.sha256||'').toLowerCase()!==input.expectedSha256.toLowerCase())return null;
   const safe=(value:unknown)=>{try{const url=new URL(String(value));return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(url.hostname)&&!['access_token','token','key'].some(key=>url.searchParams.has(key))?url.href:'';}catch{return '';}};
   const view=safe(file.webViewLink),download=safe(file.webContentLink);

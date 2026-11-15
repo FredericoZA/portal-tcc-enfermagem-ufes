@@ -7,7 +7,7 @@ import {PGlite} from '@electric-sql/pglite';
 import {pgcrypto} from '@electric-sql/pglite/contrib/pgcrypto';
 import {documentSignatureCompleted,signatureDocumentRevision} from '../src/utils/documentSignatureState';
 import {ataArchived,declarationReady} from './workflow/gates';
-import {signatureJobMatchesCurrentRevision} from './workflow/signaturePolicy';
+import {publicationRequested,signatureJobMatchesCurrentRevision} from './workflow/signaturePolicy';
 import {publicFileAuthorized,finalDocumentFilesLocked} from './workflow/publicationAccess';
 import {settlePreviousRuntimeWrites} from './runtimeRequestQueue';
 import {inferAstenJobStatus} from './integrations/asten';
@@ -38,7 +38,8 @@ function harness(p:any,jobs:any[],persist:()=>Promise<void>,options:{durable?:bo
  let role='STUDENT',access=true;
  const context:any={Date,Set,Error,structuredClone,setImmediate,process:{env:{VERCEL:'fixture'}},waitUntil:(task:Promise<unknown>)=>background.push(task),beginRuntimeRequestTask:()=>()=>{},processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],requireAuthenticated:'authenticated',remotePersistenceQueue:Promise.resolve(),settlePreviousRuntimeWrites,
   getSupabaseRuntimeStatus:()=>({durablePersistenceReady:options.durable===true}),loadPortalRuntimeState:options.read||(async()=>{throw Error('Read not configured');}),applyPersistedState:(remote:any)=>{context.processesStore=structuredClone(remote.processes);context.signatureJobsStore=structuredClone(remote.signatureJobs||[]);context.auditLogsStore=structuredClone(remote.auditLogs||[]);if(remote.access===false)access=false;},inferAstenJobStatus,
-  app:{post:(path:string,auth:unknown,handler:any)=>{assert.equal(auth,'authenticated');handlers.set(path,handler);}},getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>access,getActiveProcessRoles:()=>[role],getUserRolesForEmail:()=>({globalRoles:[],memberships:[{roles:[role]}]}),documentSignatureCompleted,ataArchived,declarationReady,
+  app:{post:(path:string,auth:unknown,handler:any)=>{assert.equal(auth,'authenticated');handlers.set(path,handler);}},getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>access,getActiveProcessRoles:()=>[role],getUserRolesForEmail:()=>({globalRoles:[],memberships:[{roles:[role]}]}),documentSignatureCompleted,ataArchived,declarationReady,publicationRequested,localReviewFilesEnabled:()=>false,
+  getGoogleWorkspaceAccessToken:async()=>{calls.external++;return 'fixture-only';},withdrawManyPublicDriveFiles:async()=>{calls.external++;},
   getPersistentAstenConnection:async()=>{calls.external++;throw Error('External call forbidden in this fixture');},callAsten:async()=>{calls.external++;throw Error('External call forbidden in this fixture');},persistPortalStateDurably:async()=>{const pending=persist();context.remotePersistenceQueue=pending;await pending;},
   missingDocumentModels:()=>[],signatureDocumentRevision,queueAutomaticAsten:(process:any,type:string)=>{calls.queued++;process.astenSignatureIntent={documentType:type,revision:signatureDocumentRevision(process,type),queuedAt:now};},executeConfiguredWorkflowEvent:async()=>({status:'COMPLETED',actions:[]}),executeAutomaticAsten:async()=>{calls.automatic++;},updateProcessCompletion:()=>{},};
  runInNewContext(ts.transpileModule(routes,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
@@ -116,7 +117,7 @@ test('TERMO assinado fica no histórico e perde validade corrente após reabrir,
  const {p,jobs}=fixture();Object.assign(jobs[1],{status:'ARCHIVED',driveSignedFileId:'signed-historical-term',signedSha256:'f'.repeat(64),providerEnvelopeId:'historical-signed-envelope'});
  const oldTerm=structuredClone(jobs[1]);let commits=0;const h=harness(p,jobs,async()=>{commits++;});
  const response=await h.request('/api/processes/:id/repository/reopen');
- assert.equal(response.code,200);assert.equal(commits,1);assert.deepEqual(jobs[1],oldTerm);assert.equal(h.calls.external,0);
+ assert.equal(response.code,200);assert.equal(commits,1);assert.deepEqual(jobs[1],oldTerm);assert.equal(h.calls.external,2);
  assert.equal(signatureJobMatchesCurrentRevision(p,jobs[1]),false);assert.equal(declarationReady(p,jobs),false);assert.equal(publicFileAuthorized(p,jobs,'trabalho-completo'),false);assert.equal(finalDocumentFilesLocked(p,jobs),false);assert.equal(ataArchived(p,jobs),true);
 });
 test('motivo é obrigatório e segue para o cancelamento ASTEN e para a auditoria',async()=>{
@@ -144,4 +145,22 @@ for(const status of [3,5])test(`consulta ASTEN antes de cancelar protege estado 
  const response=await h.request('/api/processes/:id/repository/reopen');
  assert.equal(cancels,0);assert.equal(reads,1);assert.equal(response.code,status===5?200:409,JSON.stringify(response.body));assert.equal(commits,status===5?1:0);
  if(status===3)assert.match(response.body.error,/foi assinado/);
+});
+
+test('reopening a consented original revokes Drive reading before clearing consent and fails closed on provider error',async()=>{
+ for(const fail of [false,true]){
+  const {p,jobs}=fixture();Object.assign(jobs[1],{status:'ARCHIVED',driveSignedFileId:'signed-term-fixture'});p.acervo.publicationState='PUBLIC';
+  let revoked=false,commits=0;const h=harness(p,jobs,async()=>{assert.equal(revoked,true);commits++;});
+  h.context.withdrawManyPublicDriveFiles=async(token:string,ids:string[])=>{assert.equal(token,'fixture-only');assert.ok(ids.includes(p.acervo.trabalhoCompletoFileId));assert.ok(ids.includes(p.acervo.resumoExpandidoFileId));assert.equal(p.acervo.publishFullWork,true);if(fail)throw Error('Drive unavailable');revoked=true;};
+  const result=await h.request('/api/processes/:id/repository/reopen');
+  assert.equal(result.code,fail?409:200);assert.equal(commits,fail?0:1);assert.equal(Boolean(h.context.processesStore[0].acervo.publishFullWork),fail);
+ }
+});
+
+test('local review reopening keeps fictional originals isolated from Google without skipping real Drive IDs',async()=>{
+ const {p,jobs}=fixture();Object.assign(jobs[1],{status:'ARCHIVED',driveSignedFileId:'signed-term-fixture'});p.acervo.trabalhoCompletoFileId='local_review_'+ 'a'.repeat(64);p.acervo.resumoExpandidoFileId='local_review_'+ 'b'.repeat(64);
+ const h=harness(p,jobs,async()=>{});h.context.localReviewFilesEnabled=()=>true;
+ assert.equal((await h.request('/api/processes/:id/repository/reopen')).code,200);assert.equal(h.calls.external,0);
+ const second=fixture();Object.assign(second.jobs[1],{status:'ARCHIVED',driveSignedFileId:'signed-term-fixture'});const remote=harness(second.p,second.jobs,async()=>{});remote.context.localReviewFilesEnabled=()=>true;
+ assert.equal((await remote.request('/api/processes/:id/repository/reopen')).code,200);assert.equal(remote.calls.external,2);
 });

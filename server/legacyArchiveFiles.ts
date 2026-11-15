@@ -15,14 +15,14 @@ export function verifyLegacyPdf(file: VerifiedLegacyFile, pdf: Buffer): Buffer {
   return pdf;
 }
 
-/** Existing Drive files remain private. The Portal serves only the authorized bytes. */
-export async function readLegacyAcademicPdf(file: VerifiedLegacyFile): Promise<Buffer> {
+/** Academic originals may be public; administrative documents retain private ACL checks. */
+export async function readLegacyAcademicPdf(file: VerifiedLegacyFile & {kind?:string}): Promise<Buffer> {
   if (localReviewFilesEnabled()) {
     const sourceName=file.sourceFileName||file.fileName;
     if (path.basename(sourceName) !== sourceName || /[\\/]/.test(sourceName)) throw new Error('Nome de arquivo inválido.');
     const directory = path.join(process.env.PORTAL_DATA_DIR || path.join(process.cwd(),'.portal-data'),'legacy-import','drive-pdfs');
     return verifyLegacyPdf(file, await readFile(path.join(directory,sourceName)));
   }
-  const stored = await downloadDrivePdf(await getGoogleWorkspaceAccessToken(),file.driveFileId);
+  const stored = await downloadDrivePdf(await getGoogleWorkspaceAccessToken(),file.driveFileId,undefined,['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(file.kind||'')?file.sha256:undefined);
   return verifyLegacyPdf(file,stored.pdf);
 }
