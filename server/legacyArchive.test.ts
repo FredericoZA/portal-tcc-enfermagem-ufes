@@ -126,3 +126,9 @@ test('administrative legacy references fail closed and stay outside public proje
   }
   assert.throws(()=>legacyAdministrativeFiles({...record,provenance:{administrativeDocuments:[file,file]}}));
 });
+
+test('historical withdrawal overrides publication without rewriting original consent evidence',()=>{
+ const original=canonicalLegacyRecord({...legacyFixture(),provenance:{originalConsent:['Sim']}} as any);
+ const withdrawn=canonicalLegacyRecord({...original,provenance:{...original.provenance,publicationWithdrawal:{withdrawnAt:'2026-11-15T00:00:00Z',drivePending:true}}});
+ assert.deepEqual(withdrawn.provenance.originalConsent,['Sim']);assert.equal(withdrawn.publishFullWork,false);assert.deepEqual(publicLegacyAcademicView(withdrawn).publicFiles,[]);assert.equal(privateLegacyAcademicView(withdrawn).publicationWithdrawal?.drivePending,true);
+});

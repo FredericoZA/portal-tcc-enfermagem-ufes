@@ -142,7 +142,21 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     await writeFile(path.join(dir,'legacy-import','drive-pdfs','tcc.pdf'),Buffer.from('%PDF-tampered'));
     assert.equal((await request('/api/legacy-academic-records/legado-0002/files/0/download')).status,409);
     assert.equal((await request(privateAcademicDownload,master)).status,409);
+    const withdrawal='/api/admin/legacy-academic-records/legado-0002/publication/withdraw';
+    const withdrawalBody={reason:'Solicitação de retirada do autor'};
+    assert.equal((await request(withdrawal,'',withdrawalBody)).status,401);
+    assert.equal((await request(withdrawal,'student@example.invalid',withdrawalBody)).status,403);
+    assert.equal((await request(withdrawal,master,{reason:'curto'})).status,400);
+    const withdrawn=await request(withdrawal,master,withdrawalBody);
+    assert.equal(withdrawn.status,502,'no real Google connection in isolated fixture; durable portal revocation must remain pending');
+    assert.equal(withdrawn.body.code,'PUBLIC_DRIVE_REVOCATION_PENDING');
+    assert.equal((await request('/api/legacy-academic-records/legado-0002/files/0/download?delivery=drive-links')).status,404);
+    const withdrawalView=await request('/api/admin/legacy-academic-records/legado-0002/academic',master);
+    assert.equal(withdrawalView.body.publicationWithdrawal.drivePending,true);assert.equal(withdrawalView.body.files[0].isPublic,false);
+    assert.equal((await request(withdrawal,master,withdrawalBody)).status,502,'pending Drive cleanup remains retryable');
     const state=JSON.parse(await readFile(path.join(dir,'portal-state.json'),'utf8'));
+    assert.deepEqual(state.legacyAcademicRecords.find((r:any)=>r.id==='legado-0002').provenance.originalConsent,['Sim']);
+    assert.equal(state.auditLogs.filter((r:any)=>r.action==='RETIRADA_PUBLICACAO_HISTORICA').length,1);
     assert.equal(state.legacyAcademicRecords.length,2);assert.deepEqual(state.processes.map((process:ProcessData)=>process.id),processes.map(process=>process.id));assert.deepEqual(state.signatureJobs,[]);assert.deepEqual(state.emailDeliveries,[]);assert.deepEqual(state.workflowRuns,[]);
   }finally{child.kill('SIGTERM');await new Promise<void>(r=>{if(child.exitCode!==null||child.signalCode!==null)return r();child.once('exit',()=>r());});await rm(dir,{recursive:true,force:true});}
 });

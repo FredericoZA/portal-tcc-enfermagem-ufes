@@ -246,6 +246,7 @@ export const apiClient = {
     return fetchApi<{links:{view:string;download:string}|null}>(u.pathname+'?delivery=drive-links');
   },
   getDocumentDriveLinks:(processId:string,documentId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(documentId)}/download?delivery=drive-links`),
+  withdrawLegacyPublication:(id:string,reason:string)=>fetchApi(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/publication/withdraw`,{method:'POST',body:JSON.stringify({reason})}),
   importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),
   getPublicRepository: () => fetchApi<ProcessData[]>('/api/public/repository'),
   getPublicCalendarData: (options: Pick<ApiRequestOptions, 'signal'> = {}) => fetchApi<{processes:ProcessData[];googleEvents:GoogleCalendarSyncedEvent[]}>('/api/public/calendar-data', options),

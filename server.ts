@@ -3901,6 +3901,26 @@ export async function createPortalApp() {
     res.setHeader('Cache-Control','private, no-store');
     res.json({revision:legacyCatalogRevision(legacyAcademicRecordsStore),records:legacyAcademicRecordsStore});
   });
+  app.post('/api/admin/legacy-academic-records/:id/publication/withdraw',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
+    const index=legacyAcademicRecordsStore.findIndex(r=>r.id===req.params.id);
+    if(index<0)return res.status(404).json({error:'Trabalho histórico não encontrado.'});
+    const reason=String(req.body?.reason||'').trim();
+    if(reason.length<10||reason.length>1000)return res.status(400).json({error:'Informe o motivo da retirada com 10 a 1.000 caracteres.'});
+    const current=legacyAcademicRecordsStore[index],prior=current.provenance.publicationWithdrawal as any;
+    if(!current.attachments.some(f=>legacyFileIsPublic(current,f))&&!prior?.withdrawnAt)return res.status(409).json({error:'Este registro não possui publicação ativa.'});
+    const withdrawnAt=prior?.withdrawnAt||new Date().toISOString();
+    const withdrawal={...(prior||{}),withdrawnAt,withdrawnBy:prior?.withdrawnBy||getPortalIdentity(req)!.email,reason:prior?.reason||reason,drivePending:true};
+    legacyAcademicRecordsStore[index]=canonicalLegacyRecord({...current,provenance:{...current.provenance,publicationWithdrawal:withdrawal}});
+    if(!prior?.withdrawnAt)auditLogsStore.push({id:`log-${Date.now()}-legacy-withdraw`,actorEmail:getPortalIdentity(req)!.email,actorRoles:['MASTER_ADMIN'],action:'RETIRADA_PUBLICACAO_HISTORICA',entityType:'legacy_publication',entityId:current.id,after:{reason,withdrawnAt},timestamp:withdrawnAt});
+    try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'A retirada não foi confirmada no banco. Recarregue antes de tentar novamente.'});}
+    try{
+      const token=await getGoogleWorkspaceAccessToken();
+      for(const id of new Set(current.attachments.filter(f=>['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(f.kind)).map(f=>f.driveFileId)))await withdrawDriveFilePublicAccess(token,id);
+      legacyAcademicRecordsStore[index]=canonicalLegacyRecord({...legacyAcademicRecordsStore[index],provenance:{...legacyAcademicRecordsStore[index].provenance,publicationWithdrawal:{...withdrawal,drivePending:false}}});
+      await persistPortalStateDurably();
+    }catch{return res.status(502).json({error:'Os PDFs foram bloqueados no Portal. A retirada das cópias do Drive está pendente; use Concluir retirada no Drive para tentar novamente.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
+    res.json({recordId:current.id,withdrawnAt,public:false});
+  });
   app.get('/api/admin/legacy-academic-records/:id/academic',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
     const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);

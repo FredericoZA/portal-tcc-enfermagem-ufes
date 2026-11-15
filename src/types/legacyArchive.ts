@@ -46,6 +46,7 @@ export type LegacyAdministrativeFileView = Pick<LegacyAdministrativeFile, 'fileN
 };
 /** Master-only academic view; publication consent is unchanged by private access. */
 export interface PrivateLegacyAcademicView {
+  publicationWithdrawal?: {withdrawnAt:string;drivePending:boolean};
   resumo: string;
   palavrasChave: string[];
   files: {

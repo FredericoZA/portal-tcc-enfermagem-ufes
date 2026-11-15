@@ -143,6 +143,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [privateLegacyAcademic, setPrivateLegacyAcademic] = useState<{accessKey:string;data:PrivateLegacyAcademicView|null;error:string}|null>(null);
   const privateLegacyAccess = isAuthenticated && isMasterAdmin && privateLegacyAcademic?.accessKey === legacyAccessKey ? privateLegacyAcademic : null;
   const privateLegacyData = privateLegacyAccess?.data;
+  const [withdrawingLegacy,setWithdrawingLegacy]=useState(false);
   const [legacyAcademicDownload, setLegacyAcademicDownload] = useState<number|null>(null);
   const [legacyAcademicDownloadError, setLegacyAcademicDownloadError] = useState('');
 
@@ -725,6 +726,15 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     }
   };
 
+  const withdrawHistoricalPublication=async()=>{
+    if(!process?.legacyRecord||!isMasterAdmin||withdrawingLegacy)return;
+    const reason=await portalPrompt('Os PDFs deixarão de ser públicos no Portal e no Google Drive. Os originais privados serão preservados. Informe o motivo da retirada.','',{title:'Retirar publicação histórica',tone:'warning',confirmLabel:'Retirar publicação',inputLabel:'Motivo (mínimo de 10 caracteres)',minLength:10,maxLength:1000,multiline:true});
+    if(!reason)return;setWithdrawingLegacy(true);
+    try{await apiClient.withdrawLegacyPublication(process.id,reason);portalNotice('Publicação histórica retirada do Portal e do Drive.');}
+    catch(error){portalNotice(error instanceof Error?error.message:'Não foi possível concluir a retirada.');}
+    finally{await loadData();setWithdrawingLegacy(false);}
+  };
+
   const handleDocumentAccess = async (doc:ProcessDocument,mode:'view'|'download') => {
     // Open synchronously so browsers do not block a window after the permission read.
     const destination=window.open('about:blank','_blank');
@@ -1136,6 +1146,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           <div className="portal-repository-content">
             {readOnly ? (
               <div className="portal-repository-grid">
+                {privateLegacyData&&(privateLegacyData.files.some(f=>f.isPublic)||privateLegacyData.publicationWithdrawal?.drivePending)&&<section className="rounded-xl border border-slate-200 bg-white p-4"><button type="button" className="portal-action" disabled={withdrawingLegacy} onClick={()=>void withdrawHistoricalPublication()}>{withdrawingLegacy?'Retirando publicação…':privateLegacyData.publicationWithdrawal?.drivePending?'Concluir retirada no Drive':'Retirar publicação histórica'}</button>{privateLegacyData.publicationWithdrawal?.drivePending&&<p role="status" className="mt-2 text-xs">Os PDFs já estão bloqueados no Portal. A retirada das cópias do Drive está pendente.</p>}</section>}
                 {privateLegacyAccess?.error&&<p role="alert" className="portal-instruction p-3 text-xs">{privateLegacyAccess.error}</p>}
                 {privateLegacyAccess&&legacyAcademicDownloadError&&<p role="alert" className="portal-instruction p-3 text-xs">{legacyAcademicDownloadError}</p>}
                 <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-justify text-sm">{privateLegacyData?.resumo||process.acervo?.resumoSintese||(process.legacyRecord?'Resumo não localizado no acervo importado.':'Resumo ainda não informado.')}</p></section>
