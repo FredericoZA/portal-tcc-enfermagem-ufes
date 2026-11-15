@@ -3892,7 +3892,7 @@ export async function createPortalApp() {
       res.setHeader('Cache-Control','private, no-store');
       if(localReviewFilesEnabled())return res.json({links:null});
       try{return res.json({links:await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:file.driveFileId,scope:record.id,sha256:file.sha256,assertAuthorized:()=>repositoryPublicationStillCurrent(res)})});}
-      catch{return res.status(409).json({error:'Não foi possível confirmar o PDF público no Drive. A publicação permanece protegida até a revisão.'});}
+      catch(error){return res.status(409).json({error:'Não foi possível confirmar o PDF público no Drive. A publicação permanece protegida até a revisão.',driveStatus:(error as {driveStatus?:number}).driveStatus,driveReason:(error as {driveReason?:string}).driveReason});}
     }
     try{
       const pdf=await readLegacyAcademicPdf(file);
@@ -5201,7 +5201,7 @@ export async function createPortalApp() {
       res.setHeader('Cache-Control','private, no-store');
       if(localReviewFilesEnabled()&&fileId.startsWith('local_review_'))return res.json({links:null});
       try{return res.json({links:await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:fileId,scope:process.id,sha256:String(authorizedHash||''),artifactType:isFull?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',assertAuthorized:()=>repositoryPublicationStillCurrent(res)})});}
-      catch{return res.status(409).json({error:'Não foi possível confirmar o PDF público no Drive. A publicação permanece protegida até a revisão.'});}
+      catch(error){return res.status(409).json({error:'Não foi possível confirmar o PDF público no Drive. A publicação permanece protegida até a revisão.',driveStatus:(error as {driveStatus?:number}).driveStatus,driveReason:(error as {driveReason?:string}).driveReason});}
     }
     const etag=publicPdfEtag(authorizedHash);
     res.setHeader('Cache-Control',PUBLIC_PDF_CACHE_CONTROL);

@@ -5,9 +5,37 @@ const idOk=(s:string)=>/^[\w-]{10,150}$/.test(s);
 const fields='id,name,mimeType,trashed,parents,appProperties,sha256Checksum,webViewLink,webContentLink';
 async function request(token:string,path:string,init:RequestInit={}){
  const r=await fetch(API+path,{...init,headers:{Authorization:`Bearer ${token}`,...init.headers},signal:AbortSignal.timeout(20000)});
- if(!r.ok)throw Error('Não foi possível conferir a publicação no Google Drive.');return r;
+ if(!r.ok){const data=await r.json().catch(()=>({}));throw Object.assign(Error('Não foi possível conferir a publicação no Google Drive.'),{driveStatus:r.status,driveReason:String(data?.error?.errors?.[0]?.reason||'').replace(/[^a-zA-Z0-9_]/g,'').slice(0,80)});}return r;
 }
 function browserLink(value:unknown){try{const u=new URL(String(value));return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(u.hostname)&&!['token','access_token','key'].some(k=>u.searchParams.has(k))?u.href:'';}catch{return '';}}
+/** A folder owned by another account can impose editing rights on its children.
+ * Keep the same original ID in a restricted child owned by the institutional account. */
+async function isolateOriginal(input:{token:string;source:any;scope:string;ownerId:string;current:()=>Promise<void>}){
+ const {token,source,scope,ownerId,current}=input,parent=source.parents[0];
+ const folderFields='id,mimeType,trashed,parents,appProperties,inheritedPermissionsDisabled';
+ const q=`trashed = false and '${esc(parent)}' in parents and mimeType = 'application/vnd.google-apps.folder' and appProperties has { key='portal' and value='portal-tcc' } and appProperties has { key='artifactType' and value='ORIGINALS_PRIVATE_FOLDER' } and appProperties has { key='portalProcessId' and value='${esc(scope)}' }`;
+ await current();
+ const listing=await (await request(token,`/files?${new URLSearchParams({q,fields:`files(${folderFields}),nextPageToken`,pageSize:'2'})}`)).json();
+ if(!Array.isArray(listing.files)||listing.files.length>1||listing.nextPageToken)throw Error('Pasta privada do original não confirmada.');
+ let folder=listing.files[0];
+ if(!folder)folder=await (await request(token,`/files?fields=${folderFields}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'ORIGINAIS_DO_PORTAL',mimeType:'application/vnd.google-apps.folder',parents:[parent],appProperties:{portal:'portal-tcc',artifactType:'ORIGINALS_PRIVATE_FOLDER',portalProcessId:scope}})})).json();
+ if(!idOk(String(folder.id))||folder.id===source.id||folder.id===parent||folder.mimeType!=='application/vnd.google-apps.folder'||folder.trashed||folder.appProperties?.portal!=='portal-tcc'||folder.appProperties?.artifactType!=='ORIGINALS_PRIVATE_FOLDER'||folder.appProperties?.portalProcessId!==scope||!folder.parents?.includes(parent))throw Error('Vínculo da pasta privada inválido.');
+ const endpoint=`/files/${encodeURIComponent(folder.id)}`;
+ if((await listDriveFilePermissions(token,folder.id)).find(p=>p.role==='owner')?.id!==ownerId)throw Error('A pasta precisa pertencer ao proprietário do original.');
+ if(!folder.inheritedPermissionsDisabled){
+  await current();
+  await request(token,`${endpoint}?fields=${folderFields}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({inheritedPermissionsDisabled:true})});
+ }
+ folder=await (await request(token,`${endpoint}?fields=${folderFields}`)).json();
+ if(!folder.inheritedPermissionsDisabled)throw Error('A restrição de herança não foi confirmada.');
+ const acl=await listDriveFilePermissions(token,folder.id);
+ if(acl.filter(p=>p.role==='owner').length!==1||acl.find(p=>p.role==='owner')?.id!==ownerId||acl.some(p=>p.role!=='owner'&&(p.view!=='metadata'||p.role!=='reader')))throw Error('A pasta privada possui acesso adicional ao conteúdo.');
+ await current();
+ await request(token,`/files/${encodeURIComponent(source.id)}?${new URLSearchParams({addParents:folder.id,removeParents:parent,fields})}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:'{}'});
+ const moved=await (await request(token,`/files/${encodeURIComponent(source.id)}?fields=${fields}`)).json();
+ if(moved.id!==source.id||moved.parents?.length!==1||moved.parents[0]!==folder.id||moved.sha256Checksum!==source.sha256Checksum)throw Error('A movimentação do original não foi confirmada.');
+ return moved;
+}
 /** Publish the consent-bound original, never copy or transfer its bytes through the Portal. */
 export async function publicRepositoryDriveLinks(input:{accessToken:string;sourceFileId:string;scope:string;sha256:string;artifactType?:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';assertAuthorized:()=>Promise<boolean>}){
  const {accessToken:token,sourceFileId,scope}=input,sha=input.sha256.toLowerCase();
@@ -27,13 +55,20 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
  try{
  let acl=await permissions();
  if(acl.filter(p=>p.role==='owner').length!==1)throw Error('Proprietário do original não confirmado.');
+ const ownerId=acl.find(p=>p.role==='owner').id;let isolated=false;
  // Only the owner may edit. Named collaborators are reduced to readers on this file only.
  for(const p of acl){
   if(p.role==='owner')continue;
   if(!p.id||!['user','anyone'].includes(p.type)){await revoke();throw Error('Compartilhamento amplo não permitido no original.');}
   if(p.role!=='reader'){
    await current();
-   await request(token,`${endpoint}/permissions/${encodeURIComponent(p.id)}?supportsAllDrives=true`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',...(p.type==='anyone'?{allowFileDiscovery:false}:{})})});
+   try{await request(token,`${endpoint}/permissions/${encodeURIComponent(p.id)}?supportsAllDrives=true`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',...(p.type==='anyone'?{allowFileDiscovery:false}:{})})});}
+   catch(error){
+    if(isolated||(error as {driveStatus?:number}).driveStatus!==403)throw error;
+    source=await isolateOriginal({token,source,scope,ownerId,current});isolated=true;
+    for(const remaining of await permissions())if(remaining.role!=='owner'&&remaining.role!=='reader')await request(token,`${endpoint}/permissions/${encodeURIComponent(remaining.id)}?supportsAllDrives=true`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader'})});
+    break;
+   }
   }
  }
  await current();

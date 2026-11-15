@@ -80,8 +80,32 @@ test('Drive refusal to remove collaborator editing fails closed and revokes publ
   if(init?.method==='PATCH'&&String(input).includes('/permissions/collaborator'))return Response.json({error:{message:'Inherited editing cannot be changed'}},{status:403});
   return fetch(input,init);
  });
- await assert.rejects(publicRepositoryDriveLinks(f.input));assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
+ await assert.rejects(publicRepositoryDriveLinks(f.input));assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'&&c.path.endsWith('/permissions')));
 });
 test('an expanded abstract can only be published with its own bound source type',async t=>{
  const f=fixture(t);await assert.rejects(publicRepositoryDriveLinks({...f.input,artifactType:'RESUMO_EXPANDIDO'}),/outro processo/);assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
+});
+test('inherited editing is isolated in an owner-only child while preserving the original ID and bytes',async t=>{
+ const sha='a'.repeat(64),sourceId='original_source_123',oldParent='old_parent_123',folderId='owned_folder_123';let moved=false,limited=false,shared=false,created=0;
+ const folder=()=>({id:folderId,mimeType:'application/vnd.google-apps.folder',parents:[oldParent],inheritedPermissionsDisabled:limited,appProperties:{portal:'portal-tcc',portalProcessId:'process-1',artifactType:'ORIGINALS_PRIVATE_FOLDER'}});
+ const source=()=>({id:sourceId,name:'original.pdf',mimeType:'application/pdf',sha256Checksum:sha,parents:[moved?folderId:oldParent],appProperties:{portal:'portal-tcc',portalProcessId:'process-1',artifactType:'TRABALHO_COMPLETO'},webViewLink:`https://drive.google.com/file/d/${sourceId}/view`,webContentLink:`https://drive.google.com/uc?id=${sourceId}&export=download`});
+ t.mock.method(globalThis,'fetch',async(input:any,init?:RequestInit)=>{
+  const u=new URL(String(input)),method=init?.method||'GET',body=init?.body?JSON.parse(String(init.body)):null;assert.ok(!u.pathname.endsWith('/copy'));assert.ok(!u.searchParams.has('alt'));
+  if(u.pathname.endsWith('/permissions/inherited-writer'))return Response.json({error:{errors:[{reason:'cannotModifyInheritedPermission'}]}},{status:403});
+  if(u.pathname.endsWith('/permissions')){
+   const id=u.pathname.split('/').at(-2);
+   if(method==='POST'){assert.equal(id,sourceId);assert.deepEqual(body,{type:'anyone',role:'reader',allowFileDiscovery:false});shared=true;return Response.json({id:'public'});}
+   if(id===oldParent)return Response.json({permissions:[{id:'other-owner',type:'user',role:'owner'},{id:'institutional',type:'user',role:'writer'}]});
+   return Response.json({permissions:[{id:'institutional',type:'user',role:'owner'},...((id===sourceId&&!moved)||(id===folderId&&!limited)?[{id:'inherited-writer',type:'user',role:'writer'}]:[]),...(id===folderId&&limited?[{id:'inherited-writer',type:'user',role:'reader',view:'metadata'}]:[]),...(id===sourceId&&shared?[{id:'public',type:'anyone',role:'reader'}]:[])]});
+  }
+  if(u.pathname==='/drive/v3/files'){
+   if(method==='POST'){created++;assert.equal(body.mimeType,'application/vnd.google-apps.folder');assert.deepEqual(body.parents,[oldParent]);return Response.json(folder());}
+   return Response.json({files:[]});
+  }
+  if(u.pathname.endsWith('/'+folderId)){if(method==='PATCH'){assert.deepEqual(body,{inheritedPermissionsDisabled:true});limited=true;}return Response.json(folder());}
+  if(method==='PATCH'){assert.equal(u.pathname,'/drive/v3/files/'+sourceId);assert.equal(u.searchParams.get('addParents'),folderId);assert.equal(u.searchParams.get('removeParents'),oldParent);assert.deepEqual(body,{});moved=true;}
+  return Response.json(source());
+ });
+ const input={accessToken:'fixture',sourceFileId:sourceId,scope:'process-1',sha256:sha,artifactType:'TRABALHO_COMPLETO' as const,assertAuthorized:async()=>true};
+ assert.equal((await publicRepositoryDriveLinks(input)).view,source().webViewLink);await publicRepositoryDriveLinks(input);assert.equal(created,1);assert.equal(moved,true);assert.equal(limited,true);assert.equal(shared,true);
 });
