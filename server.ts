@@ -182,7 +182,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePrivatePublicationSource, withdrawDriveFilePublicAccess, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -2405,6 +2405,7 @@ export async function createPortalApp() {
           :await refreshPortalRuntimeState<PersistedPortalState>();}finally{finishHydration?.();}
       if(res.destroyed||req.aborted)return;
       const finishApplyState=registrationTiming?.measure('apply_state');
+      res.locals.portalRuntimeReadRevision=portalRuntimeSnapshotRevision(remote);
       try{if(remote)applyPersistedState(remote);}finally{finishApplyState?.();}
       next();
     } catch (error) {
@@ -6402,8 +6403,8 @@ ${auditChanges(log)}`).join('\n\n');
       const processId=req.query.processId;
       if(processId!==undefined&&(typeof processId!=='string'||!processId||processId.length>200))return res.status(400).json({error:'Identificador do processo inválido.'});
       if(processId&&!processesStore.some(p=>p.id===processId))return res.status(404).json({error:'Processo não encontrado.'});
-      const revision=currentPortalRuntimeRevision();
-      if(revision===null)throw new Error('Revisão de auditoria não confirmada.');
+      const revision=res.locals.portalRuntimeReadRevision;
+      if(!Number.isSafeInteger(revision)||revision<1)throw new Error('Revisão de auditoria não confirmada.');
       const page=await readCriticalAuditPage({revision,processId:processId as string|undefined,before:before??undefined});
       if(page){
         res.setHeader('Cache-Control','private, no-store');

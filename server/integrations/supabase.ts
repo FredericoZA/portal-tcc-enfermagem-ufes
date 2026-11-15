@@ -33,6 +33,18 @@ let auditRpcBackoff: {endpoint:string; retryAfter:number} | undefined;
 /** Revisão do estado operacional confirmada pelo banco, após a leitura/commit da requisição. */
 export function currentPortalRuntimeRevision():number|null { return knownRevision; }
 
+// Read-only projections can advance independently of the complete CAS baseline.
+// Bind consumers to the exact returned object without serializing metadata or
+// pretending an incomplete projection is safe to use as a write baseline.
+const snapshotReadRevisions=new WeakMap<object,number>();
+function confirmedRuntimeRead<T extends object>(payload:T,revision:number):T {
+  snapshotReadRevisions.set(payload,revision);
+  return payload;
+}
+export function portalRuntimeSnapshotRevision(snapshot:object|null):number|null {
+  return snapshot?snapshotReadRevisions.get(snapshot)??null:null;
+}
+
 /** Preserve a bounded diagnostic signal, never the private PostgREST response. */
 export async function runtimeReadFailure(response:Response,stage:'REVISION'|'SNAPSHOT'):Promise<Error>{
   const detail=await response.json().catch(()=>null);
@@ -436,13 +448,13 @@ export async function loadPortalRuntimeState<T extends object>(trackRevision=tru
     knownRevision = revision;
   }
   // The RPC may share verified chunks with the cache even for untracked reads.
-  return (trackRevision||delta?structuredClone(payload):payload) as T;
+  return confirmedRuntimeRead((trackRevision||delta?structuredClone(payload):payload) as T,revision);
 }
 
 export function readCachedPortalRuntimeState<T extends object>(revision:number):T|null {
   const snapshot=cachedSnapshot;
   return snapshot?.revision===revision&&snapshot.endpoint===stateEndpoint()
-    ? structuredClone(snapshot.payload) as T
+    ? confirmedRuntimeRead(structuredClone(snapshot.payload) as T,snapshot.revision)
     : null;
 }
 
@@ -453,7 +465,7 @@ export async function refreshPortalRuntimeState<T extends object>(): Promise<T |
     const revision = await readPortalRuntimeRevision();
     if (revision === null) throw new Error('O estado persistido não foi encontrado no Supabase.');
     // Cada requisição recebe uma cópia para isolar mutações não confirmadas.
-    if (revision === cachedSnapshot.revision) return structuredClone(cachedSnapshot.payload) as T;
+    if (revision === cachedSnapshot.revision) return confirmedRuntimeRead(structuredClone(cachedSnapshot.payload) as T,revision);
   }
   return loadPortalRuntimeState<T>();
 }
@@ -525,7 +537,7 @@ export async function loadPortalRuntimeLiteState<T extends object>():Promise<T|n
   const conditional=await readConditionalRuntimeProjection('LITE',cachedLiteSnapshot);
   if(conditional.available){
     cachedLiteSnapshot=conditional.snapshot??undefined;
-    return conditional.snapshot?structuredClone(conditional.snapshot.payload) as T:null;
+    return conditional.snapshot?confirmedRuntimeRead(structuredClone(conditional.snapshot.payload) as T,conditional.snapshot.revision):null;
   }
   const response=await readSupabase(
     `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_lite_v1`,
@@ -551,7 +563,7 @@ export async function loadPortalRuntimeLiteState<T extends object>():Promise<T|n
   }
   // Apenas revisão confirmada + leitura isolada da mesma linha do banco.
   cachedLiteSnapshot={endpoint,revision,payload};
-  return structuredClone(payload) as T;
+  return confirmedRuntimeRead(structuredClone(payload) as T,revision);
 }
 
 /** Mesmo GET de revisão existente; uma atualização não reutiliza snapshot antigo. */
@@ -561,7 +573,7 @@ export async function refreshPortalRuntimeLiteState<T extends object>():Promise<
   if(cached?.endpoint===stateEndpoint()){
     const revision=await readPortalRuntimeRevision();
     if(revision===null)throw new Error('O estado persistido não foi encontrado no Supabase.');
-    if(revision===cached.revision)return structuredClone(cached.payload) as T;
+    if(revision===cached.revision)return confirmedRuntimeRead(structuredClone(cached.payload) as T,revision);
   }
   return loadPortalRuntimeLiteState<T>();
 }
@@ -578,7 +590,7 @@ export async function loadPortalRuntimeLeanState<T extends object>():Promise<T|n
   const conditional=await readConditionalRuntimeProjection('LEAN',cachedLeanSnapshot);
   if(conditional.available){
     cachedLeanSnapshot=conditional.snapshot??undefined;
-    return conditional.snapshot?structuredClone(conditional.snapshot.payload) as T:null;
+    return conditional.snapshot?confirmedRuntimeRead(structuredClone(conditional.snapshot.payload) as T,conditional.snapshot.revision):null;
   }
   const response=await readSupabase(
     `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_lean_v1`,20_000,'{}',true
@@ -601,7 +613,7 @@ export async function loadPortalRuntimeLeanState<T extends object>():Promise<T|n
     Object.hasOwn(payload,'auditLogs')||Object.hasOwn(payload,'legacyAcademicRecords')||
     !Number.isSafeInteger(revision)||revision<1)throw new Error('A projeção mínima retornou dados ou revisão inválidos.');
   cachedLeanSnapshot={endpoint,revision,payload};
-  return structuredClone(payload) as T;
+  return confirmedRuntimeRead(structuredClone(payload) as T,revision);
 }
 export async function refreshPortalRuntimeLeanState<T extends object>():Promise<T|null>{
   if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
@@ -609,7 +621,7 @@ export async function refreshPortalRuntimeLeanState<T extends object>():Promise<
   if(cached?.endpoint===stateEndpoint()){
     const revision=await readPortalRuntimeRevision();
     if(revision===null)throw new Error('O estado persistido não foi encontrado.');
-    if(revision===cached.revision)return structuredClone(cached.payload) as T;
+    if(revision===cached.revision)return confirmedRuntimeRead(structuredClone(cached.payload) as T,revision);
   }
   return loadPortalRuntimeLeanState<T>();
 }

@@ -3,6 +3,7 @@ import {suggestSentenceTitle} from '../utils/reviewedTccTitle';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarCheck, ClipboardCheck, LoaderCircle } from 'lucide-react';
 import type { ProcessData, IntegrationStudioSettings } from '../types';
+import type { RegistrationAnswers, RegistrationQuestion } from '../types/operationalConfig';
 import type {
   ReviewedAuthor,
   ReviewedFaculty,
@@ -47,6 +48,22 @@ const blankFaculty: ReviewedFaculty = {
   titulacao: '',
   instituicao: '',
 };
+
+export function ProcessReviewMetadataField({field,value,onChange}:{
+  key?:string;
+  field:RegistrationQuestion;
+  value:RegistrationAnswers[string]|undefined;
+  onChange:(value:RegistrationAnswers[string])=>void;
+}) {
+  return <label className={field.fieldType==='textarea'?'sm:col-span-2':''}>
+    <span className="mb-1 block text-sm font-semibold">{field.label}{field.required?' *':''}</span>
+    {field.fieldType==='checkbox'?<input type="checkbox" className="h-6 w-6" required={field.required} checked={value===true} onChange={event=>onChange(event.target.checked)}/>
+      :field.options?.length?<select className="portal-input" required={field.required} value={String(value??'')} onChange={event=>onChange(event.target.value)}>
+        <option value="">Selecione…</option>
+        {field.options.map(option=><option key={option}>{option}</option>)}
+      </select>:<input className="portal-input" required={field.required} type={field.fieldType==='number'?'number':'text'} value={String(value??'')} maxLength={field.validation?.maxLength||1000} onChange={event=>onChange(event.target.value)}/>}
+  </label>;
+}
 
 export function ProcessDataReviewModal({
   process,
@@ -435,59 +452,15 @@ export function ProcessDataReviewModal({
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {fields.map((field) => (
-                    <label
+                    <ProcessReviewMetadataField
                       key={field.fieldKey}
-                      className={
-                        field.fieldType === 'textarea' ? 'sm:col-span-2' : ''
-                      }
-                    >
-                      <span className="mb-1 block text-sm font-semibold">
-                        {field.label}
-                        {field.required ? ' *' : ''}
-                      </span>
-                      {field.options?.length ? (
-                        <select
-                          className="portal-input"
-                          value={String(
-                            values.registrationAnswers[field.fieldKey] ?? '',
-                          )}
-                          onChange={(e) =>
-                            setValues((current) => ({
-                              ...current,
-                              registrationAnswers: {
-                                ...current.registrationAnswers,
-                                [field.fieldKey]: e.target.value,
-                              },
-                            }))
-                          }
-                        >
-                          <option value="">Selecione…</option>
-                          {field.options.map((option) => (
-                            <option key={option}>{option}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          className="portal-input"
-                          type={
-                            field.fieldType === 'number' ? 'number' : 'text'
-                          }
-                          value={String(
-                            values.registrationAnswers[field.fieldKey] ?? '',
-                          )}
-                          maxLength={field.validation?.maxLength || 1000}
-                          onChange={(e) =>
-                            setValues((current) => ({
-                              ...current,
-                              registrationAnswers: {
-                                ...current.registrationAnswers,
-                                [field.fieldKey]: e.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      )}
-                    </label>
+                      field={field}
+                      value={values.registrationAnswers[field.fieldKey]}
+                      onChange={value=>setValues(current=>({
+                        ...current,
+                        registrationAnswers:{...current.registrationAnswers,[field.fieldKey]:value},
+                      }))}
+                    />
                   ))}
                 </div>
               </>
