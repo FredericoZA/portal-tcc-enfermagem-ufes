@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {publicRepositoryDriveLinks} from './publicRepositoryDrive';import {withdrawDriveFilePublicAccess,withdrawManyPublicDriveFiles,prepareAuthorizedPublicationSource} from './googleDriveArchive';
+import {publicRepositoryDriveLinks} from './publicRepositoryDrive';import {withdrawDriveFilePublicAccess,withdrawManyPublicDriveFiles,preparePublicationSource} from './googleDriveArchive';
 function fixture(t:any){
  const calls:{path:string;method:string;body:any}[]=[],sha='a'.repeat(64),source='original_source_123',copy='old_copy_1234',parent='private_folder_123';
  const sourceMetadata={id:source,name:'work.pdf',mimeType:'application/pdf',sha256Checksum:sha,parents:[parent],appProperties:{portal:'portal-tcc',portalProcessId:'process-1',artifactType:'TRABALHO_COMPLETO'},webViewLink:`https://drive.google.com/file/d/${source}/view`,webContentLink:`https://drive.google.com/uc?id=${source}&export=download`};
@@ -42,7 +42,7 @@ test('invalid duplicate inventory can never trash the original',async t=>{
  const f=fixture(t);f.state.existing=true;f.copyMetadata.id=f.source;await assert.rejects(publicRepositoryDriveLinks(f.input),/Vínculo/);assert.ok(!f.calls.some(c=>c.method==='PATCH'&&c.path==='/drive/v3/files/'+f.source));assert.equal(f.state.shared,false);
 });
 test('authorization preparation binds the original without premature public access',async t=>{
- const f=fixture(t);const result=await prepareAuthorizedPublicationSource({accessToken:'fixture',processFolderId:f.parent,sourceFileId:f.source,processId:'process-1',artifactType:'TRABALHO_COMPLETO',sha256:f.input.sha256});assert.equal(result.id,f.source);assert.equal(f.state.shared,false);
+ const f=fixture(t);const result=await preparePublicationSource({accessToken:'fixture',processFolderId:f.parent,sourceFileId:f.source,processId:'process-1',artifactType:'TRABALHO_COMPLETO',sha256:f.input.sha256});assert.equal(result.id,f.source);assert.equal(f.state.shared,false);
 });
 test('withdrawal removes public access from original and former duplicate without touching the owner',async t=>{
  const f=fixture(t);f.state.existing=true;f.state.shared=true;assert.equal((await withdrawDriveFilePublicAccess('fixture',f.source)).removed,2);assert.equal(f.state.shared,false);assert.equal(f.state.copyShared,false);assert.ok(f.calls.filter(c=>c.method==='DELETE').every(c=>c.path.endsWith('/public-permission')));

@@ -247,7 +247,7 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
 }
 
 /** Bind publication to the original; anonymous access is granted only after completion. */
-export async function prepareAuthorizedPublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
+export async function preparePublicationSource(input:{accessToken:string;processFolderId:string;sourceFileId:string;processId:string;artifactType:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';sha256?:string;version?:number}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!/^[a-f0-9]{64}$/i.test(input.sha256||''))throw new Error('O arquivo autorizado precisa de um hash SHA-256 válido.');
   const source=await (await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.sourceFileId)}?fields=id,mimeType,trashed,appProperties,sha256Checksum&supportsAllDrives=true`,input.accessToken)).json();
