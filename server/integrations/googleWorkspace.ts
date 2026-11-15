@@ -301,7 +301,7 @@ export async function getGoogleWorkspaceStatus() {
   return {
     ...config,
     connected: Boolean(stored),
-    existingFileManagementAuthorized:Array.isArray(stored?.metadata?.scopes)&&stored.metadata.scopes.includes('https://www.googleapis.com/auth/drive'),
+    existingFileManagementAuthorized:Array.isArray(stored?.metadata?.scopes)&&stored.metadata.scopes.some((scope:unknown)=>scope==='https://www.googleapis.com/auth/drive'),
     connectedEmail: String(stored?.metadata?.email || ''),
     connectedAt: String(stored?.metadata?.connectedAt || stored?.updatedAt || '')
   };

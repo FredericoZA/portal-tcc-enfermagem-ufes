@@ -6,7 +6,7 @@ test('only missing Google app access enables the existing independently verified
 });
 test('full Drive management scope remains disabled unless explicitly configured',t=>{
  const prior=process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES;t.after(()=>{if(prior===undefined)delete process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES;else process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES=prior;});
- delete process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES;assert.ok(!getGoogleWorkspaceScopes().includes('https://www.googleapis.com/auth/drive'));
- process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES='false';assert.ok(!getGoogleWorkspaceScopes().includes('https://www.googleapis.com/auth/drive'));
- process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES='true';assert.ok(getGoogleWorkspaceScopes().includes('https://www.googleapis.com/auth/drive'));assert.ok(getGoogleWorkspaceScopes().includes('https://www.googleapis.com/auth/drive.file'));
+ delete process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES;assert.ok(!getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive'));
+ process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES='false';assert.ok(!getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive'));
+ process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES='true';assert.ok(getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive'));assert.ok(getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive.file'));
 });
