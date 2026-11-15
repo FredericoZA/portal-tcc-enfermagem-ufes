@@ -69,6 +69,7 @@ test('HTTP local uploads persist real PDF bytes, enforce roles, version replacem
   assert.equal((await upload(route,pdf,'')).status,401);assert.equal((await upload(route,pdf,p.orientador.email)).status,403);assert.equal((await upload(route,Buffer.from('inválido'))).status,400);
   const r=await upload(route);assert.equal(r.status,201,await r.clone().text());const saved=await r.json();assert.match(saved.id,/^local_review_/);assert.equal(saved.version,1);
   const same=await upload(route);assert.equal(same.status,200);assert.equal((await same.json()).reused,true);
+  const direct=await fetch(base+route+'/download?delivery=drive-links',{headers:{'x-demo-user-email':p.aluno1.email}});assert.equal(direct.status,200);assert.deepEqual(await direct.json(),{links:null});
   const dl=await fetch(base+route+'/download',{headers:{'x-demo-user-email':p.aluno1.email}});assert.equal(dl.status,200);assert.deepEqual(Buffer.from(await dl.arrayBuffer()),pdf);
   assert.equal((await fetch(base+route+'/download')).status,401);assert.equal((await upload('/api/processes/other-review/files/trabalho-completo')).status,404);
   const next=createProfessionalPdf({title:'FICTÍCIO 2',protocol:p.protocolo,body:'Segunda versão.'});const replaced=await upload(route,next);assert.equal(replaced.status,201);assert.equal((await replaced.json()).version,2);
