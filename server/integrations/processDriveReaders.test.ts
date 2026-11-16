@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {processDriveReaderEmails,grantMissingDriveReaders} from './processDriveReaders';
-import {resolvePrivateDriveBrowserLinks,synchronizeProcessFolderReaders} from './googleDriveArchive';
+import {resolvePrivateDriveBrowserLinks,ensurePortalProcessDriveFolder,uploadProcessFormPdf} from './googleDriveArchive';
 import {createHash} from 'node:crypto';
 
 test('automatic readers come only from persisted authors and advisor',()=>{
-  assert.deepEqual(processDriveReaderEmails({aluno1:{email:'Author@Example.invalid'},aluno2:{email:'author@example.invalid'},orientador:{email:'advisor@example.invalid'},banca:[{email:'examiner@example.invalid'}]} as any),['author@example.invalid','advisor@example.invalid']);
+  assert.deepEqual(processDriveReaderEmails({aluno1:{email:'Author@Example.invalid'},aluno2:{email:'author@example.invalid'},orientador:{email:'advisor@example.invalid'},banca:[{email:'examiner@example.invalid'}]} as any,()=>true),['author@example.invalid','advisor@example.invalid']);
 });
 
 test('reader enrollment is silent, read-only and does not repeat existing grants',async t=>{
@@ -34,16 +34,6 @@ test('direct access verifies file binding and integrity before enrolling a parti
   process='process-1';sha='b'.repeat(64);assert.equal(await resolvePrivateDriveBrowserLinks(input),null);assert.equal(writes,0);
   sha='a'.repeat(64);assert.ok(await resolvePrivateDriveBrowserLinks(input));assert.equal(writes,1);
   assert.equal(await resolvePrivateDriveBrowserLinks({...input,email:'outsider@example.invalid'}),null);assert.equal(writes,1);
-});
-
-test('folder sharing rejects a folder outside the configured process root before any grant',async t=>{
-  let writes=0;
-  t.mock.method(globalThis,'fetch',async(url,init)=>{
-    if(init?.method==='POST')writes++;
-    const id=new URL(String(url)).pathname.split('/').at(-1);
-    return Response.json(id==='process_folder'?{id,mimeType:'application/vnd.google-apps.folder',parents:['unrelated_folder']}:{id,name:'02_PROCESSOS',mimeType:'application/vnd.google-apps.folder',parents:['other_root']});
-  });
-  await assert.rejects(synchronizeProcessFolderReaders({accessToken:'fixture',folderId:'process_folder',rootFolderId:'portal_root',processId:'process-1',readerEmails:['author@example.invalid']}),/raiz/);assert.equal(writes,0);
 });
 
 test('synchronization revokes only its own obsolete reader and preserves manual grants',async t=>{
@@ -83,8 +73,37 @@ test('reservation direct links require the exact archived form version before sh
 test('oversized and malformed addresses cannot request a Drive permission',async t=>{
   let calls=0;t.mock.method(globalThis,'fetch',async()=>{calls++;throw Error('must not contact Google');});
   for(const email of ['a@b', 'a@@b.invalid', 'a b@example.invalid', '!@!.'+'!.'.repeat(10000)]){
-    assert.deepEqual(processDriveReaderEmails({aluno1:{email}} as any),[]);
+    assert.deepEqual(processDriveReaderEmails({aluno1:{email}} as any,()=>true),[]);
     await assert.rejects(grantMissingDriveReaders('fixture','file_12345678',[email],[]),/inválido/);
   }
   assert.equal(calls,0);
+});
+
+test('revoked participants are excluded despite their historical process membership',()=>{
+  const process={aluno1:{email:'revoked@example.invalid'},aluno2:{email:'active@example.invalid'},orientador:{email:'advisor@example.invalid'}};
+  assert.deepEqual(processDriveReaderEmails(process as any,email=>email!=='revoked@example.invalid'),['active@example.invalid','advisor@example.invalid']);
+});
+
+test('preparing a process folder never shares its private custom response descendants',async t=>{
+  let writes=0;
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    if(init?.method){writes++;throw Error('no ACL writes while preparing folders');}
+    const u=new URL(String(url));if(u.pathname.endsWith('/permissions'))return Response.json({permissions:[]});
+    return Response.json({files:[{id:u.searchParams.get('q')?.includes('02_PROCESSOS')?'processes_folder':'process_folder',webViewLink:'https://drive.google.com/drive/folders/process_folder'}]});
+  });
+  await ensurePortalProcessDriveFolder({accessToken:'fixture',rootFolderId:'portal_root',protocol:'TEST-1',processId:'process-1'});
+  assert.equal(writes,0);
+});
+
+test('custom submission PDFs remain private even if reader emails are accidentally supplied',async t=>{
+  let writes=0;
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    if(init?.method){writes++;throw Error('custom submissions must never receive participant ACLs');}
+    const u=new URL(String(url));
+    if(u.pathname.endsWith('/permissions'))return Response.json({permissions:[]});
+    const q=u.searchParams.get('q')||'';
+    return Response.json({files:q.includes('portalProcessId')?[{id:'custom_pdf_12345',appProperties:{sha256:'a'.repeat(64)}}]:[{id:'private_folder_12345'}]});
+  });
+  await uploadProcessFormPdf({accessToken:'fixture',processFolderId:'process_folder',processId:'process-1',protocol:'TEST-1',studentNames:['Fixture'],formType:'CUSTOM_examiner',version:1,pdf:Buffer.from('%PDF-fixture'),sha256:'a'.repeat(64),readerEmails:['author@example.invalid']});
+  assert.equal(writes,0);
 });

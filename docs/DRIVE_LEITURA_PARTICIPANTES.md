@@ -4,11 +4,11 @@ O Portal mantém os documentos originais no Drive institucional. A autorização
 
 ## Acesso dos participantes
 
-Ao preparar a pasta do processo, o servidor compartilha sua leitura com os e-mails cadastrados dos autores e do orientador. A operação usa `role=reader` e `sendNotificationEmail=false`, sem enviar uma notificação do Google. Documentos em destinos separados recebem a mesma leitura após a conferência de sua vinculação ao processo. Os destinatários vêm do cadastro persistido; a requisição do navegador não pode escolher terceiros.
+Ao arquivar o cadastro e os comprovantes de reserva, o servidor compartilha a leitura desses PDFs com os autores e o orientador que continuam autorizados no processo. A pasta inteira permanece privada, para não expor respostas de formulários destinadas a outros participantes. A operação usa `role=reader` e `sendNotificationEmail=false`, sem enviar uma notificação do Google. Convites e documentos administrativos recebem a leitura após a conferência de sua vinculação ao processo. Os destinatários vêm do cadastro persistido; a requisição do navegador não pode escolher terceiros.
 
 O usuário precisa estar conectado no Google com a conta cujo e-mail recebeu o compartilhamento. O login no Portal não conecta automaticamente essa conta no Google. Um arquivo privado continua exigindo essa autorização no Drive, mesmo que alguém conheça seu link.
 
-O Master encontra em Configurações → Integrações e Plataforma → Google Drive a ação **Atualizar leitura dos participantes**. Ela percorre os processos existentes em lotes de dois, sem recriar PDFs, reenviar convites ou movimentar o fluxo de assinaturas. Falhas são apresentadas por protocolo e podem ser corrigidas e repetidas. A rotina é idempotente para permissões já presentes.
+O Master encontra em Configurações → Integrações e Plataforma → Google Drive a ação **Atualizar leitura dos participantes**. Ela percorre os processos existentes em lotes de dois, sem recriar PDFs, reenviar convites ou movimentar o fluxo de assinaturas. Falhas são apresentadas por protocolo e podem ser corrigidas e repetidas. A rotina é idempotente para permissões já presentes e aguarda o limite de requisições sem perder o lote atual.
 
 As permissões novas são registradas em propriedades privadas do arquivo. Em uma sincronização posterior, somente as permissões de leitor que o próprio Portal criou podem ser retiradas quando o participante sai do cadastro. Compartilhamentos manuais anteriores e permissões herdadas exigem revisão no Drive; esta rotina não transfere propriedade nem remove editores administrativos.
 

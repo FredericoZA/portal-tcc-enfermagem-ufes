@@ -52,6 +52,20 @@ async function requestAfterRuntimeBusy<T>(path:string,options:ApiRequestOptions=
   }
 }
 
+async function syncProcessDriveReaders(afterProcessId?:string){
+  const revision=activeIdentityRevision;
+  for(let attempt=0;;attempt++){
+    if(revision!==activeIdentityRevision)throw new ApiRequestError('Consulta cancelada.',0,'REQUEST_CANCELED');
+    try{return await fetchApi<{results:Array<{protocol:string;ok:boolean;error?:string}>;nextProcessId:string|null}>('/api/admin/drive-readers/sync',{method:'POST',body:JSON.stringify({afterProcessId})});}
+    catch(error){
+      if(!(error instanceof ApiRequestError)||error.status!==429||attempt>=2)throw error;
+      const seconds=error.retryAfterSeconds;
+      if(seconds===undefined||seconds<0||seconds>60)throw error;
+      await waitForAuditLogRetry(new AbortController().signal,seconds*1000+100);
+    }
+  }
+}
+
 function getRegistrationBootstrap(options:Pick<ApiRequestOptions,'signal'>={}):Promise<RegistrationBootstrap>{
   return requestAfterRuntimeBusy<RegistrationBootstrap>('/api/registration/bootstrap',{signal:options.signal||new AbortController().signal});
 }
@@ -240,7 +254,7 @@ async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, f
 }
 
 export const apiClient = {
-  syncProcessDriveReaders:(afterProcessId?:string)=>fetchApi<{results:Array<{protocol:string;ok:boolean;error?:string}>;nextProcessId:string|null}>('/api/admin/drive-readers/sync',{method:'POST',body:JSON.stringify({afterProcessId})}),
+  syncProcessDriveReaders,
   getReservationReceiptDriveLinks:(processId:string,receiptId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/location-proof/download?receipt=${encodeURIComponent(receiptId)}&delivery=drive-links`),
   getPublicRepositoryDriveLinks:(path:string)=>{
     const u=new URL(path,window.location.origin);

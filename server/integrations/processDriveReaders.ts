@@ -11,9 +11,9 @@ function validReaderEmail(value:string):boolean{
 }
 
 /** Only the persisted authors and advisor are automatically enrolled. */
-export function processDriveReaderEmails(process:Pick<ProcessData,'aluno1'|'aluno2'|'orientador'>):string[]{
+export function processDriveReaderEmails(process:Pick<ProcessData,'aluno1'|'aluno2'|'orientador'>,hasAccess:(email:string)=>boolean):string[]{
   return [...new Set([process.aluno1?.email,process.aluno2?.email,process.orientador?.email]
-    .map(value=>String(value||'').trim().toLowerCase()).filter(validReaderEmail))];
+    .map(value=>String(value||'').trim().toLowerCase()).filter(email=>validReaderEmail(email)&&hasAccess(email)))];
 }
 
 /** Caller must validate the process/file binding before using this internal helper. */
