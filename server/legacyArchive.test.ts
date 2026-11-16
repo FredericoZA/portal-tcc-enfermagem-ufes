@@ -136,5 +136,6 @@ test('historical withdrawal overrides publication without rewriting original con
 test('public historical document policy excludes evaluation instruments and keeps Drive references private',async()=>{
  const {publicLegacyAdministrativeDocuments}=await import('./legacyArchive');const record=canonicalLegacyRecord(legacyFixture() as any);
  const kinds=['CONVITE','ATA','TERMO','DECLARACAO','AVALIACAO'];record.provenance.administrativeDocuments=kinds.map((kind,i)=>({driveFileId:'private_admin_file_'+i,folderId:'private_folder_123456',fileName:kind+'.pdf',sha256:'a'.repeat(64),kind,visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'}));
+ (record.provenance.administrativeDocuments as any[]).push({driveFileId:record.attachments[0].driveFileId,folderId:'private_folder_123456',fileName:'misclassified.pdf',sha256:record.attachments[0].sha256,kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'});
  const documents=publicLegacyAdministrativeDocuments(record);assert.deepEqual(documents.map(d=>d.type),kinds.slice(0,4));assert.doesNotMatch(JSON.stringify(documents),/private_admin|private_folder|AVALIACAO/);
 });
