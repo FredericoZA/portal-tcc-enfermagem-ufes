@@ -55,4 +55,3 @@ export async function grantMissingDriveReaders(accessToken:string,fileId:string,
     throw error;
   }
 }
-
