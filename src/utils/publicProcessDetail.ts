@@ -12,8 +12,11 @@ export function publicProcessDetail(data: any): { process: ProcessData; document
     avaliacao: data.avaliacao || { status: 'PENDENTE' },
     dataRevision: 0,
   } as ProcessData;
-  const documents = (data.legacyRecord?[]:Object.keys(administrativeDocumentLabels) as DocumentType[]).map(type => {
-    const published = data.documents?.find((doc: any) => doc.type === type);
+  const entries = data.legacyRecord
+    ? (data.documents || []).filter((doc:any) => Object.hasOwn(administrativeDocumentLabels,doc.type))
+    : (Object.keys(administrativeDocumentLabels) as DocumentType[]).map(type => data.documents?.find((doc:any) => doc.type===type) || {type});
+  const documents = entries.map((published:any) => {
+    const type=published.type as DocumentType;
     return {
       id: published?.id || `public-${type}`, type, title: administrativeDocumentLabels[type].title,
       signatureProgress:data.documentProgress?.[type],

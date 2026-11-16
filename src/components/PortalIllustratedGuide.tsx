@@ -166,7 +166,7 @@ export const guideActivities: GuideActivity[] = [
       'O orientador, os dois examinadores, cada autor e o coorientador que participou da sessão assinam a ata. Todos os autores e o orientador assinam o termo, se houver publicação autorizada. A declaração é assinada pela presidência da comissão.',
       'O ASTEN envia o pedido de assinatura automaticamente quando o documento fica disponível. Confira o estado em Documentos administrativos e assine pelo seu link pessoal, recebido por e-mail.',
       'Pelo Gov.br, cada participante assina o mesmo PDF. Na ata, o orientador reúne as assinaturas de todos os signatários indicados; no termo, reúne as dos autores e a sua. O orientador devolve um PDF completo para cada documento.',
-      'Use Ver e Baixar PDF quando disponíveis. A ata assinada e arquivada libera a entrega final. A conclusão do processo depende também da entrega e dos demais documentos obrigatórios.',
+      'Convite, comprovante de agendamento, ata, termo quando houver e declaração são públicos depois de expedidos, independentemente da autorização dos PDFs acadêmicos. Use Ver e Baixar PDF quando disponíveis. A ata assinada e arquivada libera a entrega final. A conclusão do processo depende também da entrega e dos demais documentos obrigatórios.',
     ],
     done: 'O documento aparece assinado e arquivado, com as ações de consulta e download disponíveis.',
     help: [
@@ -262,11 +262,11 @@ export const guideActivities: GuideActivity[] = [
     steps: [
       'No mesmo Repositório, procure códigos como 001 - Legado. A numeração identifica os trabalhos antigos importados.',
       'Abra o código e consulte as mesmas abas dos demais TCCs. Dados ou arquivos ausentes na origem podem permanecer sem preenchimento. Um trabalho antigo pode ter apenas resumo expandido.',
-      'O resumo síntese pode ser lido na tabela e na ficha. Os PDFs acadêmicos só ficam públicos com autorização confirmada. A documentação administrativa antiga permanece privada para consulta do Master; o instrumento histórico da banca fica no sexto cartão de Documentos administrativos.',
+      'O resumo síntese pode ser lido na tabela e na ficha. Os PDFs acadêmicos só ficam públicos com autorização confirmada. Convite, ata, termo quando houver e declaração históricos identificados ficam públicos. O instrumento histórico da banca continua restrito e aparece no sexto cartão para o Master.',
       'O registro histórico não inicia outro cadastro, defesa ou assinatura. Não crie um novo processo para completar um trabalho antigo.',
     ],
     done: 'Você consultou os dados e os arquivos disponíveis do registro histórico.',
-    help: ['Documento antigo restrito: a importação não autoriza a divulgação de dados pessoais ou de protocolos de assinatura presentes nos arquivos.'],
+    help: ['O instrumento histórico de avaliação e arquivos sem classificação pública permanecem restritos. TCC e resumo expandido exigem a autorização registrada para cada PDF.'],
   },
   {
     id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'examinador', 'visitante'], imageId: 'sugestoes',

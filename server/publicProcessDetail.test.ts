@@ -25,3 +25,10 @@ test('shared public detail uses allowlisted people and only publicly issued docu
  }
  assert.equal(result.process.acervo?.trabalhoCompletoFileUrl,undefined);
 });
+
+
+test('legacy public detail preserves each original of the same type',()=>{
+ const entries=[0,1].map(i=>({id:`legacy-document-${i}`,type:'DECLARACAO',status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/legado-0001/documents/${i}/download`}));
+ const {documents}=publicProcessDetail({legacyRecord:true,documents:entries});
+ assert.equal(documents.length,2);assert.deepEqual(documents.map(doc=>doc.id),entries.map(doc=>doc.id));assert.deepEqual(documents.map(doc=>doc.driveDownloadUrl),entries.map(doc=>doc.url));
+});

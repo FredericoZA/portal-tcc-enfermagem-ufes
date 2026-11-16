@@ -1,8 +1,8 @@
 import {processDriveReaderEmails} from './server/integrations/processDriveReaders';
-import {publicDriveFailure} from './server/publicDriveFailure';
+import {publicDriveFailure,publicDocumentDriveFailure} from './server/publicDriveFailure';
 import {rateLimit} from 'express-rate-limit';
 import {restoreChangesPublicFiles} from './server/workflow/publicationRestoreGuard';
-import {publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
+import {publicInvitationFingerprint,publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
 import {archiveRetiredRuntimeBackups} from './server/backup/retention';
 import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
 import {loadPortalRepositorySnapshot} from './server/integrations/supabase';
@@ -36,7 +36,7 @@ import {stripDocumentScanningBlocks,delimitedTextParts,stripInlineMarkup} from '
 import {isEmailAddress,isEmailHeaderAddress} from './src/utils/emailAddress';
 import { legacyRepositoryProcess } from './src/utils/legacyRepository';
 import { readLegacyAcademicPdf } from './server/legacyArchiveFiles';
-import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles } from './server/legacyArchive';
+import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
 import {EVALUATION_OUTCOMES,evaluationQuestions,isConceptRegistrationReleased} from './src/utils/evaluationForm';
 import {renderInstitutionName} from './src/utils/institutionName';
@@ -1223,19 +1223,20 @@ async function createInstitutionalDossier(process:ProcessData,actorEmail:string,
   const processSnapshot=Buffer.from(JSON.stringify({...process,createdByEmail:process.createdByEmail},null,2),'utf8');addBuffer('00_MANIFESTO/processo.json',processSnapshot,'PROCESS_SNAPSHOT');
   const processLogs=auditLogsStore.filter(log=>log.processId===process.id).map(log=>JSON.stringify(log)).join('\n');addBuffer('00_MANIFESTO/auditoria.jsonl',Buffer.from(processLogs,'utf8'),'AUDIT_LOG');
   let accessToken='';try{accessToken=await getGoogleWorkspaceAccessToken();}catch{missing.push('Conexão Google indisponível para copiar os PDFs.');}
-  const candidates:Array<{path:string;fileId?:string;kind:string}>=[
+  const candidates:Array<{path:string;fileId?:string;kind:string;expected?:Parameters<typeof downloadDrivePdf>[2]}>=[
     {path:`01_TRABALHO_COMPLETO/${process.acervo?.trabalhoCompletoFileName||'trabalho-completo.pdf'}`,fileId:process.acervo?.trabalhoCompletoFileId,kind:'FULL_WORK'},
     {path:`02_RESUMO_EXPANDIDO/${process.acervo?.resumoExpandidoFileName||'resumo-expandido.pdf'}`,fileId:process.acervo?.resumoExpandidoFileId,kind:'EXPANDED_ABSTRACT'},
-    {path:'03_CARTA_CONVITE/carta-convite.pdf',fileId:process.defesa.invitationDriveFileId,kind:'INVITATION'}
+    {path:'03_CARTA_CONVITE/carta-convite.pdf',fileId:process.defesa.invitationDriveFileId,kind:'INVITATION',expected:{artifactType:'CONVITE',allowPublicRead:true}}
   ];
   if(process.defesa.locationProof)candidates.push({
     path:`09_COMPROVANTE_RESERVA/${process.defesa.locationProof.fileName}`,
     fileId:process.defesa.locationProof.driveFileId,
-    kind:'LOCATION_PROOF'
+    kind:'LOCATION_PROOF',
+    expected:(()=>{const archive=formArchiveJobsStore.find(job=>job.processId===process.id&&job.status==='ARCHIVED'&&job.driveFileId===process.defesa.locationProof?.driveFileId&&job.formType==='CONFIRMACAO_LOCAL');return archive?{formType:archive.formType,formVersion:archive.version,expectedSha256:archive.sha256,allowPublicRead:true}:undefined;})()
   });
-  for(const archive of formArchiveJobsStore.filter(job=>job.processId===process.id&&job.status==='ARCHIVED'))candidates.push({path:`00_FORMULARIOS/${archive.formType}/${archive.fileName||`${archive.formType}.pdf`}`,fileId:archive.driveFileId,kind:`FORM_${archive.formType}`});
-  for(const job of signatureJobsStore.filter(item=>item.processId===process.id&&item.status==='ARCHIVED')){const signedName=buildPortalDriveFileName({protocol:process.protocolo,title:process.titulo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],documentType:job.documentType,version:job.documentVersion,lifecycle:'ASSINADO'});candidates.push({path:`DOCUMENTOS_ASSINADOS/${job.documentType}/${signedName}`,fileId:job.driveSignedFileId,kind:`SIGNED_${job.documentType}`});}
-  for(const candidate of candidates){if(selectedTypes&&!selectedTypes.includes(candidate.kind==='INVITATION'?'CONVITE':candidate.kind.replace(/^SIGNED_/,'')))continue;if(!candidate.fileId){if(!['EXPANDED_ABSTRACT','INVITATION'].includes(candidate.kind))missing.push(`${candidate.kind}: arquivo não localizado.`);continue;}if(!accessToken){missing.push(`${candidate.kind}: Google indisponível.`);continue;}try{const kind=candidate.kind==='FULL_WORK'?'trabalho-completo':candidate.kind==='EXPANDED_ABSTRACT'?'resumo-expandido':'';const downloaded=await downloadDrivePdf(accessToken,candidate.fileId,{processId:process.id,...(kind?{artifactType:kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',expectedSha256:kind==='trabalho-completo'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256,allowPublicRead:candidate.kind==='FULL_WORK'?publicAcademicRead.FULL_WORK:publicAcademicRead.EXPANDED_ABSTRACT}:{})});addBuffer(candidate.path,downloaded.pdf,candidate.kind);}catch(error){missing.push(`${candidate.kind}: ${error instanceof Error?error.message:'falha no download'}`);}if(files.reduce((sum,file)=>sum+file.bytes,0)>100*1024*1024)throw new Error('O dossiê ultrapassou o limite de 100 MB.');}
+  for(const archive of formArchiveJobsStore.filter(job=>job.processId===process.id&&job.status==='ARCHIVED'))candidates.push({path:`00_FORMULARIOS/${archive.formType}/${archive.fileName||`${archive.formType}.pdf`}`,fileId:archive.driveFileId,kind:`FORM_${archive.formType}`,expected:{formType:archive.formType,formVersion:archive.version,expectedSha256:archive.sha256,allowPublicRead:archive.formType==='CONFIRMACAO_LOCAL'}});
+  for(const job of signatureJobsStore.filter(item=>item.processId===process.id&&item.status==='ARCHIVED')){const signedName=buildPortalDriveFileName({protocol:process.protocolo,title:process.titulo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],documentType:job.documentType,version:job.documentVersion,lifecycle:'ASSINADO'});candidates.push({path:`DOCUMENTOS_ASSINADOS/${job.documentType}/${signedName}`,fileId:job.driveSignedFileId,kind:`SIGNED_${job.documentType}`,expected:{artifactType:job.documentType,signatureJobId:job.id,expectedSha256:job.signedSha256,allowPublicRead:true}});}
+  for(const candidate of candidates){if(selectedTypes&&!selectedTypes.includes(candidate.kind==='INVITATION'?'CONVITE':candidate.kind.replace(/^SIGNED_/,'')))continue;if(!candidate.fileId){if(!['EXPANDED_ABSTRACT','INVITATION'].includes(candidate.kind))missing.push(`${candidate.kind}: arquivo não localizado.`);continue;}if(!accessToken){missing.push(`${candidate.kind}: Google indisponível.`);continue;}try{const kind=candidate.kind==='FULL_WORK'?'trabalho-completo':candidate.kind==='EXPANDED_ABSTRACT'?'resumo-expandido':'';const downloaded=await downloadDrivePdf(accessToken,candidate.fileId,{processId:process.id,...candidate.expected,...(kind?{artifactType:kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',expectedSha256:kind==='trabalho-completo'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256,allowPublicRead:candidate.kind==='FULL_WORK'?publicAcademicRead.FULL_WORK:publicAcademicRead.EXPANDED_ABSTRACT}:{})});addBuffer(candidate.path,downloaded.pdf,candidate.kind);}catch(error){missing.push(`${candidate.kind}: ${error instanceof Error?error.message:'falha no download'}`);}if(files.reduce((sum,file)=>sum+file.bytes,0)>100*1024*1024)throw new Error('O dossiê ultrapassou o limite de 100 MB.');}
   const profile=resolveInstallationProfile(currentSettings);const manifest={schemaVersion:1,installation:{id:profile.installationId,institution:profile.institutionName,course:profile.courseName},protocol:process.protocolo,generatedAt:new Date().toISOString(),generatedBy:actorEmail,files,missing};const manifestBuffer=Buffer.from(JSON.stringify(manifest,null,2),'utf8'),manifestHash=createHash('sha256').update(manifestBuffer).digest('hex');zip.file('00_MANIFESTO/manifest.json',manifestBuffer);zip.file('00_MANIFESTO/manifest.sha256',`${manifestHash}  manifest.json\n`);const output=await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE',compressionOptions:{level:6}});return{zip:output,fileName:`${process.protocolo}__DOSSIER_INSTITUCIONAL.zip`,manifestHash,included:files.length,missing};
 }
 const emailDeliveryJournal={
@@ -3826,7 +3827,7 @@ export async function createPortalApp() {
 
   app.get('/api/public/processes/:id',(req,res)=>{
     const legacy=legacyAcademicRecordsStore.find(r=>r.id===req.params.id||r.protocolo===req.params.id);
-    if(legacy){res.setHeader('Cache-Control','private, no-store');return res.json({...legacyRepositoryProcess(publicLegacyAcademicView(legacy)),canAccessPrivate:false,documents:[]});}
+    if(legacy){res.setHeader('Cache-Control','private, no-store');return res.json({...legacyRepositoryProcess(publicLegacyAcademicView(legacy)),canAccessPrivate:false,documents:publicLegacyAdministrativeDocuments(legacy)});}
     const p=findProcessByReference(req.params.id);
     const identity=getPortalIdentity(req),canAccessPrivate=Boolean(p&&identity&&canAccessProcess(identity.email,p.id));
     if(!p||(p.status==='EM_RASCUNHO'&&!canAccessPrivate))return res.status(404).json({error:'TCC não disponível para consulta pública.'});
@@ -3848,7 +3849,7 @@ export async function createPortalApp() {
     res.setHeader('Cache-Control','no-store');
     res.json({items:reservationReceipts(p).map(item=>item.summary),currentStatus:reservationReceiptStatus(p)});
   });
-  app.get('/api/public/processes/:id/reservation-receipt',async(req,res)=>{
+  app.get('/api/public/processes/:id/reservation-receipt',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     if(!allowPublicDownload(req.ip||''))return res.status(429).json({error:'Limite temporário de downloads atingido.'});
     const p=findProcessByReference(req.params.id);
     if(!p||p.status==='EM_RASCUNHO')return res.status(404).json({error:'Comprovante não disponível.'});
@@ -3856,11 +3857,24 @@ export async function createPortalApp() {
     if(req.query.receipt!==undefined&&!receiptId)return res.status(400).json({error:'Selecione um comprovante válido.'});
     const selected=receiptId?receipts.find(item=>item.summary.id===receiptId):receipts.find(item=>item.summary.current);
     if(!selected)return res.status(404).json({error:'Comprovante não disponível.'});
+    if(req.query.delivery==='drive-links'){
+      res.setHeader('Cache-Control','private, no-store');
+      if(localReviewFilesEnabled())return res.json({links:null});
+      const archive=formArchiveJobsStore.find(job=>job.processId===p.id&&job.formType==='CONFIRMACAO_LOCAL'&&job.reservationRevision===selected.summary.revision&&job.status==='ARCHIVED'&&job.driveFileId&&job.sha256);
+      if(!archive)return res.json({links:null});
+      try{
+        const accessToken=await getGoogleWorkspaceAccessToken();
+        const links=await publicRepositoryDriveLinks({accessToken,sourceFileId:archive.driveFileId!,scope:p.id,sha256:archive.sha256,artifactType:'CONFIRMACAO_LOCAL',formVersion:archive.version,
+          assertAuthorized:async()=>processesStore.includes(p)&&p.status!=='EM_RASCUNHO'&&formArchiveJobsStore.includes(archive)&&archive.status==='ARCHIVED',
+          validatePublicContent:async()=>{const file=await readProcessFormPdfById(accessToken,archive.driveFileId!,{processId:p.id,formType:archive.formType,formVersion:archive.version,allowedHashes:[archive.sha256]});if(!file)throw Error('Comprovante arquivado não encontrado.');await assertPublicAcademicPdf(file.pdf,p,{issuedAdministrativeDocument:true});}});
+        return res.json({links});
+      }catch(error){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}
+    }
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
     const suffix=receiptId?`-${selected.summary.id}`:'';
     res.type('application/pdf').attachment(`${p.protocolo}-comprovante${suffix}.pdf`).send(await createReservationReceiptPdf(selected.process,currentSettings,{publicView:true}));
   });
-  app.get('/api/public/processes/:id/documents/:docId/download',async(req,res)=>{
+  app.get('/api/public/processes/:id/documents/:docId/download',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     if(!allowPublicDownload(req.ip||''))return res.status(429).json({error:'Limite temporário de downloads atingido.'});
     const p=processesStore.find(item=>item.id===req.params.id||item.protocolo===req.params.id);
     if(!p||p.status==='EM_RASCUNHO')return res.status(404).json({error:'Documento não disponível.'});
@@ -3869,11 +3883,23 @@ export async function createPortalApp() {
     const job=doc.type==='CONVITE'?undefined:signatureJobsStore.filter(item=>item.processId===p.id&&item.documentType===doc.type&&item.documentVersion===doc.version&&item.status==='ARCHIVED'&&item.driveSignedFileId).sort((a,b)=>b.documentVersion-a.documentVersion)[0];
     const fileId=doc.type==='CONVITE'?p.defesa.invitationDriveFileId:job?.driveSignedFileId;
     if(!fileId)return res.status(404).json({error:'Documento não disponível.'});
+    if(req.query.delivery==='drive-links'){
+      res.setHeader('Cache-Control','private, no-store');
+      if(localReviewFilesEnabled())return res.json({links:null});
+      try{
+        const accessToken=await getGoogleWorkspaceAccessToken();
+        const sha256=doc.type==='CONVITE'?await publicInvitationFingerprint(accessToken,fileId,p.id):job?.signedSha256||'';
+        const links=await publicRepositoryDriveLinks({accessToken,sourceFileId:fileId,scope:p.id,sha256,artifactType:doc.type as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',...(job?{signatureJobId:job.id}:{}),
+          assertAuthorized:async()=>processesStore.includes(p)&&p.status!=='EM_RASCUNHO'&&publicAcademicDocuments(p,generateDefaultDocuments(p)).some(item=>item.id===doc.id&&item.version===doc.version)&&(job?signatureJobsStore.includes(job)&&job.status==='ARCHIVED'&&job.driveSignedFileId===fileId:p.defesa.invitationDriveFileId===fileId),
+          validatePublicContent:async()=>{const file=await downloadSourceFile(accessToken,fileId,{processId:p.id,artifactType:doc.type,allowPublicRead:true,...(job?{signatureJobId:job.id,expectedSha256:job.signedSha256}:{})});if(createHash('sha256').update(file.pdf).digest('hex')!==sha256)throw Error('O documento mudou durante a conferência pública.');await assertPublicAcademicPdf(file.pdf,p,{issuedAdministrativeDocument:true});}});
+        return res.json({links});
+      }catch(error){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}
+    }
     try{
       let bytes:Buffer;
       if(job?.provider==='GOV_BR'&&fileId.startsWith('local_govbr_'))bytes=await readGovbrPdf(job,fileId,String(job.signedSha256||''));
-      else{const token=await (localReviewFilesEnabled()&&fileId.startsWith('local_review_')?sourceFilesAccessToken():getGoogleWorkspaceAccessToken());bytes=(await downloadSourceFile(token,fileId,{processId:p.id,artifactType:doc.type,...(job?{signatureJobId:job.id}:{})})).pdf;}
-      await assertPublicAcademicPdf(bytes,p);
+      else{const token=await (localReviewFilesEnabled()&&fileId.startsWith('local_review_')?sourceFilesAccessToken():getGoogleWorkspaceAccessToken());bytes=(await downloadSourceFile(token,fileId,{processId:p.id,artifactType:doc.type,allowPublicRead:true,...(job?{signatureJobId:job.id,expectedSha256:job.signedSha256}:{})})).pdf;}
+      await assertPublicAcademicPdf(bytes,p,{issuedAdministrativeDocument:true});
       await deliverPortalDownload({res,processId:p.id,bytes,fileName:`${p.protocolo}-${doc.type}.pdf`,mimeType:'application/pdf',requesterBinding:`public:${req.ip||'unknown'}:${p.protocolo}:${doc.type}`,cacheControl:'no-store, max-age=0'});
     }catch{return res.status(404).json({error:'Esta cópia não está disponível para consulta pública. Os participantes autorizados podem consultar pelo acesso restrito.'});}
   });
@@ -3925,6 +3951,25 @@ export async function createPortalApp() {
       await persistPortalStateDurably();
     }catch{return res.status(502).json({error:'Os PDFs foram bloqueados no Portal. A retirada do acesso público no Drive está pendente; use Concluir retirada no Drive para tentar novamente.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
     res.json({recordId:current.id,withdrawnAt,public:false});
+  });
+  app.get('/api/public/legacy-academic-records/:id/documents/:index/download',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
+    const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);
+    const index=/^(0|[1-9]\d?)$/.test(req.params.index)?Number(req.params.index):-1;
+    if(!record||index<0||!publicLegacyAdministrativeDocuments(record).some(doc=>doc.id===`legacy-document-${index}`))return res.status(404).json({error:'Documento histórico não disponível.'});
+    const file=legacyAdministrativeFiles(record)[index];
+    res.setHeader('Cache-Control','private, no-store');
+    try{
+      if(req.query.delivery==='drive-links'){
+        if(localReviewFilesEnabled())return res.json({links:null});
+        const links=await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:file.driveFileId,scope:record.id,sha256:file.sha256,
+          assertAuthorized:async()=>legacyAcademicRecordsStore.includes(record)&&publicLegacyAdministrativeDocuments(record).some(doc=>doc.id===`legacy-document-${index}`)&&legacyAdministrativeFiles(record)[index]?.driveFileId===file.driveFileId&&legacyAdministrativeFiles(record)[index]?.sha256===file.sha256,
+          validatePublicContent:async()=>{await assertPublicAcademicPdf(await readLegacyAcademicPdf(file),legacyRepositoryProcess(publicLegacyAcademicView(record)),{issuedAdministrativeDocument:true});}});
+        return res.json({links});
+      }
+      const bytes=await readLegacyAcademicPdf(file);
+      await assertPublicAcademicPdf(bytes,legacyRepositoryProcess(publicLegacyAcademicView(record)),{issuedAdministrativeDocument:true});
+      return deliverPortalDownload({res,bytes,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`public-legacy-document:${req.ip||'unknown'}:${record.id}:${index}`,cacheControl:'no-store'});
+    }catch(error){if(req.query.delivery==='drive-links'){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}return res.status(409).json({error:'Não foi possível conferir o documento histórico.'});}
   });
   app.get('/api/admin/legacy-academic-records/:id/academic',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
@@ -4366,7 +4411,7 @@ export async function createPortalApp() {
         res.setHeader('Cache-Control','private, no-store');
         const archive=formArchiveJobsStore.find(job=>job.processId===process.id&&job.formType==='CONFIRMACAO_LOCAL'&&job.reservationRevision===receipt.summary.revision&&job.status==='ARCHIVED'&&job.driveFileId&&job.sha256);
         if(!archive)return res.json({links:null});
-        try{return res.json({links:await resolvePrivateDriveBrowserLinks({accessToken:await getGoogleWorkspaceAccessToken(),fileId:archive.driveFileId!,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType:archive.formType,formVersion:archive.version,expectedSha256:archive.sha256})});}
+        try{return res.json({links:await resolvePrivateDriveBrowserLinks({accessToken:await getGoogleWorkspaceAccessToken(),fileId:archive.driveFileId!,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType:archive.formType,formVersion:archive.version,expectedSha256:archive.sha256,allowPublicRead:true})});}
         catch{return res.json({links:null});}
       }
       const kind=receipt.summary.decision==='UNAVAILABLE'?'indisponibilidade':'reserva';
@@ -5533,12 +5578,12 @@ export async function createPortalApp() {
       res.setHeader('Cache-Control','private, no-store');
       if(fileId.startsWith('local_'))return res.json({links:null});
       try{
-        const links=await resolvePrivateDriveBrowserLinks({accessToken:await getGoogleWorkspaceAccessToken(),fileId,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType:document.type,...(signatureJob?{signatureJobId:signatureJob.id,expectedSha256:signatureJob.signedSha256}:{})});
+        const links=await resolvePrivateDriveBrowserLinks({accessToken:await getGoogleWorkspaceAccessToken(),fileId,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType:document.type,allowPublicRead:true,...(signatureJob?{signatureJobId:signatureJob.id,expectedSha256:signatureJob.signedSha256}:{})});
         return res.json({links});
       }catch{return res.json({links:null});} // Preserve the existing authorized path if Drive cannot confirm direct access.
     }
     if(signatureJob?.provider==='GOV_BR'&&fileId.startsWith('local_govbr_')){try{const pdf=await readGovbrPdf(signatureJob,fileId,String(signatureJob.signedSha256||''));await deliverPortalDownload({res,processId:process.id,bytes:pdf,fileName:signatureJob.govbrReview?.fileName||signatureJob.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch{return res.status(409).json({error:'PDF de demonstração indisponível.'});}return;}
-    try{const accessToken=await (localReviewFilesEnabled()&&fileId.startsWith('local_review_')?sourceFilesAccessToken():getGoogleWorkspaceAccessToken());const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType:document.type,...(signatureJob?{signatureJobId:signatureJob.id}:{})});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o documento.'});}
+    try{const accessToken=await (localReviewFilesEnabled()&&fileId.startsWith('local_review_')?sourceFilesAccessToken():getGoogleWorkspaceAccessToken());const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType:document.type,allowPublicRead:true,...(signatureJob?{signatureJobId:signatureJob.id,expectedSha256:signatureJob.signedSha256}:{})});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o documento.'});}
   });
 
   app.get('/api/processes/:id/signatures',requireAuthenticated,(req,res)=>{
@@ -5983,7 +6028,7 @@ export async function createPortalApp() {
           const readerEmails=authorizedProcessDriveReaderEmails(process);
           const files:Array<{fileId:string;artifactType:string;expectedSha256?:string;signatureJobId?:string;formVersion?:number;allowPublicRead?:boolean}>=[];
           const invitationIds=new Set([process.defesa.invitationDriveFileId,...(process.defesa.reservationHistory||[]).map(item=>item.invitationDriveFileId)].filter((id):id is string=>typeof id==='string'&&id.length>0));
-          for(const fileId of invitationIds)files.push({fileId,artifactType:'CONVITE'});
+          for(const fileId of invitationIds)files.push({fileId,artifactType:'CONVITE',allowPublicRead:true});
           for(const [kind,fileId,expectedSha256] of [
             ['trabalho-completo',process.acervo?.trabalhoCompletoFileId,process.acervo?.trabalhoCompletoSha256],
             ['resumo-expandido',process.acervo?.resumoExpandidoFileId,process.acervo?.resumoExpandidoSha256],
@@ -5991,9 +6036,9 @@ export async function createPortalApp() {
             const allowPublicRead=publicFileAuthorized(process,signatureJobsStore,kind);
             if(fileId)files.push({fileId,artifactType:kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',expectedSha256,allowPublicRead});
           }
-          for(const job of signatureJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveSignedFileId))files.push({fileId:job.driveSignedFileId!,artifactType:job.documentType,expectedSha256:job.signedSha256,signatureJobId:job.id});
+          for(const job of signatureJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveSignedFileId))files.push({fileId:job.driveSignedFileId!,artifactType:job.documentType,expectedSha256:job.signedSha256,signatureJobId:job.id,allowPublicRead:true});
           for(const job of formArchiveJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveFileId&&j.sha256&&['CADASTRO_INICIAL','CONFIRMACAO_LOCAL'].includes(j.formType))){
-            files.push({fileId:job.driveFileId!,artifactType:job.formType,expectedSha256:job.sha256,formVersion:job.version});
+            files.push({fileId:job.driveFileId!,artifactType:job.formType,expectedSha256:job.sha256,formVersion:job.version,allowPublicRead:job.formType==='CONFIRMACAO_LOCAL'});
           }
           files.push(...await listSupersededProcessAcademicFiles(accessToken,process.id));
           // Share only allowed documents, never the folder containing private custom responses.

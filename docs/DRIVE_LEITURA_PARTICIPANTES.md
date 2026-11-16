@@ -16,7 +16,15 @@ As permissões novas são registradas em propriedades privadas do arquivo. Em um
 
 Os botões solicitam links diretamente do Google Drive depois de verificar sessão, vínculo no processo e identidade do documento. Os comprovantes privados também usam essa entrega quando sua versão arquivada está identificada. Não há transferência do corpo do PDF pela Vercel nesse caminho. Se o Google não confirmar o acesso, permanece o caminho compatível autorizado do Portal; portanto, a simples publicação deste código não comprova que todos os PDFs já usam entrega direta.
 
-Comprovantes públicos resumidos continuam protegendo os dados pessoais: não tornam público o comprovante privado original.
+## Política de publicação
+
+O padrão é privado para pastas, cadastros completos, respostas de formulários e demais arquivos internos. São públicos, depois de expedidos, os originais do convite, comprovante de agendamento/resposta de reserva, ata, termo de autorização quando houver e declaração. A publicidade desses cinco documentos não depende da escolha sobre o TCC ou resumo expandido. Documentos ainda em elaboração ou aguardando assinatura não são antecipados.
+
+Título, nomes, data e local da defesa, resumo sintético, palavras-chave e parecer registrado são informações públicas. A ficha pública não inclui credenciais, respostas internas nem os identificadores privados dos PDFs acadêmicos. TCC e resumo expandido permanecem privados até a autorização independente de cada arquivo e a conclusão das condições de publicação.
+
+A leitura pública é concedida ao arquivo original com `anyone/reader`; pastas e modelos não se tornam públicos. Os PDFs administrativos são conferidos uma vez por hash antes da liberação, preservando os bytes e recusando credenciais de acesso. A marca de conferência permite que os acessos seguintes usem apenas metadados e links do Drive. Não são produzidas cópias públicas. Se o Drive ainda não autorizar a operação, o Portal mantém a entrega compatível sem afirmar que a permissão pública foi aplicada.
+
+O perfil Master do Portal não precisa receber poderes adicionais. A conexão OAuth institucional pode precisar de uma reconexão única para incorporar o gerenciamento dos arquivos históricos; a renovação normal das credenciais é feita no servidor.
 
 ## Verificação e recuperação
 

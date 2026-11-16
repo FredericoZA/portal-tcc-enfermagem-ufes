@@ -261,6 +261,12 @@ export const apiClient = {
     if(u.origin!==window.location.origin||!(/^\/api\/public\/processes\/[^/]+\/files\/(trabalho-completo|resumo-expandido)\/download$/.test(u.pathname)||/^\/api\/legacy-academic-records\/[^/]+\/files\/(0|[1-9]\d?)\/download$/.test(u.pathname)))throw Error('Endereço público inválido.');
     return fetchApi<{links:{view:string;download:string}|null}>(u.pathname+'?delivery=drive-links');
   },
+  getPublicDocumentDriveLinks:(path:string)=>{
+    const u=new URL(path,window.location.origin);
+    if(u.origin!==window.location.origin||!(/^\/api\/public\/processes\/[^/]+\/documents\/[^/]+\/download$/.test(u.pathname)||/^\/api\/public\/processes\/[^/]+\/reservation-receipt$/.test(u.pathname)||/^\/api\/public\/legacy-academic-records\/[^/]+\/documents\/(0|[1-9]\d?)\/download$/.test(u.pathname)))throw Error('Endereço de documento público inválido.');
+    const receipt=u.searchParams.get('receipt');u.search='';if(receipt)u.searchParams.set('receipt',receipt);u.searchParams.set('delivery','drive-links');
+    return fetchApi<{links:{view:string;download:string}|null}>(u.pathname+u.search);
+  },
   getDocumentDriveLinks:(processId:string,documentId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(documentId)}/download?delivery=drive-links`),
   withdrawLegacyPublication:(id:string,reason:string)=>fetchApi(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/publication/withdraw`,{method:'POST',body:JSON.stringify({reason})}),
   importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),

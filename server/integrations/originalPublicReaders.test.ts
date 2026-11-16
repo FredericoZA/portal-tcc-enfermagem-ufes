@@ -15,7 +15,7 @@ test('existing academic readers accept an explicitly authorized public original 
  const input={accessToken:'fixture',fileId:'original_pdf_123',email:'participant@example.invalid',...expected};
  await assert.rejects(resolvePrivateDriveBrowserLinks(input),/compartilhamento/);
  assert.ok(await resolvePrivateDriveBrowserLinks({...input,allowPublicRead:true}));
- await assert.rejects(downloadDrivePdf('fixture','original_pdf_123',{...expected,artifactType:'ATA',allowPublicRead:true}),/compartilhamento/);
+ await assert.rejects(downloadDrivePdf('fixture','original_pdf_123',{...expected,artifactType:'ATA',allowPublicRead:true}),/tipo do arquivo/);
  role='writer';await assert.rejects(downloadDrivePdf('fixture','original_pdf_123',{...expected,allowPublicRead:true}),/Compartilhamento/);await assert.rejects(resolvePrivateDriveBrowserLinks({...input,allowPublicRead:true}),/compartilhamento/);
 });
 test('legacy academic originals accept public reading only with an exact recorded hash',async t=>{

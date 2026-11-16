@@ -62,7 +62,7 @@ pages=[
  ('Abra “Repositório acadêmico”.','A entrega é liberada depois de todas as assinaturas exigidas na ata e do seu arquivamento. Qualquer um dos autores pode concluir esta etapa.'),
  ('Preencha o resumo síntese e as palavras-chave.','Escreva até três parágrafos e 2.000 caracteres. Preencha exatamente cinco palavras-chave, uma em cada campo.'),
  ('Clique em “Escolher arquivo” no trabalho completo.','Selecione o PDF final do TCC. Este arquivo é obrigatório. Anexe o PDF do resumo expandido se houver; ele é opcional.'),
- ('Escolha a divulgação e confirme a entrega.','Assinale somente a caixa do arquivo que deseja tornar público. Sem caixas assinaladas, nenhum PDF será publicado. Clique em “Confirmar entrega e ir para documentos”. Aguarde a confirmação do Portal.')],note='Apenas escolher um arquivo não conclui a entrega. É necessário clicar no botão de confirmação e aguardar o registro.'),
+ ('Escolha a divulgação e confirme a entrega.','Assinale somente a caixa do arquivo que deseja tornar público. Sem caixas assinaladas, nenhum PDF acadêmico será publicado. Clique em “Confirmar entrega e ir para documentos”. Aguarde a confirmação do Portal.')],note='Apenas escolher um arquivo não conclui a entrega. É necessário clicar no botão de confirmação e aguardar o registro.'),
  dict(tag='ALUNO • DEPOIS DA ENTREGA',title='7. Publicação e termo de autorização',steps=[
  ('Confira a aba “Documentos administrativos”.','Depois da confirmação, os dados da entrega ficam bloqueados. Se “Editar entrega” ainda estiver disponível, use-o somente para uma correção necessária; informe o motivo e confirme novamente arquivos e autorizações. Se houver publicação, o novo termo exigirá novas assinaturas.'),
  ('Se nenhum PDF foi autorizado para publicação, não há termo.','O TCC entregue continua guardado para consulta institucional restrita. Não é necessário marcar publicação para concluir a entrega.'),
@@ -228,7 +228,7 @@ for page_number,page in enumerate(pages,1):
   para('<b>Se os autores não autorizarem a publicação</b><br/>Anexe o TCC, deixe as opções de tornar público desmarcadas e confirme a entrega. O arquivo permanece com acesso restrito. Não haverá termo de publicação para assinar.',gap=19)
   para('<b>Se os autores autorizarem a publicação</b><br/>Marque o TCC, o resumo expandido ou ambos, conforme a autorização. Após a entrega, o termo é gerado e a ASTEN envia automaticamente os links de assinatura aos autores e ao orientador.',gap=19)
   para('<b>As escolhas são independentes.</b><br/>É possível entregar os dois PDFs e autorizar a divulgação de apenas um, dos dois ou de nenhum. O resumo expandido é opcional; o PDF do TCC completo é obrigatório nos trabalhos novos.',gap=16)
-  para('Exemplo: entregar o TCC e não marcar “Tornar este Trabalho de TCC Público” cumpre a entrega sem divulgar o PDF ao público.',style='body')
+  para('Convite, comprovante de agendamento, ata, termo quando houver e declaração são públicos depois de expedidos. Título, nomes, defesa, resumo síntese, palavras-chave e parecer registrado também são públicos. As pastas e os formulários internos continuam privados.',style='body')
  elif page.get('kind')=='reference':
   header(page['tag'],page['title'])
   for title,text in [

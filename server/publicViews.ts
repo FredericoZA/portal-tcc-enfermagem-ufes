@@ -86,7 +86,7 @@ function expandedAbstractState(process: ProcessData): PublicArtifactState {
 
 /**
  * Contrato do repositório anônimo. Os links passam pela autorização do Portal;
- * os originais permanecem privados e seus IDs nunca são serializados.
+ * os PDFs acadêmicos seguem o consentimento individual e seus IDs nunca são serializados.
  */
 export function publicRepositoryView(process: ProcessData) {
   const acervo = process.status === 'CONCLUIDO' ? process.acervo : undefined;
@@ -123,7 +123,7 @@ export function publicRepositoryView(process: ProcessData) {
       hasReservationReceipt: receiptCount > 0,
       reservationReceiptCount: receiptCount,
     },
-    avaliacao: { status: process.avaliacao.status },
+    avaliacao: { status: process.avaliacao.status,...(process.avaliacao.status==='CONCLUIDO'?{parecer:process.avaliacao.parecer}:{}) },
     acervo: acervo
       ? {
           palavrasChave: [...(acervo.palavrasChave || [])],

@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {PDFDocument,StandardFonts} from 'pdf-lib';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
@@ -36,7 +37,10 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
   await writeFile(path.join(dir,'legacy-import','drive-pdfs','tcc.pdf'),pdf);
   await writeFile(path.join(dir,'legacy-import','drive-pdfs','admin.pdf'),pdf);
   const privateDocument={driveFileId:'private_admin_123456',fileName:'instrumento.pdf',sourceFileName:'admin.pdf',folderId:'private_folder_12345',kind:'AVALIACAO',sha256:createHash('sha256').update(pdf).digest('hex'),visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'};
-  const importedRecord={...record,attachments:[{...record.attachments[0],sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{...record.provenance,administrativeDocuments:[privateDocument]}};
+  const issued=await PDFDocument.create(),font=await issued.embedFont(StandardFonts.Helvetica);issued.addPage().drawText('Ata historica expedida. Autoria e composicao da banca examinadora.',{x:30,y:700,size:12,font});
+  const publicAta=Buffer.from(await issued.save());await writeFile(path.join(dir,'legacy-import','drive-pdfs','ata.pdf'),publicAta);
+  const issuedDocument={...privateDocument,driveFileId:'issued_admin_123456',fileName:'ata.pdf',sourceFileName:'ata.pdf',kind:'ATA',sha256:createHash('sha256').update(publicAta).digest('hex')};
+  const importedRecord={...record,attachments:[{...record.attachments[0],sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{...record.provenance,administrativeDocuments:[privateDocument,issuedDocument]}};
   const port=43000+Math.floor(Math.random()*1000),base=`http://127.0.0.1:${port}`;
   const child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),PORTAL_DATA_DIR:dir,PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_SESSION_SECRET:'test-legacy-session-secret-123456789',PORTAL_OTP_PEPPER:'test-legacy-otp-pepper-123456789',SUPABASE_URL:'',SUPABASE_SERVICE_ROLE_KEY:'',SUPABASE_SECRET_KEY:'',VERCEL:'',PORTAL_TEST_DOCUMENT_RENDERER:'true',PORTAL_LOCAL_REVIEW_DATA:'true',ASTEN_INTEGRATION_ENABLED:'false'},stdio:'ignore'});
   const request=async(url:string,email='',body?:unknown)=>{const res=await fetch(base+url,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return{status:res.status,body:await res.json()};};
@@ -90,7 +94,10 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     });
     const detail=await request('/api/public/processes/legado-0001');
     assert.equal(detail.status,200);assert.equal(detail.body.legacyRecord,true);
-    assert.equal(detail.body.canAccessPrivate,false);assert.deepEqual(detail.body.documents,[]);
+    assert.equal(detail.body.canAccessPrivate,false);assert.deepEqual(detail.body.documents.map((doc:any)=>doc.type),['ATA']);
+    const publicDocument=await fetch(base+detail.body.documents[0].url);assert.equal(publicDocument.status,200);assert.deepEqual(Buffer.from(await publicDocument.arrayBuffer()),publicAta);
+    assert.equal((await request('/api/public/legacy-academic-records/legado-0001/documents/0/download')).status,404);
+    assert.deepEqual((await request(detail.body.documents[0].url+'?delivery=drive-links')).body,{links:null});
     assert.equal(detail.body.acervo.resumoSintese,record.resumo);
     assert.equal(detail.body.orientador.instituicao,'Universidade Federal do Espírito Santo');
     assert.equal(detail.body.aluno1.email,'');assert.equal(detail.body.avaliacao.status,'PENDENTE');
@@ -125,7 +132,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     const original=await fetch(base+listing.body[0].downloadUrl,{headers:{'x-demo-user-email':master}});
     assert.equal(original.status,200);assert.match(original.headers.get('cache-control')||'',/no-store/);
     assert.deepEqual(Buffer.from(await original.arrayBuffer()),pdf);
-    assert.equal((await request(privateDocs+'/1/download',master)).status,404);
+    assert.equal((await request(privateDocs+'/2/download',master)).status,404);
     assert.equal((await request(privateDocs+'/-1/download',master)).status,404);
     await writeFile(path.join(dir,'legacy-import','drive-pdfs','admin.pdf'),Buffer.from('%PDF-changed'));
     assert.equal((await request(privateDocs+'/0/download',master)).status,409);

@@ -10,3 +10,11 @@ test('full Drive management scope remains disabled unless explicitly configured'
  process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES='false';assert.ok(!getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive'));
  process.env.GOOGLE_MANAGE_EXISTING_DRIVE_FILES='true';assert.ok(getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive'));assert.ok(getGoogleWorkspaceScopes().some(scope=>scope==='https://www.googleapis.com/auth/drive.file'));
 });
+
+test('issued administrative documents keep safe byte delivery on provider refusal without weakening academic failures',async()=>{
+ const {publicDocumentDriveFailure}=await import('./publicDriveFailure');
+ assert.deepEqual(publicDocumentDriveFailure({driveStatus:403,driveReason:'insufficientFilePermissions'}),{status:200,body:{links:null,requiresDriveAuthorization:true}});
+ assert.equal(publicDocumentDriveFailure(Error('hash changed')).status,409);
+ assert.equal(publicDocumentDriveFailure(Error('credencial de acesso pessoal')).status,409);
+ assert.equal(publicDriveFailure({driveStatus:403,driveReason:'insufficientFilePermissions'}).status,409);
+});

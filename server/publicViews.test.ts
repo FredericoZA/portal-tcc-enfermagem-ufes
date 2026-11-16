@@ -109,3 +109,9 @@ test('repositório distingue arquivo privado, público e resumo não apresentado
   assert.equal(noAbstract.acervo.expandedAbstractState, 'NOT_PRESENTED');
   assert.equal(noAbstract.acervo.expandedAbstractLabel, 'Não apresentado');
 });
+
+test('submitted descriptive metadata and the registered opinion are public independently of PDF consent',()=>{
+ const p=processData();p.status='CONCLUIDO';p.acervo={...p.acervo,submittedAt:'2026-11-16T00:00:00Z',resumoSintese:'Resumo público em um parágrafo.',palavrasChave:['Um','Dois','Três','Quatro','Cinco'],publishFullWork:false,publishExpandedAbstract:false};
+ const view=publicRepositoryView(p);assert.equal(view.avaliacao.parecer,p.avaliacao.parecer);assert.equal(view.acervo.resumoSintese,p.acervo.resumoSintese);assert.equal(view.acervo.palavrasChave.length,5);assert.equal(view.acervo.trabalhoCompletoFileUrl,undefined);assert.equal(view.acervo.resumoExpandidoFileUrl,undefined);
+ p.avaliacao.status='PENDENTE';assert.equal(publicRepositoryView(p).avaliacao.parecer,undefined);
+});

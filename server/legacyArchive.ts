@@ -24,6 +24,12 @@ export function legacyAdministrativeFiles(record: Pick<LegacyAcademicRecord,'pro
     return {driveFileId,folderId,sha256,fileName,...(sourceFileName?{sourceFileName}:{}),kind:file.kind,visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'};
   });
 }
+/** Public catalog carries only issued document kinds and Portal routes, never Drive references. */
+export function publicLegacyAdministrativeDocuments(record:LegacyAcademicRecord){
+  const labels:Record<string,string>={CONVITE:'Carta convite',ATA:'Ata',TERMO:'Termo de autorização',DECLARACAO:'Declaração'};
+  const academicIds=new Set(record.attachments.map(file=>file.driveFileId));
+  return legacyAdministrativeFiles(record).flatMap((file,index)=>labels[file.kind]&&!academicIds.has(file.driveFileId)?[{id:`legacy-document-${index}`,type:file.kind,title:labels[file.kind],status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`}]:[]);
+}
 export function legacyProtocol(id: string): string {
   if (!/^legado-\d{4}$/.test(id) || Number(id.slice(7)) < 1 || Number(id.slice(7)) > 999) throw new Error('Identificador legado inválido.');
   return `${String(Number(id.slice(7))).padStart(3,'0')} - Legado`;

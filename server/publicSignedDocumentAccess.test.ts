@@ -26,7 +26,7 @@ test('HTTP: PDF arquivado do Asten fica público sem regravar assinatura ou libe
   for(const key of localKeys)process.env[key]=env[key];
   const processData=structuredClone(DEMO_PROCESSES[0]);
   processData.id='signed-public-fixture';processData.protocolo='TCC-2026-7711';processData.status='CONCLUIDO';processData.etapaAtual='CONCLUIDO';
-  processData.aluno1.email='autora@example.invalid';processData.aluno1.matricula='9988776655';processData.avaliacao={status:'CONCLUIDO',resultadoCode:'REPROVADO',resultadoLabel:'Texto interno que não deve sair no DTO',parecer:'Parecer interno não publicado no DTO'};
+  processData.aluno1.email='autora@example.invalid';processData.aluno1.matricula='9988776655';processData.avaliacao={status:'CONCLUIDO',resultadoCode:'REPROVADO',resultadoLabel:'Texto interno que não deve sair no DTO',parecer:'Parecer registrado da ata'};
   processData.acervo={...processData.acervo,publishFullWork:false,publishExpandedAbstract:false} as typeof processData.acervo;
   const bytes=await fixturePdf('Ata da defesa de Ana Silva. Registro institucional da defesa e das assinaturas.');
   const hash=createHash('sha256').update(bytes).digest('hex');
@@ -51,10 +51,10 @@ test('HTTP: PDF arquivado do Asten fica público sem regravar assinatura ou libe
   while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>deadline||child.exitCode!==null)throw Error('Fixture failed to start');await new Promise(resolve=>setTimeout(resolve,100));}
   const detail=await fetch(`${base}/api/public/processes/${processData.protocolo}`);assert.equal(detail.status,200);
   const publicData=await detail.json(),ata=publicData.documents.find((document:{type:string})=>document.type==='ATA');
-  assert.ok(ata);assert.equal(ata.signatureProvider,'ASTEN');assert.equal(publicData.canAccessPrivate,false);assert.doesNotMatch(JSON.stringify(publicData),/docente@example|autora@example|9988776655|local_review_|Texto interno|Parecer interno/);
-  assert.deepEqual(publicData.avaliacao,{status:'CONCLUIDO',resultadoCode:'REPROVADO',resultadoLabel:'Reprovado'});
+  assert.ok(ata);assert.equal(ata.signatureProvider,'ASTEN');assert.equal(publicData.canAccessPrivate,false);assert.doesNotMatch(JSON.stringify(publicData),/docente@example|autora@example|9988776655|local_review_|Texto interno/);
+  assert.deepEqual(publicData.avaliacao,{status:'CONCLUIDO',parecer:'Parecer registrado da ata',resultadoCode:'REPROVADO',resultadoLabel:'Reprovado'});
   const repository=await (await fetch(`${base}/api/public/repository`)).json();
-  assert.deepEqual(repository.find((entry:{id:string})=>entry.id===processData.protocolo).avaliacao,{status:'CONCLUIDO'});
+  assert.deepEqual(repository.find((entry:{id:string})=>entry.id===processData.protocolo).avaliacao,{status:'CONCLUIDO',parecer:'Parecer registrado da ata'});
   const unscheduled=repository.find((entry:{id:string})=>entry.id===awaitingSchedule.protocolo);
   assert.equal(unscheduled.status,'AGUARDANDO_CONFIRMACAO_LOCAL');
   assert.equal(unscheduled.defesa.startAt,'');
@@ -64,11 +64,11 @@ test('HTTP: PDF arquivado do Asten fica público sem regravar assinatura ou libe
   assert.ok(!repository.some((entry:{id:string})=>entry.id===draft.protocolo));
   const download=await fetch(base+ata.url);assert.equal(download.status,200);assert.match(download.headers.get('content-type')||'',/application\/pdf/);
   const received=Buffer.from(await download.arrayBuffer());assert.deepEqual(received,bytes);assert.equal(createHash('sha256').update(received).digest('hex'),hash);
-  assert.equal((await fetch(`${base}/api/public/processes/${restricted.protocolo}/documents/doc-ata/download`)).status,404);
+  const publicAdministrative=await fetch(`${base}/api/public/processes/${restricted.protocolo}/documents/doc-ata/download`);assert.equal(publicAdministrative.status,200);assert.deepEqual(Buffer.from(await publicAdministrative.arrayBuffer()),restrictedBytes);
   const authorized=await fetch(`${base}/api/processes/${restricted.id}/documents/doc-ata/download`,{headers:{'x-demo-user-email':'master@portal.local'}});
   assert.equal(authorized.status,200);
   assert.deepEqual(Buffer.from(await authorized.arrayBuffer()),restrictedBytes);
-  const pendingDetail=await (await fetch(`${base}/api/public/processes/${pending.protocolo}`)).json();assert.equal(pendingDetail.documents.some((document:{type:string})=>document.type==='ATA'),false);assert.deepEqual(pendingDetail.avaliacao,{status:'CONCLUIDO'});assert.equal(pendingDetail.documentProgress.ATA.signed,1);assert.equal(pendingDetail.documentProgress.ATA.total,2);assert.equal(pendingDetail.documentProgress.ATA.emailSent,true);assert.doesNotMatch(JSON.stringify(pendingDetail),/PRIVATE SIGNER|private-signer|private-pending|providerEnvelope|driveUnsigned|driveSigned|signers/);assert.ok(Array.isArray(pendingDetail.reservationReceipts));
+  const pendingDetail=await (await fetch(`${base}/api/public/processes/${pending.protocolo}`)).json();assert.equal(pendingDetail.documents.some((document:{type:string})=>document.type==='ATA'),false);assert.deepEqual(pendingDetail.avaliacao,{status:'CONCLUIDO',parecer:'Parecer registrado da ata'});assert.equal(pendingDetail.documentProgress.ATA.signed,1);assert.equal(pendingDetail.documentProgress.ATA.total,2);assert.equal(pendingDetail.documentProgress.ATA.emailSent,true);assert.doesNotMatch(JSON.stringify(pendingDetail),/PRIVATE SIGNER|private-signer|private-pending|providerEnvelope|driveUnsigned|driveSigned|signers/);assert.ok(Array.isArray(pendingDetail.reservationReceipts));
   assert.equal((await fetch(`${base}/api/public/processes/${pending.protocolo}/documents/doc-ata/download`)).status,404);
   assert.equal((await fetch(`${base}/api/public/processes/${processData.protocolo}/documents/doc-termo/download`)).status,404);
   assert.equal((await fetch(`${base}/api/public/processes/${processData.protocolo}/files/trabalho-completo/download`)).status,404);
