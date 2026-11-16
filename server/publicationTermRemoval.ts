@@ -35,4 +35,5 @@ export async function destroyPreviousPublicationTerms(
     job.lastError = 'Termo excluído após alteração da autorização de publicação.';
   }
   p.acervo.publicationAuthorizationFileIds = [];
+  request.previousTermsDestroyedAt = new Date().toISOString();
 }

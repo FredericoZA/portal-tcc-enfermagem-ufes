@@ -84,11 +84,12 @@ export function beginPublicationChoice(
   const previousTermFileIds = [...new Set([
     ...terms.flatMap((j) => [j.driveSignedFileId, j.driveUnsignedFileId]),
     ...(p.acervo.publicationAuthorizationFileIds || []),
-    ...(pending?.previousTermFileIds || []),
+    ...(!pending?.previousTermsDestroyedAt ? pending?.previousTermFileIds || [] : []),
   ].filter((v): v is string => Boolean(v)))];
   if (previousTermFileIds.some(id => [p.acervo.trabalhoCompletoFileId, p.acervo.resumoExpandidoFileId].includes(id)))
     throw Error('O termo está vinculado a um PDF acadêmico. Confira o arquivo antes de continuar.');
   const revokeFileIds = [
+    ...(pending?.revokeFileIds || []),
     p.acervo.trabalhoCompletoFileId,
     p.acervo.resumoExpandidoFileId,
     p.acervo.publicFullWorkFileId,

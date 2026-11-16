@@ -6,6 +6,8 @@ test('public repository and legacy references retain the historical catalog', ()
   for (const path of [
     '/public/repository',
     '/processes/proc-1/publication-choice',
+    '/processes/proc-1/files/trabalho-completo/download',
+    '/processes/legado-0001/files/resumo-expandido/download',
     '/public/processes/TCC%20-%2000001',
     '/public/processes/legacy-108',
     '/legacy-academic-records',
@@ -27,7 +29,6 @@ test('current document reads retain consent, signatures, revisions and ACL state
     '/public/processes/proc-1/documents/doc-ata/download',
     '/public/processes/proc-1/files/trabalho-completo/download',
     '/public/processes/proc-1/files/resumo-expandido/download',
-    '/processes/proc-1/files/trabalho-completo/download',
   ]) {
     assert.equal(runtimeReadProjection('GET', path), 'LEAN', path);
   }

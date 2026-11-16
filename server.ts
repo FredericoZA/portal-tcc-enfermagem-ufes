@@ -39,7 +39,7 @@ import { readLegacyAcademicPdf } from './server/legacyArchiveFiles';
 import {historicalPublicationProcess,storeHistoricalPublicationProcess} from './server/legacyPublicationProcess';
 import {installPublicationChoiceRoutes} from './server/publicationChoiceRoutes';
 import {destroyPreviousPublicationTerms} from './server/publicationTermRemoval';
-import {assertRenewedPublicationSigners} from './server/workflow/publicationChoice';
+import {assertRenewedPublicationSigners,beginPublicationChoice,finishPublicationRevocation} from './server/workflow/publicationChoice';
 import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
 import {EVALUATION_OUTCOMES,evaluationQuestions,isConceptRegistrationReleased} from './src/utils/evaluationForm';
@@ -2523,6 +2523,14 @@ export async function createPortalApp() {
     if(!canRegisterProcess(getPortalIdentity(req)!.email))return res.status(403).json({error:'O cadastro está disponível para alunos autorizados.',code:'STUDENT_REGISTRATION_REQUIRED'});
     next();
   };
+  const destroyPreviousTerms=async(p:ProcessData)=>{
+      const ids=p.acervo.publicationChange?.previousTermFileIds||[];
+      const otherLegacyFiles=legacyAcademicRecordsStore.filter(r=>r.id!==p.id).flatMap(r=>[...r.attachments.map(f=>f.driveFileId),...legacyAdministrativeFiles(r).map(f=>f.driveFileId)]);
+      const otherProcessFiles=processesStore.filter(r=>r.id!==p.id).flatMap(r=>[r.acervo?.trabalhoCompletoFileId,r.acervo?.resumoExpandidoFileId]);
+      if(ids.some(id=>[...otherLegacyFiles,...otherProcessFiles].includes(id)))throw Error('O termo está referenciado por outro processo.');
+      await destroyPreviousPublicationTerms(p,signatureJobsStore,async files=>{if(files.length)await deleteAuthorizationPdfs(await getGoogleWorkspaceAccessToken(),files);});
+      if(p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id)!;r.provenance.administrativeDocuments=legacyAdministrativeFiles(r).filter(f=>!ids.includes(f.driveFileId));storeHistoricalPublicationProcess(r,p);}
+    };
   installPublicationChoiceRoutes(app,{
     authenticate:requireAuthenticated,
     limit:rateLimit({windowMs:60_000,limit:5,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),
@@ -2533,14 +2541,7 @@ export async function createPortalApp() {
     replace:p=>{if(p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id);if(!r)throw Error('Registro não encontrado.');storeHistoricalPublicationProcess(r,p);return;}const index=processesStore.findIndex(row=>row.id===p.id);if(index<0)throw Error('Processo não encontrado.');processesStore[index]=p;},
     jobs:()=>signatureJobsStore,audit:log=>{auditLogsStore.push(log);},persist:persistPortalStateDurably,
     revoke:async ids=>{await withdrawManyPublicDriveFiles(await getGoogleWorkspaceAccessToken(),ids);},
-    destroyPreviousTerms:async p=>{
-      const ids=p.acervo.publicationChange?.previousTermFileIds||[];
-      const otherLegacyFiles=legacyAcademicRecordsStore.filter(r=>r.id!==p.id).flatMap(r=>[...r.attachments.map(f=>f.driveFileId),...legacyAdministrativeFiles(r).map(f=>f.driveFileId)]);
-      const otherProcessFiles=processesStore.filter(r=>r.id!==p.id).flatMap(r=>[r.acervo?.trabalhoCompletoFileId,r.acervo?.resumoExpandidoFileId]);
-      if(ids.some(id=>[...otherLegacyFiles,...otherProcessFiles].includes(id)))throw Error('O termo está referenciado por outro processo.');
-      await destroyPreviousPublicationTerms(p,signatureJobsStore,async files=>{if(files.length)await deleteAuthorizationPdfs(await getGoogleWorkspaceAccessToken(),files);});
-      if(p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id)!;r.provenance.administrativeDocuments=legacyAdministrativeFiles(r).filter(f=>!ids.includes(f.driveFileId));storeHistoricalPublicationProcess(r,p);}
-    },
+    destroyPreviousTerms,
     term:async(p,email)=>{
       const request=p.acervo!.publicationChange!;
       let job=request.signatureJobId?signatureJobsStore.find(j=>j.id===request.signatureJobId):undefined;
@@ -4017,18 +4018,28 @@ export async function createPortalApp() {
     const reason=String(req.body?.reason||'').trim();
     if(reason.length<10||reason.length>1000)return res.status(400).json({error:'Informe o motivo da retirada com 10 a 1.000 caracteres.'});
     const current=legacyAcademicRecordsStore[index],prior=current.provenance.publicationWithdrawal as any;
-    if(!current.attachments.some(f=>legacyFileIsPublic(current,f))&&!prior?.withdrawnAt)return res.status(409).json({error:'Este registro não possui publicação ativa.'});
-    const withdrawnAt=prior?.withdrawnAt||new Date().toISOString();
-    const withdrawal={...(prior||{}),withdrawnAt,withdrawnBy:prior?.withdrawnBy||getPortalIdentity(req)!.email,reason:prior?.reason||reason,drivePending:true};
-    legacyAcademicRecordsStore[index]=canonicalLegacyRecord({...current,provenance:{...current.provenance,publicationWithdrawal:withdrawal}});
-    if(!prior?.withdrawnAt)auditLogsStore.push({id:`log-${Date.now()}-legacy-withdraw`,actorEmail:getPortalIdentity(req)!.email,actorRoles:['MASTER_ADMIN'],action:'RETIRADA_PUBLICACAO_HISTORICA',entityType:'legacy_publication',entityId:current.id,after:{reason,withdrawnAt},timestamp:withdrawnAt});
+    const active=current.attachments.some(f=>legacyFileIsPublic(current,f));
+    if(!active&&!prior?.withdrawnAt)return res.status(409).json({error:'Este registro não possui publicação ativa.'});
+    if(!active&&prior?.drivePending===false)return res.json({recordId:current.id,withdrawnAt:prior.withdrawnAt,public:false});
+    const withdrawnAt=active?new Date().toISOString():prior.withdrawnAt;
+    const withdrawal={...(!active?prior:{}),withdrawnAt,withdrawnBy:active?getPortalIdentity(req)!.email:prior.withdrawnBy,reason:active?reason:prior.reason,drivePending:true};
+    const saved=historicalPublicationProcess(current);
+    const pending=saved.acervo.publicationChange;
+    const publicationProcess=!active&&pending?.status==='REVOKING_DRIVE'&&!pending.publishFullWork&&!pending.publishExpandedAbstract?saved:beginPublicationChoice(saved,{publishFullWork:false,publishExpandedAbstract:false},signatureJobsStore,getPortalIdentity(req)!.email,`withdrawal-${randomBytes(16).toString('hex')}`,withdrawnAt,true);
+    current.provenance.publicationWithdrawal=withdrawal;
+    storeHistoricalPublicationProcess(current,publicationProcess);
+    if(active)auditLogsStore.push({id:`log-${Date.now()}-legacy-withdraw`,actorEmail:getPortalIdentity(req)!.email,actorRoles:['MASTER_ADMIN'],action:'RETIRADA_PUBLICACAO_HISTORICA',entityType:'legacy_publication',entityId:current.id,after:{reason,withdrawnAt},timestamp:withdrawnAt});
     try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'A retirada não foi confirmada no banco. Recarregue antes de tentar novamente.'});}
     try{
       const token=await getGoogleWorkspaceAccessToken();
-      await withdrawManyPublicDriveFiles(token,current.attachments.filter(f=>['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(f.kind)).map(f=>f.driveFileId));
-      legacyAcademicRecordsStore[index]=canonicalLegacyRecord({...legacyAcademicRecordsStore[index],provenance:{...legacyAcademicRecordsStore[index].provenance,publicationWithdrawal:{...withdrawal,drivePending:false}}});
+      await withdrawManyPublicDriveFiles(token,publicationProcess.acervo.publicationChange!.revokeFileIds);
+      await destroyPreviousTerms(publicationProcess);
+      publicationProcess.acervo.publicationChange!.previousTermsDestroyedAt=new Date().toISOString();
+      finishPublicationRevocation(publicationProcess,new Date().toISOString());
+      current.provenance.publicationWithdrawal={...withdrawal,drivePending:false};
+      storeHistoricalPublicationProcess(current,publicationProcess);
       await persistPortalStateDurably();
-    }catch{return res.status(502).json({error:'Os PDFs foram bloqueados no Portal. A retirada do acesso público no Drive está pendente; use Concluir retirada no Drive para tentar novamente.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
+    }catch{return res.status(502).json({error:'Os PDFs foram bloqueados no Portal. A retirada do acesso público ou a exclusão do termo no Drive está pendente; use Concluir retirada no Drive para tentar novamente.',code:'PUBLIC_DRIVE_REVOCATION_PENDING'});}
     res.json({recordId:current.id,withdrawnAt,public:false});
   });
   app.get('/api/public/legacy-academic-records/:id/documents/:index/download',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
@@ -5277,6 +5288,12 @@ export async function createPortalApp() {
     if(!process||!(master||canAccessProcess(identity.email,process.id))||(process.legacyRecord&&!master))return res.status(404).json({error:'Processo não encontrado.'});
     const roles=getActiveProcessRoles(identity.email,process.id);
     const publicationEditing=process.acervo?.publicationChange?.status==='EDITING';
+    const uploadRevision=process.dataRevision,uploadRequestId=process.acervo?.publicationChange?.id;
+    const assertUploadCurrent=()=>{
+      const current=publicationProcessById(process.id);
+      if(current!==process||current.dataRevision!==uploadRevision||current.acervo?.publicationChange?.id!==uploadRequestId||Boolean(current.acervo?.publicationChange?.status==='EDITING')!==publicationEditing)
+        throw Object.assign(Error('A publicação mudou durante o envio. Atualize os dados antes de tentar novamente.'),{code:'PUBLICATION_UPLOAD_CONFLICT'});
+    };
     if(publicationEditing&&req.body?.expectedPublicationRevision!==process.dataRevision)return res.status(409).json({error:'O arquivo mudou. Reabra a edição antes de enviar outra versão.'});
     if(!roles.includes('STUDENT')&&!(master&&publicationEditing))return res.status(403).json({error:'Apenas o Master ou um dos autores pode anexar os arquivos finais.'});
     if(!process.legacyRecord&&process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes do envio dos arquivos finais.'});
@@ -5289,8 +5306,10 @@ export async function createPortalApp() {
       const archive=async(file:{bytes:Buffer;fileName:string})=>{
         if(!file.fileName.toLowerCase().endsWith('.pdf')||!file.bytes.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Selecione um arquivo PDF válido.');
         const accessToken=await sourceFilesAccessToken();
-        if(!process.driveFolderId){const folder=await sourceFilesFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId!,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
+        assertUploadCurrent();
+        if(!process.driveFolderId){const folder=await sourceFilesFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId!,protocol:process.protocolo,processId:process.id});assertUploadCurrent();process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
         const sha256=createHash('sha256').update(file.bytes).digest('hex');
+        assertUploadCurrent();
         const previousId=artifactType==='TRABALHO_COMPLETO'?process.acervo?.trabalhoCompletoFileId:process.acervo?.resumoExpandidoFileId;
         const previousHash=artifactType==='TRABALHO_COMPLETO'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;
         const previousVersion=artifactType==='TRABALHO_COMPLETO'?process.acervo?.trabalhoCompletoVersion:process.acervo?.resumoExpandidoVersion;
@@ -5303,9 +5322,11 @@ export async function createPortalApp() {
           const readerEmails=authorizedProcessDriveReaderEmails(process);
           if(readerEmails.length)await resolvePrivateDriveBrowserLinks({accessToken,fileId:String(uploaded.id),email:readerEmails[0],readerEmails,processId:process.id,artifactType,expectedSha256:sha256});
         }
+        assertUploadCurrent();
         const replacingPrevious=Boolean(previousId&&previousId!==String(uploaded.id));
         const previousPublicFileId=artifactType==='TRABALHO_COMPLETO'?process.acervo?.publicFullWorkFileId:process.acervo?.publicExpandedAbstractFileId;
         if(replacingPrevious&&previousPublicFileId)await withdrawDriveFilePublicAccess(accessToken,previousPublicFileId);
+        assertUploadCurrent();
         const now=new Date().toISOString();const nextAcervo={...(process.acervo||{})};
         if(artifactType==='TRABALHO_COMPLETO'){nextAcervo.trabalhoCompletoFileId=String(uploaded.id);nextAcervo.trabalhoCompletoFileName=String(uploaded.name||canonicalName);nextAcervo.trabalhoCompletoFileUrl=localUrl;nextAcervo.trabalhoCompletoSha256=sha256;nextAcervo.trabalhoCompletoVersion=version;if(replacingPrevious){nextAcervo.publicFullWorkFileId=undefined;nextAcervo.publicFullWorkFileUrl=undefined;}}
         else{nextAcervo.resumoExpandidoFileId=String(uploaded.id);nextAcervo.resumoExpandidoFileName=String(uploaded.name||canonicalName);nextAcervo.resumoExpandidoFileUrl=localUrl;nextAcervo.resumoExpandidoSha256=sha256;nextAcervo.resumoExpandidoVersion=version;if(replacingPrevious){nextAcervo.publicExpandedAbstractFileId=undefined;nextAcervo.publicExpandedAbstractFileUrl=undefined;}}
@@ -5322,7 +5343,7 @@ export async function createPortalApp() {
         ?await withDriveStagedUpload({uploadId,purpose:artifactType==='TRABALHO_COMPLETO'?'PROCESS_FULL_WORK':'PROCESS_EXPANDED_ABSTRACT',requesterBinding:sessionUploadBinding(identity),processId:process.id},archive)
         :await archive({bytes:readLegacyDevelopmentUpload({contentBase64:req.body?.contentBase64,fileName:String(req.body?.fileName||''),expected:'PDF'}),fileName:String(req.body?.fileName||'')});
       res.status(result.status).json(result.body);
-    }catch(error){const message=error instanceof Error?error.message:'Falha ao armazenar o PDF no Google Drive.';const clientError=/arquivo|upload|checksum|MIME|sessão|processo|finalidade|fallback/i.test(message);res.status(clientError?400:502).json({error:message});}
+    }catch(error){if((error as {code?:string})?.code==='PUBLICATION_UPLOAD_CONFLICT')return res.status(409).json({error:(error as Error).message,code:'PUBLICATION_UPLOAD_CONFLICT'});const message=error instanceof Error?error.message:'Falha ao armazenar o PDF no Google Drive.';const clientError=/arquivo|upload|checksum|MIME|sessão|processo|finalidade|fallback/i.test(message);res.status(clientError?400:502).json({error:message});}
   });
 
   const repositoryPublicationStillCurrent=async(res:express.Response)=>{

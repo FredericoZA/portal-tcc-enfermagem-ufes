@@ -110,3 +110,14 @@ test('historical new consent exposes only the specifically authorized PDF after 
   assert.equal(record.provenance.supersededAttachments[0].driveFileId, oldId);
   assert.equal(record.attachments[0].driveFileId, 'replacement_legacy_123');
 });
+
+test('a later withdrawal beats renewed consent, while a subsequent signed renewal may publish again',()=>{
+ const record=fixture();
+ record.provenance.publicationOverride={status:'COMPLETED',publishFullWork:true,signedTermJobId:'term-new',syncedAt:'2026-11-16T12:00:00Z'};
+ record.provenance.publicationWithdrawal={withdrawnAt:'2026-11-16T13:00:00Z',drivePending:true};
+ assert.equal(canonicalLegacyRecord(record).isPublic,false);
+ record.provenance.publicationOverride.syncedAt='2026-11-16T14:00:00Z';
+ assert.equal(canonicalLegacyRecord(record).isPublic,true);
+ record.provenance.publicationWithdrawal.withdrawnAt='2026-11-16T14:00:00Z';
+ assert.equal(canonicalLegacyRecord(record).isPublic,false,'equal or ambiguous timing fails closed');
+});

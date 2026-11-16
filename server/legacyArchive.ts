@@ -37,6 +37,8 @@ export function legacyProtocol(id: string): string {
 /** Historical consent is independent of live-process signatures and required uploads. */
 export function legacyAuthorization(provenance: Record<string, unknown>): LegacyAcademicRecord['authorizationDecision'] {
   const override=provenance.publicationOverride as any;
+  const withdrawal=provenance.publicationWithdrawal as {withdrawnAt?:string}|undefined;
+  if(withdrawal?.withdrawnAt && (!override?.syncedAt || !(Date.parse(override.syncedAt)>Date.parse(withdrawal.withdrawnAt))))return 'DENIED';
   if(override)return override.status==='COMPLETED'&&override.signedTermJobId&&override.syncedAt&&(override.publishFullWork||override.publishExpandedAbstract)?'AUTHORIZED':'DENIED';
   if(provenance?.publicationWithdrawal&&typeof provenance.publicationWithdrawal==='object'&&typeof (provenance.publicationWithdrawal as any).withdrawnAt==='string')return 'DENIED';
   const values = Array.isArray(provenance?.originalConsent) ? provenance.originalConsent : [];
