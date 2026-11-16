@@ -4019,16 +4019,18 @@ export async function createPortalApp() {
     if(reason.length<10||reason.length>1000)return res.status(400).json({error:'Informe o motivo da retirada com 10 a 1.000 caracteres.'});
     const current=legacyAcademicRecordsStore[index],prior=current.provenance.publicationWithdrawal as any;
     const active=current.attachments.some(f=>legacyFileIsPublic(current,f));
-    if(!active&&!prior?.withdrawnAt)return res.status(409).json({error:'Este registro não possui publicação ativa.'});
-    if(!active&&prior?.drivePending===false)return res.json({recordId:current.id,withdrawnAt:prior.withdrawnAt,public:false});
-    const withdrawnAt=active?new Date().toISOString():prior.withdrawnAt;
-    const withdrawal={...(!active?prior:{}),withdrawnAt,withdrawnBy:active?getPortalIdentity(req)!.email:prior.withdrawnBy,reason:active?reason:prior.reason,drivePending:true};
-    const saved=historicalPublicationProcess(current);
-    const pending=saved.acervo.publicationChange;
-    const publicationProcess=!active&&pending?.status==='REVOKING_DRIVE'&&!pending.publishFullWork&&!pending.publishExpandedAbstract?saved:beginPublicationChoice(saved,{publishFullWork:false,publishExpandedAbstract:false},signatureJobsStore,getPortalIdentity(req)!.email,`withdrawal-${randomBytes(16).toString('hex')}`,withdrawnAt,true);
+    const saved=historicalPublicationProcess(current),pending=saved.acervo.publicationChange;
+    const hasPending=Boolean(pending&&pending.status!=='COMPLETED');
+    if(!active&&!prior?.withdrawnAt&&!hasPending)return res.status(409).json({error:'Este registro não possui publicação ativa.'});
+    if(!active&&!hasPending&&prior?.drivePending===false)return res.json({recordId:current.id,withdrawnAt:prior.withdrawnAt,public:false});
+    const retryPending=!active&&pending?.status==='REVOKING_DRIVE'&&!pending.publishFullWork&&!pending.publishExpandedAbstract;
+    const newWithdrawal=active||!prior?.withdrawnAt||(!retryPending&&hasPending);
+    const withdrawnAt=newWithdrawal?new Date().toISOString():prior.withdrawnAt;
+    const withdrawal={...(!newWithdrawal?prior:{}),withdrawnAt,withdrawnBy:newWithdrawal?getPortalIdentity(req)!.email:prior.withdrawnBy,reason:newWithdrawal?reason:prior.reason,drivePending:true};
+    const publicationProcess=retryPending?saved:beginPublicationChoice(saved,{publishFullWork:false,publishExpandedAbstract:false},signatureJobsStore,getPortalIdentity(req)!.email,`withdrawal-${randomBytes(16).toString('hex')}`,withdrawnAt,true);
     current.provenance.publicationWithdrawal=withdrawal;
     storeHistoricalPublicationProcess(current,publicationProcess);
-    if(active)auditLogsStore.push({id:`log-${Date.now()}-legacy-withdraw`,actorEmail:getPortalIdentity(req)!.email,actorRoles:['MASTER_ADMIN'],action:'RETIRADA_PUBLICACAO_HISTORICA',entityType:'legacy_publication',entityId:current.id,after:{reason,withdrawnAt},timestamp:withdrawnAt});
+    if(newWithdrawal)auditLogsStore.push({id:`log-${Date.now()}-legacy-withdraw`,actorEmail:getPortalIdentity(req)!.email,actorRoles:['MASTER_ADMIN'],action:'RETIRADA_PUBLICACAO_HISTORICA',entityType:'legacy_publication',entityId:current.id,after:{reason,withdrawnAt},timestamp:withdrawnAt});
     try{await persistPortalStateDurably();}catch{return res.status(503).json({error:'A retirada não foi confirmada no banco. Recarregue antes de tentar novamente.'});}
     try{
       const token=await getGoogleWorkspaceAccessToken();
