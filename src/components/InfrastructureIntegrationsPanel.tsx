@@ -58,6 +58,20 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
     catch (error) { setMessage({ ok: false, text: error instanceof Error ? error.message : 'Falha no teste do Supabase.' }); }
     finally { setWorking(''); }
   };
+  const syncDriveReaders = async () => {
+    setWorking('drive-readers');setMessage(null);
+    try {
+      let afterProcessId:string|undefined;let processed=0;const failures:string[]=[];
+      do {
+        const batch=await apiClient.syncProcessDriveReaders(afterProcessId);
+        processed+=batch.results.length;
+        failures.push(...batch.results.filter(item=>!item.ok).map(item=>`${item.protocol}: ${item.error}`));
+        afterProcessId=batch.nextProcessId||undefined;
+      } while(afterProcessId);
+      setMessage({ok:failures.length===0,text:failures.length?failures.join(' · '):`Acesso de leitura atualizado em ${processed} processos, sem notificações por e-mail.`});
+    } catch(error) {setMessage({ok:false,text:error instanceof Error?error.message:'Não foi possível atualizar o acesso no Drive.'});}
+    finally {setWorking('');}
+  };
   const runHomologation = async () => {
     setWorking('homologation'); setMessage(null); setHasRunTests(true);
     try {
@@ -97,7 +111,7 @@ export const InfrastructureIntegrationsPanel: React.FC<{ isMaster: boolean }> = 
         </section>
 
         <div className="grid min-w-0 content-start gap-3">
-        <section className={compactCard} aria-label="Google Drive"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black normal-case"><Cloud className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Google Drive</span><State ok={googleReady} label={googleReady?'Conectado':'Pendente'}/></div><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className={`${action} mt-3 w-full`}><ExternalLink className="h-3.5 w-3.5"/>Conectar Google</button></section>
+        <section className={compactCard} aria-label="Google Drive"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black normal-case"><Cloud className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Google Drive</span><State ok={googleReady} label={googleReady?'Conectado':'Pendente'}/></div><button type="button" onClick={()=>{window.location.href='/api/integrations/google/oauth/start?returnTo=/?google=connected';}} className={`${action} mt-3 w-full`}><ExternalLink className="h-3.5 w-3.5"/>Conectar Google</button><button type="button" onClick={syncDriveReaders} disabled={!googleReady||Boolean(working)} className={`${action} mt-2 w-full`}>Atualizar leitura dos participantes</button></section>
 
         <section className={compactCard} aria-label="Supabase"><div className="flex items-center justify-between gap-1"><span className="flex items-center gap-1 text-[9px] font-black normal-case"><Database className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/>Supabase</span><State ok={supabaseReady} label={supabaseReady?'Pronto':'Pendente'}/></div><button type="button" onClick={testSupabase} disabled={working==='supabase'||!status?.supabase.configured} className={`${action} mt-3 w-full`}>{working==='supabase'?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Database className="h-3.5 w-3.5"/>}Testar conexão</button><p className="mt-2 text-[8.5px] leading-4 text-slate-700">{status?.supabase.message || 'Aguardando status.'}</p></section>
 

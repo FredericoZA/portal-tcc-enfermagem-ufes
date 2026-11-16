@@ -17,6 +17,16 @@ test('feedback HTTP exige Master para lista, imagens e análise, inclusive contr
     const until=Date.now()+30000;
     while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw Error('Servidor isolado não iniciou');await new Promise(r=>setTimeout(r,200));}
     const me=await request('/api/me',president);assert.equal(me.status,200);assert.ok((await me.json()).globalRoles.includes('COMMISSION_PRESIDENT'));
+    assert.equal((await request('/api/admin/drive-readers/sync','','POST')).status,401);
+    for(const email of [president,'aluno@example.invalid'])assert.equal((await request('/api/admin/drive-readers/sync',email,'POST')).status,403);
+    for(const path of ['/api/processes/unknown/location-proof/download','/api/processes/unknown/documents/doc-convite/download','/api/processes/unknown/files/trabalho-completo/download']){
+      for(const query of ['', '?delivery=drive-links']){
+        assert.equal((await request(path+query)).status,401);
+        assert.equal((await request(path+query,'outsider@example.invalid')).status,404);
+      }
+    }
+    assert.equal((await request('/api/signatures/jobs/unknown/govbr/approve','','POST')).status,401);
+    assert.equal((await request('/api/signatures/jobs/unknown/govbr/approve','outsider@example.invalid','POST')).status,403);
     const anonymousLookup=await request('/api/forms/registration-suggestions?field=email&q=ana');
     assert.equal(anonymousLookup.status,401);
     assert.doesNotMatch(await anonymousLookup.text(),/example\.invalid|matr[ií]cula/i);
