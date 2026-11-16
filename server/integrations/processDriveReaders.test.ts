@@ -79,3 +79,12 @@ test('reservation direct links require the exact archived form version before sh
   await assert.rejects(resolvePrivateDriveBrowserLinks({accessToken:'fixture',fileId:'receipt_12345678',email:'author@example.invalid',readerEmails:['author@example.invalid'],processId:'process-1',artifactType:'CONFIRMACAO_LOCAL',formVersion:2}),/não corresponde/);
   assert.equal(grants,0);
 });
+
+test('oversized and malformed addresses cannot request a Drive permission',async t=>{
+  let calls=0;t.mock.method(globalThis,'fetch',async()=>{calls++;throw Error('must not contact Google');});
+  for(const email of ['a@b', 'a@@b.invalid', 'a b@example.invalid', '!@!.'+'!.'.repeat(10000)]){
+    assert.deepEqual(processDriveReaderEmails({aluno1:{email}} as any),[]);
+    await assert.rejects(grantMissingDriveReaders('fixture','file_12345678',[email],[]),/inválido/);
+  }
+  assert.equal(calls,0);
+});

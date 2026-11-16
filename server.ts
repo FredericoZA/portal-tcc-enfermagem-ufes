@@ -5977,15 +5977,9 @@ export async function createPortalApp() {
           if(!process.driveFolderId)throw Error('O cadastro inicial precisa ser arquivado antes de compartilhar sua pasta.');
           const readerEmails=processDriveReaderEmails(process);
           await synchronizeProcessFolderReaders({accessToken,rootFolderId,folderId:process.driveFolderId,processId:process.id,readerEmails});
-          const files:Array<{fileId:string;artifactType:string;expectedSha256?:string;signatureJobId?:string;allowPublicRead?:boolean}>=[];
+          const files:Array<{fileId:string;artifactType:string;expectedSha256?:string;signatureJobId?:string}>=[];
           if(process.defesa.invitationDriveFileId)files.push({fileId:process.defesa.invitationDriveFileId,artifactType:'CONVITE'});
           for(const job of signatureJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveSignedFileId))files.push({fileId:job.driveSignedFileId!,artifactType:job.documentType,expectedSha256:job.signedSha256,signatureJobId:job.id});
-          for(const [kind,fileId,expectedSha256] of [
-            ['trabalho-completo',process.acervo?.trabalhoCompletoFileId,process.acervo?.trabalhoCompletoSha256],
-            ['resumo-expandido',process.acervo?.resumoExpandidoFileId,process.acervo?.resumoExpandidoSha256],
-          ] as const){
-            if(fileId&&!fileId.startsWith('local_'))files.push({fileId,artifactType:kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',expectedSha256,allowPublicRead:publicFileAuthorized(process,signatureJobsStore,kind)});
-          }
           // Global document destinations do not inherit the process folder's readers.
           if(readerEmails.length)for(const file of files){
             const links=await resolvePrivateDriveBrowserLinks({accessToken,...file,processId:process.id,email:readerEmails[0],readerEmails});

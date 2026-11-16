@@ -1,10 +1,19 @@
 import type {ProcessData} from '../../src/types';
 import {createHash} from 'node:crypto';
 
+// Linear validation: do not backtrack over untrusted addresses.
+function validReaderEmail(value:string):boolean{
+  if(value.length>254||/\s/.test(value))return false;
+  const parts=value.split('@');
+  if(parts.length!==2||!parts[0])return false;
+  const dot=parts[1].lastIndexOf('.');
+  return dot>0&&dot<parts[1].length-1;
+}
+
 /** Only the persisted authors and advisor are automatically enrolled. */
 export function processDriveReaderEmails(process:Pick<ProcessData,'aluno1'|'aluno2'|'orientador'>):string[]{
   return [...new Set([process.aluno1?.email,process.aluno2?.email,process.orientador?.email]
-    .map(value=>String(value||'').trim().toLowerCase()).filter(value=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)))];
+    .map(value=>String(value||'').trim().toLowerCase()).filter(validReaderEmail))];
 }
 
 /** Caller must validate the process/file binding before using this internal helper. */
@@ -15,7 +24,7 @@ export async function grantMissingDriveReaders(accessToken:string,fileId:string,
   const created:string[]=[];
   try {
   for(const email of readers){
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Destinatário de leitura do Drive inválido.');
+    if(!validReaderEmail(email))throw Error('Destinatário de leitura do Drive inválido.');
     if(permissions.some(p=>p.type==='user'&&String(p.emailAddress||'').toLowerCase()===email&&p.view!=='metadata'&&['owner','reader','commenter','writer','organizer','fileOrganizer'].includes(p.role)))continue;
     const response=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions?sendNotificationEmail=false&supportsAllDrives=true&fields=id,type,role,emailAddress`,{
       method:'POST',headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},
