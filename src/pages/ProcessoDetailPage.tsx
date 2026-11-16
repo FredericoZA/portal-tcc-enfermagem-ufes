@@ -1044,7 +1044,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {/* ========================================================================= */}
       {/* SECTION 5: PAINEL DE DOCUMENTOS E ASSINATURAS GERENCIADAS                */}
       {/* ========================================================================= */}
-      {process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin}/>}
+      {process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && <LegacyAdministrativeDocuments processId={process.id} canAccessOriginals={isMasterAdmin} publicDocuments={documents}/>}
       {!process.legacyRecord && localFormat.showSectionDocs !== false && isTabVisible('docs') && (repositoryReopenNotice?<aside role="status" className="portal-instruction p-3 text-sm"><p>{repositoryReopenNotice}</p><button type="button" disabled={isSubmittingAcervo} className="portal-action mt-2" onClick={()=>void retryRepositoryDocuments()}>Atualizar documentos</button></aside>:<ProcessDocumentsPanel count={Object.keys(administrativeDocumentLabels).length+1} toolbar={
           !readOnly&&isMasterAdmin?<button type="button" onClick={()=>{setDownloadSelection(documents.filter(doc=>doc.status==='DISPONIVEL'||doc.status==='ASSINADO').map(doc=>doc.type));setDownloadPicker(true);}} disabled={isDownloadingDossier} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 disabled:opacity-60" aria-label="Escolher documentos para baixar" title="Baixar documentos"><Download className="h-4 w-4"/></button>:undefined
         } notices={<>

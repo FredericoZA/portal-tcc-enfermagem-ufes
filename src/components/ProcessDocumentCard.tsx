@@ -121,7 +121,7 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
         if(scopeRef.current!==scope){tab?.close();return;}
         if(links&&tab)tab.location.replace(links.view);
         else{tab?.close();if(links)portalNotice('Permita a abertura de uma nova aba para acessar o PDF.');else setPreview({scope,item,url:receiptPreviewUrl(receiptProtocol,item,privateProcessId)});}
-      }).catch(error=>{tab?.close();if(scopeRef.current===scope)portalNotice(error instanceof Error?error.message:'Não foi possível abrir o comprovante.');});
+      }).catch(error=>{tab?.close();if(scopeRef.current!==scope)return;if(privateProcessId)setPreview({scope,item,url:receiptPreviewUrl(receiptProtocol,item,privateProcessId)});else portalNotice(error instanceof Error?error.message:'Não foi possível abrir o comprovante.');});
       return;
     }
 
@@ -134,7 +134,7 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
     try {
       receiptPreviewUrl(receiptProtocol, item, privateProcessId);
       {
-        const {links}=await apiClient.getPublicDocumentDriveLinks(receiptPreviewUrl(receiptProtocol,item));
+        const {links}=await apiClient.getPublicDocumentDriveLinks(receiptPreviewUrl(receiptProtocol,item)).catch(error=>{if(privateProcessId)return {links:null};throw error;});
         if(scopeRef.current!==scope){tab?.close();return;}
         if(links){if(tab)tab.location.replace(links.download);else portalNotice('Permita a abertura de uma nova aba para acessar o PDF.');return;}
         tab?.close();

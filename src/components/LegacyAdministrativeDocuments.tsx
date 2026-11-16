@@ -2,6 +2,7 @@ import React, {lazy, Suspense, useEffect, useState} from 'react';
 import {FileCheck} from 'lucide-react';
 import {ProcessDocumentCard, ProcessDocumentsPanel, ReservationReceiptCard} from './ProcessDocumentCard';
 import {apiClient} from '../services/apiClient';
+import type {ProcessDocument} from '../types';
 import type {LegacyAdministrativeFileView} from '../types/legacyArchive';
 import {PortalModalShell} from './PortalModalShell';
 
@@ -15,7 +16,7 @@ const groups: {kind:LegacyAdministrativeFileView['kind'];label:string}[]=[
 ];
 
 /** Existing administrative tab, with original historical files and no live signature actions. */
-export function LegacyAdministrativeDocuments({processId, canAccessOriginals = false}:{processId:string; canAccessOriginals?:boolean}) {
+export function LegacyAdministrativeDocuments({processId, canAccessOriginals = false,publicDocuments=[]}:{processId:string; canAccessOriginals?:boolean;publicDocuments?:ProcessDocument[]}) {
   const [files,setFiles]=useState<LegacyAdministrativeFileView[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
@@ -45,6 +46,18 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
     }catch{setError('Não foi possível conferir e baixar o documento. O original permanece preservado.');}
     finally{setDownloading(null);}
   }
+  const publicPath=(file:LegacyAdministrativeFileView)=>file.downloadUrl.startsWith('/api/public/legacy-academic-records/');
+  async function open(file:LegacyAdministrativeFileView,mode:'view'|'download'){
+    if(!publicPath(file)){if(mode==='view')setPreview(file);else await download(file);return;}
+    const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
+    setDownloading(file.index);setError('');
+    try{
+      const {links}=await apiClient.getPublicDocumentDriveLinks(file.downloadUrl);
+      if(links){if(tab)tab.location.replace(mode==='view'?links.view:links.download);else setError('Permita a abertura de uma nova aba para acessar o PDF.');}
+      else if(mode==='view'){tab?.close();setPreview(file);}else if(tab)tab.location.replace(file.downloadUrl);
+    }catch{tab?.close();setError('Não foi possível confirmar a consulta pública deste documento.');}
+    finally{setDownloading(null);}
+  }
   return <>
     <ProcessDocumentsPanel count={groups.length+1} columns={6} notices={<>
       {loading&&<p role="status" className="text-xs">Consultando documentos…</p>}
@@ -52,14 +65,17 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
     </>}>
       <ReservationReceiptCard historical/>
       {groups.map(group=>{
-        const documents=canAccessOriginals?files.filter(file=>file.kind===group.kind):[];
+        const published=publicDocuments.filter(doc=>doc.type===group.kind&&doc.driveDownloadUrl&&['ASSINADO','DISPONIVEL'].includes(doc.status)).map(doc=>({kind:group.kind,index:Number(doc.id.replace('legacy-document-','')),fileName:doc.title||group.label,downloadUrl:doc.driveDownloadUrl!}));
+        const documents=published.length?published:canAccessOriginals?files.filter(file=>file.kind===group.kind):[];
+        const restricted=group.kind==='AVALIACAO'&&!canAccessOriginals;
+        const pending=loading&&canAccessOriginals&&!published.length;
         const file=documents.find(item=>item.index===selected[group.kind])||documents[0];
         return <ProcessDocumentCard key={group.kind} title={group.label}
-          signerLabel="Arquivo" signerNote={!canAccessOriginals?'Consulta restrita':file?'Original importado':loading?'Consultando acervo':'Não localizado'}
-          status={!canAccessOriginals?'Acesso restrito':loading?'Consultando…':file?'Disponível':'Não disponível'}
-          statusDescription={!canAccessOriginals?'A consulta aos originais históricos exige uma conta autorizada.':!loading&&!file?'Não localizado no acervo importado.':undefined}
-          tone={file?'available':'pending'} available={Boolean(file)&&!loading} working={downloading!==null}
-          onView={()=>file&&setPreview(file)} onDownload={()=>file&&void download(file)}>
+          signerLabel="Arquivo" signerNote={restricted?'Consulta restrita':file?'Original importado':pending?'Consultando acervo':'Não localizado'}
+          status={restricted?'Acesso restrito':pending?'Consultando…':file?'Disponível':'Não disponível'}
+          statusDescription={restricted?'O instrumento histórico da banca exige acesso autorizado.':!pending&&!file?'Não localizado no acervo importado.':undefined}
+          tone={file?'available':'pending'} available={Boolean(file)&&!pending} working={downloading!==null}
+          onView={()=>file&&void open(file,'view')} onDownload={()=>file&&void open(file,'download')}>
           {documents.length>1&&<label className="text-xs">Arquivo
             <select className="portal-input mt-1 w-full" value={file.index} onChange={event=>setSelected(current=>({...current,[group.kind]:Number(event.target.value)}))}>
               {documents.map(item=><option key={item.index} value={item.index}>{item.fileName}</option>)}
@@ -68,7 +84,7 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
         </ProcessDocumentCard>;
       })}
     </ProcessDocumentsPanel>
-    <PortalModalShell open={canAccessOriginals&&preview!==null} onClose={()=>setPreview(null)} title="Visualizar documento" icon={FileCheck} maxWidthClass="max-w-5xl" bodyClassName="p-3 overflow-auto" footer={<button type="button" className="portal-action" onClick={()=>setPreview(null)}>Fechar</button>}>
+    <PortalModalShell open={preview!==null&&(canAccessOriginals||publicPath(preview))} onClose={()=>setPreview(null)} title="Visualizar documento" icon={FileCheck} maxWidthClass="max-w-5xl" bodyClassName="p-3 overflow-auto" footer={<button type="button" className="portal-action" onClick={()=>setPreview(null)}>Fechar</button>}>
       {preview&&<Suspense fallback={<p role="status">Carregando documento…</p>}><Preview url={preview.downloadUrl} format="pdf" label={preview.fileName}/></Suspense>}
     </PortalModalShell>
   </>;
