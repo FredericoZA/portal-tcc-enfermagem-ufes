@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {readBoundedResponse,ResponseSizeError} from '../security/boundedResponse';
+import {grantMissingDriveReaders} from './processDriveReaders';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
@@ -64,13 +65,27 @@ async function ensureFolder(accessToken: string, parentId: string, name: string)
   return created.json();
 }
 
-export async function ensurePortalProcessDriveFolder(input:{accessToken:string;rootFolderId:string;protocol:string;processId:string}){
+export async function ensurePortalProcessDriveFolder(input:{accessToken:string;rootFolderId:string;protocol:string;processId:string;readerEmails?:string[]}){
   await assertPrivateContainer(input.accessToken,input.rootFolderId);
   const processes=await ensureFolder(input.accessToken,input.rootFolderId,'02_PROCESSOS');
   const processFolder=await ensureFolder(input.accessToken,processes.id,input.protocol);
+  if(input.readerEmails?.length)await synchronizeProcessFolderReaders({...input,folderId:String(processFolder.id),readerEmails:input.readerEmails});
   // Each upload creates its own destination on demand. Do not pre-create
   // empty legacy document/publication trees for every new process.
   return {id:String(processFolder.id),webViewLink:String(processFolder.webViewLink||`https://drive.google.com/drive/folders/${processFolder.id}`)};
+}
+
+export async function synchronizeProcessFolderReaders(input:{accessToken:string;rootFolderId:string;folderId:string;processId:string;readerEmails:string[]}){
+  const metadata=async(id:string)=>(await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,name,mimeType,parents,trashed,appProperties&supportsAllDrives=true`,input.accessToken)).json();
+  const folder=await metadata(input.folderId);
+  if(folder.id!==input.folderId||folder.trashed||folder.mimeType!=='application/vnd.google-apps.folder'||folder.parents?.length!==1||(folder.appProperties?.portalProcessId&&folder.appProperties.portalProcessId!==input.processId))throw Error('Pasta do processo não confirmada para compartilhamento.');
+  const parent=await metadata(folder.parents[0]);
+  if(parent.trashed||parent.mimeType!=='application/vnd.google-apps.folder'||parent.name!=='02_PROCESSOS'||parent.parents?.length!==1||parent.parents[0]!==input.rootFolderId)throw Error('A pasta não pertence à raiz de processos configurada.');
+  await assertPrivateContainer(input.accessToken,input.rootFolderId);
+  await assertPrivateContainer(input.accessToken,parent.id);
+  const permissions=await listDriveFilePermissions(input.accessToken,input.folderId);
+  if(permissions.some(isUnsafePrivateContainerPermission))throw Error('A pasta do processo precisa permanecer privada.');
+  return grantMissingDriveReaders(input.accessToken,input.folderId,input.readerEmails,permissions,folder.appProperties||{});
 }
 
 function archiveNamePart(value:string,max=80){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toUpperCase().slice(0,max)||'NAO_INFORMADO';}
@@ -343,18 +358,23 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
 }
 
 /** Resolve browser links without downloading PDF bytes or changing Drive permissions. */
-export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;fileId:string;email:string;processId:string;artifactType:string;signatureJobId?:string;expectedSha256?:string;allowPublicRead?:boolean}):Promise<{view:string;download:string}|null>{
+export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;fileId:string;email:string;processId:string;artifactType:string;signatureJobId?:string;expectedSha256?:string;allowPublicRead?:boolean;readerEmails?:string[];formVersion?:number}):Promise<{view:string;download:string}|null>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return null;
   const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
   const publicAcademic=input.allowPublicRead===true&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(input.artifactType)&&/^[a-f0-9]{64}$/i.test(input.expectedSha256||'');
   if(permissions.some(p=>isUnsafePrivateContainerPermission(p)&&!(publicAcademic&&p.type==='anyone'&&p.role==='reader')))throw new Error('Arquivo privado possui compartilhamento amplo no Google Drive.');
   // Portal membership alone does not grant access to the Google account.
-  if(!(publicAcademic&&permissions.some(p=>p.type==='anyone'&&p.role==='reader'))&&!permissions.some(p=>p.type==='user'&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileOrganizer','writer','commenter','reader'].includes(p.role)))return null;
+  const hasAccess=()=>permissions.some(p=>p.type==='user'&&p.view!=='metadata'&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileOrganizer','writer','commenter','reader'].includes(p.role));
+  const mayEnroll=input.readerEmails?.some(email=>email.toLowerCase()===input.email.toLowerCase());
+  if(!(publicAcademic&&permissions.some(p=>p.type==='anyone'&&p.role==='reader'))&&!hasAccess()&&!mayEnroll)return null;
   const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,mimeType,trashed,appProperties,sha256Checksum,webViewLink,webContentLink&supportsAllDrives=true`,input.accessToken);
   const file=await response.json(),properties=file.appProperties||{};
-  if(file.id!==input.fileId||file.trashed||file.mimeType!=='application/pdf'||properties.portal!=='portal-tcc'||properties.portalProcessId!==input.processId||properties.artifactType!==input.artifactType||(input.signatureJobId&&properties.portalSignatureJobId!==input.signatureJobId))throw new Error('O arquivo do Drive não corresponde ao documento solicitado.');
+  const typeMatches=input.formVersion!==undefined?properties.formType===input.artifactType&&properties.formVersion===String(input.formVersion):properties.artifactType===input.artifactType;
+  if(file.id!==input.fileId||file.trashed||file.mimeType!=='application/pdf'||properties.portal!=='portal-tcc'||properties.portalProcessId!==input.processId||!typeMatches||(input.signatureJobId&&properties.portalSignatureJobId!==input.signatureJobId))throw new Error('O arquivo do Drive não corresponde ao documento solicitado.');
   if(publicAcademic&&String(file.sha256Checksum||'').toLowerCase()!==input.expectedSha256!.toLowerCase())return null;
   if(input.expectedSha256&&String(properties.sha256||'').toLowerCase()!==input.expectedSha256.toLowerCase())return null;
+  if(input.expectedSha256&&file.sha256Checksum&&String(file.sha256Checksum).toLowerCase()!==input.expectedSha256.toLowerCase())return null;
+  if(mayEnroll)await grantMissingDriveReaders(input.accessToken,input.fileId,input.readerEmails!,permissions,properties);
   const safe=(value:unknown)=>{try{const url=new URL(String(value));return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(url.hostname)&&!['access_token','token','key'].some(key=>url.searchParams.has(key))?url.href:'';}catch{return '';}};
   const view=safe(file.webViewLink),download=safe(file.webContentLink);
   return view&&download?{view,download}:null;

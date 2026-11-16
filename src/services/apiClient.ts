@@ -240,6 +240,8 @@ async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, f
 }
 
 export const apiClient = {
+  syncProcessDriveReaders:(afterProcessId?:string)=>fetchApi<{results:Array<{protocol:string;ok:boolean;error?:string}>;nextProcessId:string|null}>('/api/admin/drive-readers/sync',{method:'POST',body:JSON.stringify({afterProcessId})}),
+  getReservationReceiptDriveLinks:(processId:string,receiptId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/location-proof/download?receipt=${encodeURIComponent(receiptId)}&delivery=drive-links`),
   getPublicRepositoryDriveLinks:(path:string)=>{
     const u=new URL(path,window.location.origin);
     if(u.origin!==window.location.origin||!(/^\/api\/public\/processes\/[^/]+\/files\/(trabalho-completo|resumo-expandido)\/download$/.test(u.pathname)||/^\/api\/legacy-academic-records\/[^/]+\/files\/(0|[1-9]\d?)\/download$/.test(u.pathname)))throw Error('Endereço público inválido.');

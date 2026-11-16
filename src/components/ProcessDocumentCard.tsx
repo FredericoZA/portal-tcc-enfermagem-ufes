@@ -115,6 +115,15 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
   const closePicker = () => setPicker(null);
   const view = (item: ReservationReceiptSummary) => {
     if (!receiptProtocol) return;
+    if(privateProcessId){
+      const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
+      void apiClient.getReservationReceiptDriveLinks(privateProcessId,item.id).then(({links})=>{
+        if(scopeRef.current!==scope){tab?.close();return;}
+        if(links&&tab)tab.location.replace(links.view);
+        else{tab?.close();if(links)portalNotice('Permita a abertura de uma nova aba para acessar o PDF.');else setPreview({scope,item,url:receiptPreviewUrl(receiptProtocol,item,privateProcessId)});}
+      }).catch(error=>{tab?.close();if(scopeRef.current===scope)portalNotice(error instanceof Error?error.message:'Não foi possível abrir o comprovante.');});
+      return;
+    }
     try { setPreview({scope, item, url: receiptPreviewUrl(receiptProtocol, item, privateProcessId)}); }
     catch (error) { portalNotice(error instanceof Error ? error.message : 'Não foi possível abrir o comprovante.'); }
   };
@@ -122,13 +131,21 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
     if (!receiptProtocol || downloadingRef.current) return;
     downloadingRef.current = true;
     setDownloadingScope(scope);
+    const tab=privateProcessId?window.open('about:blank','_blank'):null;if(tab)tab.opener=null;
     try {
       receiptPreviewUrl(receiptProtocol, item, privateProcessId);
+      if(privateProcessId){
+        const {links}=await apiClient.getReservationReceiptDriveLinks(privateProcessId,item.id);
+        if(scopeRef.current!==scope){tab?.close();return;}
+        if(links){if(tab)tab.location.replace(links.download);else portalNotice('Permita a abertura de uma nova aba para acessar o PDF.');return;}
+        tab?.close();
+      }
       const {blob, fileName} = await apiClient.downloadReservationReceipt(receiptProtocol, item.id, privateProcessId);
       const objectUrl = URL.createObjectURL(blob), anchor = document.createElement('a');
       anchor.href = objectUrl; anchor.download = fileName; anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
     } catch (error) {
+      tab?.close();
       if (scopeRef.current === scope) portalNotice(error instanceof Error ? error.message : 'Não foi possível baixar o comprovante.');
     } finally { downloadingRef.current = false; setDownloadingScope(null); }
   };

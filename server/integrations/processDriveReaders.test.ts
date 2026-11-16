@@ -1,0 +1,81 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {processDriveReaderEmails,grantMissingDriveReaders} from './processDriveReaders';
+import {resolvePrivateDriveBrowserLinks,synchronizeProcessFolderReaders} from './googleDriveArchive';
+import {createHash} from 'node:crypto';
+
+test('automatic readers come only from persisted authors and advisor',()=>{
+  assert.deepEqual(processDriveReaderEmails({aluno1:{email:'Author@Example.invalid'},aluno2:{email:'author@example.invalid'},orientador:{email:'advisor@example.invalid'},banca:[{email:'examiner@example.invalid'}]} as any),['author@example.invalid','advisor@example.invalid']);
+});
+
+test('reader enrollment is silent, read-only and does not repeat existing grants',async t=>{
+  const permissions:any[]=[];let writes=0;
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    const u=new URL(String(url));assert.equal(u.searchParams.get('sendNotificationEmail'),'false');
+    assert.equal(init?.method,'POST');writes++;
+    const body=JSON.parse(String(init.body));assert.deepEqual(body,{type:'user',role:'reader',emailAddress:'author@example.invalid'});
+    return Response.json({id:'permission',...body});
+  });
+  await grantMissingDriveReaders('fixture','file_12345678',['author@example.invalid'],permissions);
+  await grantMissingDriveReaders('fixture','file_12345678',['author@example.invalid'],permissions);
+  assert.equal(writes,1);
+});
+
+test('direct access verifies file binding and integrity before enrolling a participant',async t=>{
+  let writes=0,process='process-1',sha='a'.repeat(64);
+  const input={accessToken:'fixture',fileId:'document_12345678',email:'author@example.invalid',readerEmails:['author@example.invalid'],processId:'process-1',artifactType:'ATA',expectedSha256:'a'.repeat(64)};
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    const path=new URL(String(url)).pathname;
+    if(init?.method==='POST'){writes++;return Response.json({id:'reader-1',type:'user',role:'reader',emailAddress:input.email});}
+    if(path.endsWith('/permissions'))return Response.json({permissions:[{type:'user',role:'owner',emailAddress:'owner@example.invalid'}]});
+    return Response.json({id:input.fileId,mimeType:'application/pdf',appProperties:{portal:'portal-tcc',portalProcessId:process,artifactType:'ATA',sha256:sha},sha256Checksum:sha,webViewLink:'https://drive.google.com/file/d/document_12345678/view',webContentLink:'https://drive.usercontent.google.com/download?id=document_12345678'});
+  });
+  process='other-process';await assert.rejects(resolvePrivateDriveBrowserLinks(input),/não corresponde/);assert.equal(writes,0);
+  process='process-1';sha='b'.repeat(64);assert.equal(await resolvePrivateDriveBrowserLinks(input),null);assert.equal(writes,0);
+  sha='a'.repeat(64);assert.ok(await resolvePrivateDriveBrowserLinks(input));assert.equal(writes,1);
+  assert.equal(await resolvePrivateDriveBrowserLinks({...input,email:'outsider@example.invalid'}),null);assert.equal(writes,1);
+});
+
+test('folder sharing rejects a folder outside the configured process root before any grant',async t=>{
+  let writes=0;
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    if(init?.method==='POST')writes++;
+    const id=new URL(String(url)).pathname.split('/').at(-1);
+    return Response.json(id==='process_folder'?{id,mimeType:'application/vnd.google-apps.folder',parents:['unrelated_folder']}:{id,name:'02_PROCESSOS',mimeType:'application/vnd.google-apps.folder',parents:['other_root']});
+  });
+  await assert.rejects(synchronizeProcessFolderReaders({accessToken:'fixture',folderId:'process_folder',rootFolderId:'portal_root',processId:'process-1',readerEmails:['author@example.invalid']}),/raiz/);assert.equal(writes,0);
+});
+
+test('synchronization revokes only its own obsolete reader and preserves manual grants',async t=>{
+  const key='portalReader_'+createHash('sha256').update('previous@example.invalid').digest('hex').slice(0,24);
+  const permissions=[{id:'managed-reader',type:'user',role:'reader',emailAddress:'previous@example.invalid'},{id:'manual-reader',type:'user',role:'reader',emailAddress:'manual@example.invalid'},{id:'owner',type:'user',role:'owner',emailAddress:'owner@example.invalid'}];
+  const writes:Array<{url:string;method?:string;body:unknown}>=[];
+  t.mock.method(globalThis,'fetch',async(url,init)=>{writes.push({url:String(url),method:init?.method,body:init?.body?JSON.parse(String(init.body)):null});return init?.method==='DELETE'?new Response(null,{status:204}):Response.json({id:'file_12345678'});});
+  await grantMissingDriveReaders('fixture','file_12345678',[],permissions,{[key]:'managed-reader'});
+  assert.equal(writes.length,2);assert.match(writes[0].url,/permissions\/managed-reader\?/);assert.equal(writes[0].method,'DELETE');
+  assert.deepEqual(writes[1].body,{appProperties:{[key]:null}});assert.deepEqual(permissions.map(p=>p.id),['manual-reader','owner']);
+});
+
+test('failed permission bookkeeping rolls back only the readers created by this attempt',async t=>{
+  const methods:string[]=[];
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    methods.push(String(init?.method));
+    if(init?.method==='POST')return Response.json({id:'new-reader',type:'user',role:'reader',emailAddress:'author@example.invalid'});
+    if(init?.method==='PATCH')return new Response(null,{status:503});
+    assert.match(String(url),/permissions\/new-reader\?/);
+    return new Response(null,{status:204});
+  });
+  await assert.rejects(grantMissingDriveReaders('fixture','file_12345678',['author@example.invalid'],[],{}),/registrar/);
+  assert.deepEqual(methods,['POST','PATCH','DELETE']);
+});
+
+test('reservation direct links require the exact archived form version before sharing',async t=>{
+  let grants=0;
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    if(init?.method==='POST'){grants++;throw Error('must not share a different revision');}
+    if(String(url).includes('/permissions'))return Response.json({permissions:[]});
+    return Response.json({id:'receipt_12345678',mimeType:'application/pdf',appProperties:{portal:'portal-tcc',portalProcessId:'process-1',formType:'CONFIRMACAO_LOCAL',formVersion:'1'}});
+  });
+  await assert.rejects(resolvePrivateDriveBrowserLinks({accessToken:'fixture',fileId:'receipt_12345678',email:'author@example.invalid',readerEmails:['author@example.invalid'],processId:'process-1',artifactType:'CONFIRMACAO_LOCAL',formVersion:2}),/não corresponde/);
+  assert.equal(grants,0);
+});
