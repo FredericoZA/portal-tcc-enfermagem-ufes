@@ -5981,8 +5981,16 @@ export async function createPortalApp() {
         try{
           if(!process.driveFolderId)throw Error('O cadastro inicial precisa ser arquivado antes de compartilhar sua pasta.');
           const readerEmails=authorizedProcessDriveReaderEmails(process);
-          const files:Array<{fileId:string;artifactType:string;expectedSha256?:string;signatureJobId?:string;formVersion?:number}>=[];
-          if(process.defesa.invitationDriveFileId)files.push({fileId:process.defesa.invitationDriveFileId,artifactType:'CONVITE'});
+          const files:Array<{fileId:string;artifactType:string;expectedSha256?:string;signatureJobId?:string;formVersion?:number;allowPublicRead?:boolean}>=[];
+          const invitationIds=new Set([process.defesa.invitationDriveFileId,...(process.defesa.reservationHistory||[]).map(item=>item.invitationDriveFileId)].filter((id):id is string=>typeof id==='string'&&id.length>0));
+          for(const fileId of invitationIds)files.push({fileId,artifactType:'CONVITE'});
+          for(const [kind,fileId,expectedSha256] of [
+            ['trabalho-completo',process.acervo?.trabalhoCompletoFileId,process.acervo?.trabalhoCompletoSha256],
+            ['resumo-expandido',process.acervo?.resumoExpandidoFileId,process.acervo?.resumoExpandidoSha256],
+          ] as const){
+            const allowPublicRead=publicFileAuthorized(process,signatureJobsStore,kind);
+            if(fileId)files.push({fileId,artifactType:kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',expectedSha256,allowPublicRead});
+          }
           for(const job of signatureJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveSignedFileId))files.push({fileId:job.driveSignedFileId!,artifactType:job.documentType,expectedSha256:job.signedSha256,signatureJobId:job.id});
           for(const job of formArchiveJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveFileId&&j.sha256&&['CADASTRO_INICIAL','CONFIRMACAO_LOCAL'].includes(j.formType))){
             files.push({fileId:job.driveFileId!,artifactType:job.formType,expectedSha256:job.sha256,formVersion:job.version});
