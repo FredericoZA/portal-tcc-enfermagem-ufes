@@ -111,7 +111,7 @@ test('legados são históricos no mesmo repositório, com privacidade preservada
   assert.match(text, /001 - Legado/);
   assert.match(text, /mesmas abas/);
   assert.match(text, /declaração históricos identificados ficam públicos/);
-  assert.match(text, /instrumento histórico da banca continua restrito/);
+  assert.match(text, /instrumento de avaliação continua restrito/);
   assert.match(text, /autorização confirmada/);
   assert.match(text, /não inicia outro cadastro, defesa ou assinatura/);
 });

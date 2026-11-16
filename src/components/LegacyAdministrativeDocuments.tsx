@@ -9,10 +9,10 @@ import {PortalModalShell} from './PortalModalShell';
 const Preview=lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
 const groups: {kind:LegacyAdministrativeFileView['kind'];label:string}[]=[
   {kind:'CONVITE',label:'Carta-Convite da Banca'},
+  {kind:'AVALIACAO',label:'Instrumento de avaliação'},
   {kind:'ATA',label:'Ata'},
   {kind:'TERMO',label:'Termo de Autorização e Publicação'},
   {kind:'DECLARACAO',label:'Declaração de Participação na Banca'},
-  {kind:'AVALIACAO',label:'Instrumento histórico da banca'},
 ];
 
 /** Existing administrative tab, with original historical files and no live signature actions. */
@@ -73,7 +73,7 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
         return <ProcessDocumentCard key={group.kind} title={group.label}
           signerLabel="Arquivo" signerNote={restricted?'Consulta restrita':file?'Original importado':pending?'Consultando acervo':'Não localizado'}
           status={restricted?'Acesso restrito':pending?'Consultando…':file?'Disponível':'Não disponível'}
-          statusDescription={restricted?'O instrumento histórico da banca exige acesso autorizado.':!pending&&!file?'Não localizado no acervo importado.':undefined}
+          statusDescription={restricted?'O instrumento de avaliação exige acesso autorizado.':!pending&&!file?'Não localizado no acervo importado.':undefined}
           tone={file?'available':'pending'} available={Boolean(file)&&!pending} working={downloading!==null}
           onView={()=>file&&void open(file,'view')} onDownload={()=>file&&void open(file,'download')}>
           {documents.length>1&&<label className="text-xs">Arquivo

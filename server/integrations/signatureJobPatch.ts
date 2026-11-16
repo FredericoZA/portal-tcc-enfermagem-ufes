@@ -27,5 +27,8 @@ export function existingSignatureJobPatch(before:object,after:object):Record<str
     ||Buffer.byteLength(JSON.stringify(b))>200_000)return null;
   ids.add(b.id);changed.push(b);if(changed.length>10)return null;
  }
+ // Historical consent has no live academic process projection. Its canonical
+ // job stays in the runtime journal; use the aggregate commit for this rare action.
+ if(changed.some(job=>typeof job.processId==='string'&&/^legado-\d{4}$/.test(job.processId)))return null;
  return changed.length?changed:null;
 }

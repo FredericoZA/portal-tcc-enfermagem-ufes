@@ -5,6 +5,7 @@ import { runtimeReadProjection } from './runtimeReadProjection';
 test('public repository and legacy references retain the historical catalog', () => {
   for (const path of [
     '/public/repository',
+    '/processes/proc-1/publication-choice',
     '/public/processes/TCC%20-%2000001',
     '/public/processes/legacy-108',
     '/legacy-academic-records',
@@ -37,7 +38,7 @@ test('every mutation and unreviewed endpoint still requires canonical hydration'
     for (const path of [
       '/public/repository',
       '/processes/proc-1',
-      '/public/processes/proc-1/files/trabalho-completo/download',
+        '/public/processes/proc-1/files/trabalho-completo/download',
     ]) {
       assert.equal(
         runtimeReadProjection(method, path),

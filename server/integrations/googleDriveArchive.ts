@@ -304,6 +304,18 @@ export async function withdrawManyPublicDriveFiles(accessToken:string,fileIds:st
  if(results.some(result=>result.status==='rejected'))throw Error('Há retiradas de acesso pendentes no Google Drive. Repita a operação para concluir.');
 }
 
+/** Exact PDF deletion; never recursively removes folders. A repeated deletion is safe. */
+export async function deleteAuthorizationPdfs(accessToken:string,fileIds:string[]):Promise<void>{
+  for(const id of new Set(fileIds)){
+    if(!/^[a-zA-Z0-9_-]{10,150}$/.test(id))throw Error('Referência de termo inválida.');
+    try{
+      const file=await (await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,mimeType&supportsAllDrives=true`,accessToken)).json();
+      if(file.id!==id||file.mimeType!=='application/pdf')throw Error('O termo anterior não é um PDF confirmado.');
+      await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?supportsAllDrives=true`,accessToken,{method:'DELETE'});
+    }catch(error){if(![404,410].includes(Number((error as {status?:number})?.status)))throw error;}
+  }
+}
+
 export async function inspectPortalDriveArtifact(input:{accessToken:string;fileId:string;expectedSha256?:string;expectedVersion?:number;expectPublic:boolean;expectedSourceFileId?:string;publicReadOptional?:boolean}){
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return{ok:false,issues:['ID de arquivo inválido.']};
   const issues:string[]=[];

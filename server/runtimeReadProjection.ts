@@ -90,6 +90,7 @@ export function runtimeReadProjection(
   // complete catalog here; stripping it would silently turn a valid link into 404.
   if (
     LITE_PATHS.has(requestPath) ||
+    /^\/processes\/[^/?#]+\/publication-choice$/.test(requestPath) ||
     /^\/public\/processes\/[^/?#]+$/.test(requestPath) ||
     /^\/legacy-academic-records\/[^/?#]+\/files\/(?:0|[1-9]\d?)\/download$/.test(
       requestPath,

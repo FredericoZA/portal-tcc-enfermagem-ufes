@@ -306,3 +306,8 @@ test('versioned signer policy survives PostgreSQL JSONB commit, normalized signe
   assert.doesNotThrow(()=>assertCurrentSignatureRecipients(p,'ATA',reloaded.signatureJobs[0],{commissionPresidentEmail:'changed@example.invalid'}));
  }finally{await db.close();}
 });
+
+test('historical consent jobs use the canonical runtime journal without a fake live-process projection',()=>{
+ const before:any=state();before.signatureJobs[0].processId='legado-0091';const after=structuredClone(before);after.signatureJobs[0].status='SENDING';
+ assert.equal(existingSignatureJobPatch(before,after),null);
+});

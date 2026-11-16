@@ -152,6 +152,10 @@ export function assertSignatureEligibility(
   type: SignableDocumentType,
   jobs: SignatureJob[],
 ): void {
+  if(process.legacyRecord){
+    if(type!=='TERMO'||process.acervo?.publicationChange?.status!=='AWAITING_SIGNATURE'||!publicationRequested(process)||!process.acervo.authorizationConfirmedAt)throw Error('O registro histórico aceita apenas a renovação expressa do termo de publicação.');
+    return;
+  }
   if (process.avaliacao.status !== 'CONCLUIDO') throw new Error(`${process.protocolo}: registro de conceito e ata pendente.`);
   if ((type === 'TERMO' || type === 'DECLARACAO') && !repositoryDataComplete(process)) {
     throw new Error(`${process.protocolo}: dados finais do repositório ainda não foram concluídos.`);
@@ -177,7 +181,9 @@ export function assertCurrentSignatureRecipients(process:ProcessData,type:Signab
 
 /** Prevent a new request through either provider once this revision is signed. */
 export function assertDocumentSignatureOpen(process:ProcessData,type:SignableDocumentType,jobs:SignatureJob[]):void{
- if(process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'||(type==='ATA'&&currentAtaArchived(process,jobs))||documentSignatureCompleted(jobs,process.id,type,signatureDocumentRevision(process,type)))throw new Error('Este documento já está assinado. Utilize Ver ou Baixar PDF.');
+ const change=process.acervo?.publicationChange;
+ const renewedTerm=type==='TERMO'&&change?.status==='AWAITING_SIGNATURE'&&change.revision===process.dataRevision;
+ if((!renewedTerm&&(process.status==='CONCLUIDO'||process.etapaAtual==='CONCLUIDO'))||(type==='ATA'&&currentAtaArchived(process,jobs))||documentSignatureCompleted(jobs,process.id,type,signatureDocumentRevision(process,type)))throw new Error('Este documento já está assinado. Utilize Ver ou Baixar PDF.');
 }
 
 export function signatureJobMatchesCurrentRevision(process:ProcessData,job:Pick<SignatureJob,'documentType'|'sourceDataRevision'|'status'|'removedFromLogsAt'>):boolean{

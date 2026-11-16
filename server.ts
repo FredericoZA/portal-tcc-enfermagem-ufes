@@ -36,6 +36,10 @@ import {stripDocumentScanningBlocks,delimitedTextParts,stripInlineMarkup} from '
 import {isEmailAddress,isEmailHeaderAddress} from './src/utils/emailAddress';
 import { legacyRepositoryProcess } from './src/utils/legacyRepository';
 import { readLegacyAcademicPdf } from './server/legacyArchiveFiles';
+import {historicalPublicationProcess,storeHistoricalPublicationProcess} from './server/legacyPublicationProcess';
+import {installPublicationChoiceRoutes} from './server/publicationChoiceRoutes';
+import {destroyPreviousPublicationTerms} from './server/publicationTermRemoval';
+import {assertRenewedPublicationSigners} from './server/workflow/publicationChoice';
 import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
 import {EVALUATION_OUTCOMES,evaluationQuestions,isConceptRegistrationReleased} from './src/utils/evaluationForm';
@@ -194,7 +198,7 @@ import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, asse
 import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
-import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePublicationSource, withdrawDriveFilePublicAccess, withdrawManyPublicDriveFiles, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
+import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePublicationSource, withdrawDriveFilePublicAccess, withdrawManyPublicDriveFiles, deleteAuthorizationPdfs, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
 import { renderGoogleDriveTemplateToPdf,saveReviewedAta,exportReviewedAta,discardAtaCopy,cleanupExpiredAtaPreviews } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail, workflowEmailCopies } from './server/integrations/trackedGmail';
 import { createCriticalAuditJournal, visibleCriticalAudit } from './server/criticalAuditPolicy';
@@ -625,7 +629,15 @@ async function saveRemoteSnapshotWithRecovery(snapshot:PersistedPortalState):Pro
   }
 }
 
+function publicationProcessById(id:string):ProcessData|undefined{
+  const live=processesStore.find(p=>p.id===id);if(live)return live;
+  const record=legacyAcademicRecordsStore.find(r=>r.id===id);
+  return record?.provenance.publicationProcess as ProcessData|undefined;
+}
+function currentPublicationProcess(p:ProcessData):boolean{return processesStore.includes(p)||publicationProcessById(p.id)===p;}
 function snapshotPortalState() {
+  for(const record of legacyAcademicRecordsStore){const p=record.provenance.publicationProcess as ProcessData|undefined;if(p)storeHistoricalPublicationProcess(record,p);}
+
   const signatureMetadata=signatureJobsStore.map(({artifactBase64:_artifact,...job})=>job);
   const formMetadata=formArchiveJobsStore.map(({artifactBase64:_artifact,...job})=>({...job,artifactBase64:''}));
   const authorizedStudents = authorizedStudentsStore.map(entry => {
@@ -952,7 +964,7 @@ function isReservationAuthor(email:string,process:ProcessData):boolean{
 }
 function canAdministerSignatureJob(email:string,job:SignatureJob):boolean{
   if(hasFullAdministration(email))return true;
-  const process=job.documentType==='DECLARACAO'&&processesStore.find(item=>item.id===job.processId);
+  const process=job.documentType==='DECLARACAO'&&publicationProcessById(job.processId);
   return Boolean(process&&canAccessPresidencyDeclaration(email,process));
 }
 function canUseStudioForm(email:string,processId:string,form:FormRecipientSelection):boolean{
@@ -1917,6 +1929,7 @@ async function createSignatureJobUnlocked(p:ProcessData,type:'ATA'|'TERMO'|'DECL
   const reviewedPolicy=type==='ATA'?p.avaliacao.reviewedAta?.signaturePolicySnapshot:undefined;
   if(type==='ATA'&&p.avaliacao.reviewedAta&&!reviewedPolicy&&explicitSignatureSelection)throw new Error('A política de assinaturas mudou. Reabra a ata pelo fluxo normal e confira a nova versão antes de enviá-la.');
   const signers=reviewedPolicy?signatureSignersFromSnapshot(reviewedPolicy):deriveSignatureSigners(p,type);
+  if(type==='TERMO'&&p.acervo?.publicationChange?.status==='AWAITING_SIGNATURE')assertRenewedPublicationSigners(p,{signers});
   const signerPolicySnapshot=reviewedPolicy||captureSignaturePolicySnapshot(p,type,currentSettings,signers);
   assertCurrentSignatureRecipients(p,type,{signers,signerPolicySnapshot},currentSettings);
   if(signers.some(s=>!isValidPortalEmail(s.email)))throw new Error(`${p.protocolo}: signatário sem e-mail válido.`);
@@ -1988,7 +2001,7 @@ function astenDispatchFailure(stage:AstenDispatchStage,error:unknown):string{
   return error instanceof Error?error.message:'Falha no envio à ASTEN.';
 }
 async function dispatchSignatureJobUnlocked(job:SignatureJob):Promise<SignatureJob>{
-  if(job.status==='CANCELED'||!processesStore.some(p=>p.id===job.processId))return job;
+  if(job.status==='CANCELED'||!(processesStore.some(p=>p.id===job.processId)||publicationProcessById(job.processId)))return job;
   if(job.status==='DRIVE_SYNC_PENDING')return archiveSignatureJobAutomatically(job);
   // Se a instância caiu após solicitar o encaminhamento, NÃO solicitar novamente.
   if(job.providerEnvelopeId&&['SENDING','UNCERTAIN'].includes(job.providerDispatchState||'')){
@@ -2000,7 +2013,7 @@ async function dispatchSignatureJobUnlocked(job:SignatureJob):Promise<SignatureJ
     return job;
   }
   if(job.removedFromLogsAt||['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status))return job;
-  const currentProcess=processesStore.find(item=>item.id===job.processId);
+  const currentProcess=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);
   try{
     if(!currentProcess||!signatureJobMatchesCurrentRevision(currentProcess,job))throw new Error('A solicitação de assinatura não pertence à versão atual do documento.');
     if(hasCompetingSignatureArchive(currentProcess,job,signatureJobsStore))throw new Error('Esta versão já foi arquivada por outra solicitação.');
@@ -2031,7 +2044,7 @@ async function dispatchSignatureJobUnlocked(job:SignatureJob):Promise<SignatureJ
     // Read-only preparation does not need another aggregate commit. The durable
     // claim and CREATING barrier below still precede any ASTEN creation request.
     job.status='SENDING';job.lastError=undefined;job.updatedAt=new Date().toISOString();
-    const process=processesStore.find(item=>item.id===job.processId);if(!process)throw new Error('Processo do documento não encontrado.');
+    const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);if(!process)throw new Error('Processo do documento não encontrado.');
     const authenticationProfile=job.providerAuthenticationProfile||getAstenSigningProfile();
     dispatchStage='SIGNER_CONTACTS';
     const signerPhones=authenticationProfile==='CONFIDENTIAL_SMS'?await getAstenSignerPhones():{};
@@ -2113,7 +2126,7 @@ function updateProcessCompletion(processId:string):void{
   const latestByType=new Map<string,SignatureJob>();
   for(const type of ['TERMO','DECLARACAO']){const job=latestSignature(process,signatureJobsStore,type);if(job)latestByType.set(type,job);}
   const requiredTypes=publicationRequested(process)?['TERMO','DECLARACAO']:['DECLARACAO'];
-  if(process.acervo?.submittedAt&&repositoryDataComplete(process)&&ataArchived(process,signatureJobsStore)&&requiredTypes.every(type=>{const job=latestByType.get(type);return job?.status==='ARCHIVED'&&Boolean(job.driveSignedFileId)&&job.sourceDataRevision===process.dataRevision;})) {
+  if(process.acervo?.submittedAt&&repositoryDataComplete(process)&&ataArchived(process,signatureJobsStore)&&requiredTypes.every(type=>{const job=latestByType.get(type);return job?.status==='ARCHIVED'&&Boolean(job.driveSignedFileId)&&job.sourceDataRevision===signatureDocumentRevision(process,type);} )) {
     process.etapaAtual='CONCLUIDO';process.status='CONCLUIDO';process.completedAt=process.completedAt||new Date().toISOString();process.updatedAt=process.completedAt;
   }
 }
@@ -2148,7 +2161,7 @@ async function readGovbrPdf(job:SignatureJob,fileId:string,expectedSha256:string
 
 async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promise<void>{
   if(!job.postArchivePending||job.status!=='ARCHIVED')return;
-  const process=processesStore.find(item=>item.id===job.processId);
+  const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);
   if(!process||job.sourceDataRevision!==signatureDocumentRevision(process,job.documentType)){
     job.postArchivePending=undefined;
     job.lastError=undefined;
@@ -2160,8 +2173,33 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
     if(run&&run.status!=='COMPLETED')throw new Error('A rotina publicada aguarda retomada.');
   };
   try{
+    if(process.legacyRecord){
+      const change=process.acervo.publicationChange;
+      if(job.documentType!=='TERMO'||change?.signatureJobId!==job.id||change.status!=='AWAITING_SIGNATURE')throw Error('Termo histórico desatualizado.');
+      const record=legacyAcademicRecordsStore.find(r=>r.id===process.id);if(!record)throw Error('Registro histórico indisponível.');
+      const token=await getGoogleWorkspaceAccessToken();
+      for(const [kind,id,sha] of [['TRABALHO_COMPLETO',process.acervo.trabalhoCompletoFileId,process.acervo.trabalhoCompletoSha256],['RESUMO_EXPANDIDO',process.acervo.resumoExpandidoFileId,process.acervo.resumoExpandidoSha256]]){
+        if(!(kind==='TRABALHO_COMPLETO'?change.publishFullWork:change.publishExpandedAbstract))continue;
+        if(!id||!sha)throw Error('Arquivo histórico não conferido.');
+        await publicRepositoryDriveLinks({accessToken:token,sourceFileId:id,scope:process.id,sha256:sha,assertAuthorized:async()=>publicationProcessById(process.id)===process&&process.acervo.publicationChange===change&&job.status==='ARCHIVED'});
+      }
+      process.acervo.publicationSyncedAt=new Date().toISOString();process.acervo.publicationState='PUBLIC';
+      change.status='COMPLETED';change.completedAt=new Date().toISOString();change.lastError=undefined;change.signedTermFileId=job.driveSignedFileId;
+      storeHistoricalPublicationProcess(record,process);
+      if(job.driveSignedFileId&&job.signedSha256){
+        const files=legacyAdministrativeFiles(record);
+        if(!files.some(f=>f.driveFileId===job.driveSignedFileId))files.push({kind:'TERMO',driveFileId:job.driveSignedFileId,fileName:job.fileName,folderId:process.driveFolderId!,sha256:job.signedSha256,visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'});
+        record.provenance.administrativeDocuments=files;
+        (record.provenance.publicationOverride as any).currentTermFileId=job.driveSignedFileId;
+      }
+      job.postArchivePending=undefined;job.lastError=undefined;await persistPortalStateDurably();return;
+    }
     if(declarationReady(process,signatureJobsStore)){
       if(process.acervo?.publicationState!=='PUBLIC')await syncAuthorizedPublication(process,actorEmail);
+      const change=process.acervo?.publicationChange;
+      if(job.documentType==='TERMO'&&change?.signatureJobId===job.id&&change.status==='AWAITING_SIGNATURE'){
+        change.status='COMPLETED';change.completedAt=new Date().toISOString();change.lastError=undefined;
+      }
       if(job.documentType!=='DECLARACAO'&&process.status!=='CONCLUIDO'){
         await runEvent('PUBLICATION_CLEARED');
         await executeAutomaticAsten(process,'DECLARACAO',actorEmail);
@@ -2185,7 +2223,7 @@ async function commitSignatureArchive(
   process:ProcessData,job:SignatureJob,actorEmail:string,
   archive:Pick<SignatureJob,'driveSignedFileId'|'driveSignedWebViewLink'|'signedSha256'>,
 ):Promise<void>{
-  if(!processesStore.includes(process)||!signatureJobsStore.includes(job)||!signatureJobMatchesCurrentRevision(process,job)){
+  if(!(processesStore.includes(process)||currentPublicationProcess(process))||!signatureJobsStore.includes(job)||!signatureJobMatchesCurrentRevision(process,job)){
     throw new Error('O documento mudou durante o arquivamento. Consulte a versão atual.');
   }
   if(job.status==='ARCHIVED')return;
@@ -2203,7 +2241,7 @@ async function commitSignatureArchive(
     process.etapaAtual='REPOSITORIO';
   }
   if(process.astenSignatureIntent?.documentType===job.documentType)process.astenSignatureIntent=undefined;
-  if(job.documentType!=='DECLARACAO'&&declarationReady(process,signatureJobsStore))queueAutomaticAsten(process,'DECLARACAO');
+  if(job.documentType!=='DECLARACAO'&&!process.acervo?.publicationChange&&declarationReady(process,signatureJobsStore))queueAutomaticAsten(process,'DECLARACAO');
   recordSignatureAudit(auditLogsStore,process,job,actorEmail,'SIGNED_DOCUMENT_ARCHIVED',job.provider==='ASTEN'?'ASTEN_SIGNERS_READBACK':'GOV_BR_MANUAL_REVIEW',beforeStatus);
   await persistPortalStateDurably();
   await finishArchivedSignature(job,actorEmail);
@@ -2212,7 +2250,7 @@ async function commitSignatureArchive(
 async function archiveSignatureJobAutomatically(job:SignatureJob):Promise<SignatureJob>{
   if(job.status==='ARCHIVED')return job;
   if(!job.providerEnvelopeId)return job;
-  const process=processesStore.find(item=>item.id===job.processId);if(!process||!signatureJobMatchesCurrentRevision(process,job)||hasCompetingSignatureArchive(process,job,signatureJobsStore))return job;
+  const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);if(!process||!signatureJobMatchesCurrentRevision(process,job)||hasCompetingSignatureArchive(process,job,signatureJobsStore))return job;
   let archive:Pick<SignatureJob,'driveSignedFileId'|'driveSignedWebViewLink'|'signedSha256'>;
   try{
     assertCurrentSignatureRecipients(process,job.documentType,job,currentSettings);
@@ -2476,6 +2514,36 @@ export async function createPortalApp() {
     if(!canRegisterProcess(getPortalIdentity(req)!.email))return res.status(403).json({error:'O cadastro está disponível para alunos autorizados.',code:'STUDENT_REGISTRATION_REQUIRED'});
     next();
   };
+  installPublicationChoiceRoutes(app,{
+    authenticate:requireAuthenticated,
+    limit:rateLimit({windowMs:60_000,limit:5,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),
+    email:req=>getPortalIdentity(req)?.email,
+    master:email=>hasFullAdministration(email),
+    process:id=>{const live=processesStore.find(p=>p.id===id);if(live)return live;const r=legacyAcademicRecordsStore.find(r=>r.id===id);if(!r)return;return historicalPublicationProcess(r);},
+    access:(email,p)=>hasFullAdministration(email)||canAccessProcess(email,p.id),
+    replace:p=>{if(p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id);if(!r)throw Error('Registro não encontrado.');storeHistoricalPublicationProcess(r,p);return;}const index=processesStore.findIndex(row=>row.id===p.id);if(index<0)throw Error('Processo não encontrado.');processesStore[index]=p;},
+    jobs:()=>signatureJobsStore,audit:log=>{auditLogsStore.push(log);},persist:persistPortalStateDurably,
+    revoke:async ids=>{await withdrawManyPublicDriveFiles(await getGoogleWorkspaceAccessToken(),ids);},
+    destroyPreviousTerms:async p=>{
+      const ids=p.acervo.publicationChange?.previousTermFileIds||[];
+      const otherLegacyFiles=legacyAcademicRecordsStore.filter(r=>r.id!==p.id).flatMap(r=>[...r.attachments.map(f=>f.driveFileId),...legacyAdministrativeFiles(r).map(f=>f.driveFileId)]);
+      const otherProcessFiles=processesStore.filter(r=>r.id!==p.id).flatMap(r=>[r.acervo?.trabalhoCompletoFileId,r.acervo?.resumoExpandidoFileId]);
+      if(ids.some(id=>[...otherLegacyFiles,...otherProcessFiles].includes(id)))throw Error('O termo está referenciado por outro processo.');
+      await destroyPreviousPublicationTerms(p,signatureJobsStore,async files=>{if(files.length)await deleteAuthorizationPdfs(await getGoogleWorkspaceAccessToken(),files);});
+      if(p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id)!;r.provenance.administrativeDocuments=legacyAdministrativeFiles(r).filter(f=>!ids.includes(f.driveFileId));storeHistoricalPublicationProcess(r,p);}
+    },
+    term:async(p,email)=>{
+      const request=p.acervo!.publicationChange!;
+      let job=request.signatureJobId?signatureJobsStore.find(j=>j.id===request.signatureJobId):undefined;
+      if(!job&&p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id)!;const contacts=r.provenance.verifiedPublicationParticipants as any;if(!contacts?.verifiedBy||r.autores.length>2||contacts.authors?.length!==r.autores.length||!contacts.advisor?.email||contacts.authors.some((a:any)=>!a.email))throw Object.assign(Error('Contatos históricos não confirmados.'),{code:'PUBLICATION_CONTACTS_UNVERIFIED'});}
+      if(!job){job=await createSignatureJob(p,'TERMO',email);request.signatureJobId=job.id;await persistPortalStateDurably();}
+      if(job.sourceDataRevision!==request.revision)throw Error('Versão da assinatura divergente.');
+      if(job.status==='ARCHIVED'){await finishArchivedSignature(job,email);return;}
+      await dispatchSignatureJobAutomatically(job);
+      if(!acceptedAstenSignature(job))throw Error('A assinatura do novo termo aguarda confirmação.');
+    },
+  });
+
   // Variação pública sem contagem de processos, IDs ou campos privados.
   app.get('/api/public/sync/version',async(_req,res)=>{
     res.setHeader('Cache-Control','public, no-store, max-age=0');
@@ -2575,12 +2643,14 @@ export async function createPortalApp() {
     }else if(purpose==='PROCESS_FULL_WORK'||purpose==='PROCESS_EXPANDED_ABSTRACT'){
       if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});
       processId=String(req.body?.processId||'').trim();
-      const process=processesStore.find(item=>item.id===processId);
-      if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
-      if(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore))return res.status(409).json({error:'Reabra a entrega antes de enviar novos arquivos finais.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
+      const process=publicationProcessById(processId);
+      const master=hasFullAdministration(identity.email);
+      if(!process||!(master||canAccessProcess(identity.email,process.id))||(process.legacyRecord&&!master))return res.status(404).json({error:'Processo não encontrado.'});
+      const publicationEditing=process.acervo?.publicationChange?.status==='EDITING';
+      if(!publicationEditing&&(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore)))return res.status(409).json({error:'Reabra a entrega antes de enviar novos arquivos finais.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
       const roles=getActiveProcessRoles(identity.email,process.id);
-      if(!roles.includes('STUDENT'))return res.status(403).json({error:'Somente um dos autores pode anexar os arquivos finais.'});
-      if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
+      if(!roles.includes('STUDENT')&&!(master&&publicationEditing))return res.status(403).json({error:'Apenas o Master ou um dos autores pode anexar os arquivos finais.'});
+      if(!process.legacyRecord&&!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
       requesterBinding=sessionUploadBinding(identity);
     }else return res.status(400).json({error:'Finalidade de upload inválida.'});
     try{
@@ -2694,7 +2764,7 @@ export async function createPortalApp() {
       try{
         if(!job)throw new Error('Evento sem envelope local reconhecido.');
         const beforeStatus=job.status;
-        const process=processesStore.find(item=>item.id===job.processId);
+        const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);
         const current=Boolean(process&&signatureJobMatchesCurrentRevision(process,job)&&!hasCompetingSignatureArchive(process,job,signatureJobsStore));
         if(current&&job.status!=='ARCHIVED'){
           const connection=await getPersistentAstenConnection();
@@ -5193,14 +5263,16 @@ export async function createPortalApp() {
   app.post('/api/processes/:id/files/:kind',requireAuthenticated,async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     const index=processesStore.findIndex(process=>process.id===req.params.id);
-    if(index<0)return res.status(404).json({error:'Processo não encontrado.'});
-    const process=processesStore[index];
-    if(!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
+    const process=publicationProcessById(String(req.params.id));
+    const master=hasFullAdministration(identity.email);
+    if(!process||!(master||canAccessProcess(identity.email,process.id))||(process.legacyRecord&&!master))return res.status(404).json({error:'Processo não encontrado.'});
     const roles=getActiveProcessRoles(identity.email,process.id);
-    if(!roles.includes('STUDENT'))return res.status(403).json({error:'Somente um dos autores pode anexar os arquivos finais.'});
-    if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes do envio dos arquivos finais.'});
-    if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o recebimento, a validação e o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
-    if(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore))return res.status(409).json({error:'Os arquivos finais ficam bloqueados após a preparação do Termo ou da Declaração. Use o fluxo administrativo de nova versão.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
+    const publicationEditing=process.acervo?.publicationChange?.status==='EDITING';
+    if(publicationEditing&&req.body?.expectedPublicationRevision!==process.dataRevision)return res.status(409).json({error:'O arquivo mudou. Reabra a edição antes de enviar outra versão.'});
+    if(!roles.includes('STUDENT')&&!(master&&publicationEditing))return res.status(403).json({error:'Apenas o Master ou um dos autores pode anexar os arquivos finais.'});
+    if(!process.legacyRecord&&process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes do envio dos arquivos finais.'});
+    if(!process.legacyRecord&&!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o recebimento, a validação e o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
+    if(!publicationEditing&&(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore)))return res.status(409).json({error:'Os arquivos finais ficam bloqueados após a preparação do Termo ou da Declaração. Use o fluxo administrativo de nova versão.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
     const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':req.params.kind==='resumo-expandido'?'RESUMO_EXPANDIDO':null;
     if(!artifactType)return res.status(404).json({error:'Tipo de arquivo não reconhecido.'});
     if(!currentSettings.driveRootFolderId&&!localReviewFilesEnabled())return res.status(409).json({error:'O Master ainda não concluiu a configuração da pasta raiz do Google Drive.'});
@@ -5229,7 +5301,9 @@ export async function createPortalApp() {
         if(artifactType==='TRABALHO_COMPLETO'){nextAcervo.trabalhoCompletoFileId=String(uploaded.id);nextAcervo.trabalhoCompletoFileName=String(uploaded.name||canonicalName);nextAcervo.trabalhoCompletoFileUrl=localUrl;nextAcervo.trabalhoCompletoSha256=sha256;nextAcervo.trabalhoCompletoVersion=version;if(replacingPrevious){nextAcervo.publicFullWorkFileId=undefined;nextAcervo.publicFullWorkFileUrl=undefined;}}
         else{nextAcervo.resumoExpandidoFileId=String(uploaded.id);nextAcervo.resumoExpandidoFileName=String(uploaded.name||canonicalName);nextAcervo.resumoExpandidoFileUrl=localUrl;nextAcervo.resumoExpandidoSha256=sha256;nextAcervo.resumoExpandidoVersion=version;if(replacingPrevious){nextAcervo.publicExpandedAbstractFileId=undefined;nextAcervo.publicExpandedAbstractFileUrl=undefined;}}
         if(replacingPrevious){nextAcervo.authorizationConfirmedAt=undefined;nextAcervo.publicationSyncedAt=undefined;nextAcervo.publicationState=publicationRequested(process)?'PENDING_SYNC':'NOT_REQUESTED';}
-        processesStore[index]={...process,acervo:nextAcervo,dataRevision:process.dataRevision+1,updatedAt:now};
+        const updated={...process,acervo:nextAcervo,dataRevision:process.dataRevision+1,updatedAt:now};
+        if(publicationEditing)updated.acervo.publicationChange={...updated.acervo.publicationChange!,revision:updated.dataRevision};
+        if(updated.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===updated.id)!;storeHistoricalPublicationProcess(r,updated);}else processesStore[index]=updated;
         auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:[...getUserRolesForEmail(identity.email).globalRoles,...roles],action:replacingPrevious?'VERSAO_ARQUIVO_SUBSTITUIDA':'UPLOAD_PDF_DRIVE',entityType:'process_file',entityId:String(uploaded.id),before:previousId?{driveFileId:previousId,version:previousVersion||1,lifecycle:'SUPERSEDED',publicCopyFileId:previousPublicFileId||undefined}:undefined,after:{artifactType,fileName:String(uploaded.name||canonicalName),sha256,version,lifecycle:'CURRENT',publicationAuthorizationInvalidated:replacingPrevious,publicCopyAccessRemoved:Boolean(replacingPrevious&&previousPublicFileId)},timestamp:now});
         await persistPortalStateDurably();
         return{status:201,body:{id:String(uploaded.id),fileName:String(uploaded.name||canonicalName),downloadUrl:localUrl,sha256,version}};
@@ -5272,8 +5346,8 @@ export async function createPortalApp() {
 
   app.get('/api/processes/:id/files/:kind/download',requireAuthenticated,rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false,message:{error:'Limite temporário de consultas aos PDFs atingido.'}}),async(req,res)=>{
     const identity=getPortalIdentity(req)!;
-    const process=processesStore.find(item=>item.id===req.params.id);
-    if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Arquivo não encontrado.'});
+    const process=publicationProcessById(String(req.params.id));
+    if(!process||!(hasFullAdministration(identity.email)||canAccessProcess(identity.email,process.id))||(process.legacyRecord&&!hasFullAdministration(identity.email)))return res.status(404).json({error:'Arquivo não encontrado.'});
     const fileId=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoFileId:req.params.kind==='resumo-expandido'?process.acervo?.resumoExpandidoFileId:'';
     if(!fileId)return res.status(404).json({error:'Arquivo não encontrado.'});
     try{const accessToken=await sourceFilesAccessToken();const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO';const expectedSha256=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;const links=fileId.startsWith('local_')?null:await resolvePrivateDriveBrowserLinks({accessToken,fileId,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType,expectedSha256,allowPublicRead:publicFileAuthorized(process,signatureJobsStore,req.params.kind)}).catch(()=>null);res.setHeader('Cache-Control','private, no-store');if(req.query.delivery==='drive-links')return res.json({links});if(links)return res.redirect(302,req.query.view==='1'?links.view:links.download);const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType,allowPublicRead:publicFileAuthorized(process,signatureJobsStore,req.params.kind),expectedSha256});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o PDF.'});}
@@ -5599,7 +5673,7 @@ export async function createPortalApp() {
   });
 
   app.get('/api/processes/:id/verifications',requireAuthenticated,requireFeature('PUBLIC_AUTHENTICITY'),(req,res)=>{const identity=getPortalIdentity(req)!;const process=processesStore.find(item=>item.id===req.params.id);if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Trabalho não encontrado.'});res.json(processVerificationsFor(process.id));});
-  app.get('/api/public/verification/:code',requireFeature('PUBLIC_AUTHENTICITY'),(req,res)=>{const code=String(req.params.code||'');const job=signatureJobsStore.find(item=>item.verificationCode===code&&item.status==='ARCHIVED');if(!job)return res.status(404).json({valid:false,status:'NOT_FOUND'});const process=processesStore.find(item=>item.id===job.processId);if(!process)return res.status(404).json({valid:false,status:'NOT_FOUND'});const profile=resolveInstallationProfile(currentSettings);res.setHeader('Cache-Control','public, max-age=300');res.json({valid:true,status:'VALID',institution:profile.institutionName,course:profile.courseName,protocol:process.protocolo,documentType:job.documentType,version:job.documentVersion,signedAt:job.provider==='GOV_BR'?(job.signedAt||null):job.completedAt,archivedAt:job.completedAt,signatureValidationMethod:job.provider==='GOV_BR'?job.govbrReview?.method:'ASTEN_API',reviewedAt:job.govbrReview?.approvedAt,sha256:job.signedSha256});});
+  app.get('/api/public/verification/:code',requireFeature('PUBLIC_AUTHENTICITY'),(req,res)=>{const code=String(req.params.code||'');const job=signatureJobsStore.find(item=>item.verificationCode===code&&item.status==='ARCHIVED');if(!job)return res.status(404).json({valid:false,status:'NOT_FOUND'});const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);if(!process)return res.status(404).json({valid:false,status:'NOT_FOUND'});const profile=resolveInstallationProfile(currentSettings);res.setHeader('Cache-Control','public, max-age=300');res.json({valid:true,status:'VALID',institution:profile.institutionName,course:profile.courseName,protocol:process.protocolo,documentType:job.documentType,version:job.documentVersion,signedAt:job.provider==='GOV_BR'?(job.signedAt||null):job.completedAt,archivedAt:job.completedAt,signatureValidationMethod:job.provider==='GOV_BR'?job.govbrReview?.method:'ASTEN_API',reviewedAt:job.govbrReview?.approvedAt,sha256:job.signedSha256});});
   app.get('/api/public/verification/:code/qr.svg',requireFeature('PUBLIC_AUTHENTICITY'),async(req,res)=>{const code=String(req.params.code||'');const job=signatureJobsStore.find(item=>item.verificationCode===code&&item.status==='ARCHIVED');if(!job)return res.status(404).send('Código não encontrado.');const base=String(process.env.PORTAL_PUBLIC_URL||process.env.APP_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');const svg=await QRCode.toString(`${base}/validar/${encodeURIComponent(code)}`,{type:'svg',errorCorrectionLevel:'M',margin:2,width:256,color:{dark:'#0f172a',light:'#ffffff'}});res.setHeader('Content-Type','image/svg+xml; charset=utf-8');res.setHeader('Cache-Control','public, max-age=86400');res.send(svg);});
   app.post('/api/public/verification/:code/check-file',requireFeature('PUBLIC_AUTHENTICITY'),(_req,res)=>res.status(410).json({error:'A conferência de autenticidade é feita no navegador, sem enviar o PDF. Atualize a página.',code:'LOCAL_VERIFICATION_REQUIRED'}));
   app.get('/api/admin/processes/:id/dossier',requireAuthenticated,requireAdministrator,requireFeature('INSTITUTIONAL_DOSSIER'),async(req,res)=>{const identity=getPortalIdentity(req)!;const process=processesStore.find(item=>item.id===req.params.id);if(!process)return res.status(404).json({error:'Trabalho não encontrado.'});try{const dossier=await createInstitutionalDossier(process,identity.email,req.query.types?String(req.query.types).split(',').filter(type=>['CONVITE','ATA','TERMO','DECLARACAO'].includes(type)):undefined);auditLogsStore.push({id:`log-${Date.now()}`,processId:process.id,actorEmail:identity.email,actorRoles:getUserRolesForEmail(identity.email).globalRoles,action:'GERACAO_DOSSIE_INSTITUCIONAL',entityType:'process_dossier',entityId:dossier.manifestHash.slice(0,24),after:{manifestHash:dossier.manifestHash,included:dossier.included,missing:dossier.missing.length},timestamp:new Date().toISOString()});await persistPortalStateDurably();await deliverPortalDownload({res,processId:process.id,bytes:dossier.zip,fileName:dossier.fileName,mimeType:'application/zip',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Não foi possível gerar o dossiê.'});}});
@@ -6056,7 +6130,7 @@ export async function createPortalApp() {
     const identity=getPortalIdentity(req)!;
     const job=formArchiveJobsStore.find(item=>item.id===req.params.id);
     if(!job)return res.status(404).json({error:'Arquivamento não encontrado.'});
-    const process=processesStore.find(item=>item.id===job.processId);
+    const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);
     if(!process)return res.status(409).json({error:'O processo do formulário não está disponível.'});
     const updated=await retryExistingFormArchiveJob(job,process);
     let workflowError:string|undefined;
@@ -6100,7 +6174,7 @@ export async function createPortalApp() {
   });
   const govbrJobForRequest=(req:express.Request,allowExaminerDownload=false)=>{
     const job=signatureJobsStore.find(item=>item.id===req.params.id&&item.provider==='GOV_BR'&&['ATA','TERMO','DECLARACAO'].includes(item.documentType)&&item.status!=='CANCELED');
-    const process=job&&processesStore.find(item=>item.id===job.processId);
+    const process=job&&(processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId));
     const email=getPortalIdentity(req)!.email;
     if(!job||!process||!(canAccessSignatureDocument(email,process,job.documentType)||allowExaminerDownload&&job.signerPolicySnapshot&&job.signers.some(signer=>normalizeEmail(signer.email)===normalizeEmail(email))))throw Object.assign(new Error('Documento Gov.br não encontrado.'),{status:404});
     const examinerCanDownload=allowExaminerDownload&&job.signers.some(signer=>(Boolean(job.signerPolicySnapshot)||job.documentType==='ATA'&&['EXAMINER','STUDENT','CO_ADVISOR'].includes(signer.role))&&normalizeEmail(signer.email)===normalizeEmail(email));
@@ -6187,11 +6261,11 @@ export async function createPortalApp() {
     }catch(error){res.status((error as {status?:number})?.status||409).json({error:error instanceof Error?error.message:'A conferência não foi aprovada.'});}
   });
 
-  app.post('/api/signatures/jobs/:id/retry',requireAuthenticated,requirePresidencyOperator,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=signatureJobsStore.find(item=>item.id===req.params.id&&!item.removedFromLogsAt);if(!job||!canAdministerSignatureJob(identity.email,job))return res.status(404).json({error:'Item não encontrado.'});if(job.provider==='GOV_BR')return res.status(409).json({error:'Use a conferência Gov.br para continuar este documento.',code:'GOVBR_REVIEW_REQUIRED'});if(job.status==='CANCELED')return res.status(409).json({error:'Esta solicitação Asten foi cancelada. Inicie uma nova solicitação.',code:'SIGNATURE_CANCELED'});if(!allowSignatureRetry(identity.email,job.id))return res.status(429).json({error:'Muitas tentativas de reenvio em sequência. Aguarde um minuto e tente novamente.',code:'SIGNATURE_RETRY_RATE_LIMIT'});const signatureProcess=processesStore.find(item=>item.id===job.processId);if(!signatureProcess)return res.status(409).json({error:'O processo associado não está disponível.'});try{assertDocumentSignatureOpen(signatureProcess,job.documentType as 'ATA'|'TERMO'|'DECLARACAO',signatureJobsStore);assertSignatureEligibility(signatureProcess,job.documentType as 'ATA'|'TERMO'|'DECLARACAO');if(!signatureJobMatchesCurrentRevision(signatureProcess,job))throw new Error(`${signatureProcess.protocolo}: os dados mudaram desde a geração desta assinatura. Gere o documento novamente pelo fluxo atual.`);}catch(error){return res.status(409).json({error:error instanceof Error?error.message:'O processo ainda não está elegível para assinatura.',code:'SIGNATURE_FLOW_GATE'});}await dispatchSignatureJobAutomatically(job);const failed=['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING'].includes(job.status);if(!failed){const process=processesStore.find(item=>item.id===job.processId);if(process){const eventCode:WorkflowEventCode=job.documentType==='ATA'?'EVALUATION_SUBMITTED':job.documentType==='DECLARACAO'?'PUBLICATION_CLEARED':'REPOSITORY_SUBMITTED';await executeConfiguredWorkflowEvent(process,eventCode,identity.email);}}res.status(failed?409:200).json(publicSignatureJob(job));});
+  app.post('/api/signatures/jobs/:id/retry',requireAuthenticated,requirePresidencyOperator,async(req,res)=>{const identity=getPortalIdentity(req)!;const job=signatureJobsStore.find(item=>item.id===req.params.id&&!item.removedFromLogsAt);if(!job||!canAdministerSignatureJob(identity.email,job))return res.status(404).json({error:'Item não encontrado.'});if(job.provider==='GOV_BR')return res.status(409).json({error:'Use a conferência Gov.br para continuar este documento.',code:'GOVBR_REVIEW_REQUIRED'});if(job.status==='CANCELED')return res.status(409).json({error:'Esta solicitação Asten foi cancelada. Inicie uma nova solicitação.',code:'SIGNATURE_CANCELED'});if(!allowSignatureRetry(identity.email,job.id))return res.status(429).json({error:'Muitas tentativas de reenvio em sequência. Aguarde um minuto e tente novamente.',code:'SIGNATURE_RETRY_RATE_LIMIT'});const signatureProcess=publicationProcessById(job.processId);if(!signatureProcess)return res.status(409).json({error:'O processo associado não está disponível.'});try{assertDocumentSignatureOpen(signatureProcess,job.documentType as 'ATA'|'TERMO'|'DECLARACAO',signatureJobsStore);assertSignatureEligibility(signatureProcess,job.documentType as 'ATA'|'TERMO'|'DECLARACAO');if(!signatureJobMatchesCurrentRevision(signatureProcess,job))throw new Error(`${signatureProcess.protocolo}: os dados mudaram desde a geração desta assinatura. Gere o documento novamente pelo fluxo atual.`);}catch(error){return res.status(409).json({error:error instanceof Error?error.message:'O processo ainda não está elegível para assinatura.',code:'SIGNATURE_FLOW_GATE'});}await dispatchSignatureJobAutomatically(job);const failed=['PROVIDER_ERROR','WAITING_INTEGRATION','DRIVE_SYNC_PENDING'].includes(job.status);if(!failed){const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);if(process){const eventCode:WorkflowEventCode=job.documentType==='ATA'?'EVALUATION_SUBMITTED':job.documentType==='DECLARACAO'?'PUBLICATION_CLEARED':'REPOSITORY_SUBMITTED';await executeConfiguredWorkflowEvent(process,eventCode,identity.email);}}res.status(failed?409:200).json(publicSignatureJob(job));});
   app.post('/api/signatures/jobs/generate',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'A geração em lote foi desativada. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_GENERATION_DISABLED'}));
   app.post('/api/signatures/jobs/:id/approve',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'A aprovação de buffer foi desativada. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_APPROVAL_DISABLED'}));
   app.post('/api/signatures/jobs/:id/dispatch',requireAuthenticated,requireAdministrativeOperator,(_req,res)=>res.status(410).json({error:'O disparo de buffer foi desativado. Use a ação do documento dentro do TCC.',code:'LEGACY_SIGNATURE_DISPATCH_DISABLED'}));
-  app.post('/api/signatures/jobs/:id/reconcile',requireAuthenticated,requirePresidencyOperator,async(req,res)=>{const identity=getPortalIdentity(req)!;if(!allowSignatureRetry(identity.email,req.params.id))return res.status(429).json({error:'Muitas consultas de assinatura em sequência. Tente novamente em um minuto.',code:'SIGNATURE_RECONCILE_RATE_LIMIT'});const job=signatureJobsStore.find(j=>j.id===req.params.id&&!j.removedFromLogsAt);if(!job||!canAdministerSignatureJob(identity.email,job))return res.status(404).json({error:'Envelope não encontrado.'});if(job.status==='ARCHIVED'&&job.postArchivePending){try{await finishArchivedSignature(job,identity.email);return res.json(publicSignatureJob(job));}catch{return res.status(409).json({error:'As ações posteriores ainda aguardam nova tentativa.'});}}if(!job.providerEnvelopeId)return res.status(404).json({error:'Envelope não encontrado.'});if(job.status==='ARCHIVED')return res.json(publicSignatureJob(job));const signatureProcess=processesStore.find(item=>item.id===job.processId);if(!signatureProcess||!signatureJobMatchesCurrentRevision(signatureProcess,job)||hasCompetingSignatureArchive(signatureProcess,job,signatureJobsStore))return res.status(409).json({error:'A solicitação de assinatura não está mais ativa para este documento.'});try{if(job.status==='DRIVE_SYNC_PENDING'){await archiveSignatureJobAutomatically(job);return res.status((job as SignatureJob).status==='ARCHIVED'?200:409).json(publicSignatureJob(job));}const connection=await getPersistentAstenConnection();if(!connection)throw new Error('Conecte a conta Asten em Configurações.');const response=await callAsten('getDadosEnvelope',{idEnvelope:job.providerEnvelopeId,getLobs:'N'},connection.token);job.status=inferAstenJobStatus(response,job.status,job.providerEnvelopeId);if(['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status))job.providerDispatchState='SENT';job.updatedAt=new Date().toISOString();if(job.status==='SIGNED'){job.completedAt=job.updatedAt;await archiveSignatureJobAutomatically(job);}persistPortalState();res.json(publicSignatureJob(job));}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha na reconciliação.'});}});
+  app.post('/api/signatures/jobs/:id/reconcile',requireAuthenticated,requirePresidencyOperator,async(req,res)=>{const identity=getPortalIdentity(req)!;if(!allowSignatureRetry(identity.email,req.params.id))return res.status(429).json({error:'Muitas consultas de assinatura em sequência. Tente novamente em um minuto.',code:'SIGNATURE_RECONCILE_RATE_LIMIT'});const job=signatureJobsStore.find(j=>j.id===req.params.id&&!j.removedFromLogsAt);if(!job||!canAdministerSignatureJob(identity.email,job))return res.status(404).json({error:'Envelope não encontrado.'});if(job.status==='ARCHIVED'&&job.postArchivePending){try{await finishArchivedSignature(job,identity.email);return res.json(publicSignatureJob(job));}catch{return res.status(409).json({error:'As ações posteriores ainda aguardam nova tentativa.'});}}if(!job.providerEnvelopeId)return res.status(404).json({error:'Envelope não encontrado.'});if(job.status==='ARCHIVED')return res.json(publicSignatureJob(job));const signatureProcess=publicationProcessById(job.processId);if(!signatureProcess||!signatureJobMatchesCurrentRevision(signatureProcess,job)||hasCompetingSignatureArchive(signatureProcess,job,signatureJobsStore))return res.status(409).json({error:'A solicitação de assinatura não está mais ativa para este documento.'});try{if(job.status==='DRIVE_SYNC_PENDING'){await archiveSignatureJobAutomatically(job);return res.status((job as SignatureJob).status==='ARCHIVED'?200:409).json(publicSignatureJob(job));}const connection=await getPersistentAstenConnection();if(!connection)throw new Error('Conecte a conta Asten em Configurações.');const response=await callAsten('getDadosEnvelope',{idEnvelope:job.providerEnvelopeId,getLobs:'N'},connection.token);job.status=inferAstenJobStatus(response,job.status,job.providerEnvelopeId);if(['SENT','PARTIALLY_SIGNED','SIGNED','ARCHIVED'].includes(job.status))job.providerDispatchState='SENT';job.updatedAt=new Date().toISOString();if(job.status==='SIGNED'){job.completedAt=job.updatedAt;await archiveSignatureJobAutomatically(job);}persistPortalState();res.json(publicSignatureJob(job));}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha na reconciliação.'});}});
   app.post('/api/signatures/jobs/:id/archive',requireAuthenticated,requireAdministrator,(_req,res)=>res.status(410).json({error:'O arquivamento manual legado foi desativado; o callback Asten arquiva automaticamente no Drive.',code:'LEGACY_SIGNATURE_ARCHIVE_DISABLED'}));
   // A Asten aguarda resposta rápida: persistimos o evento, nunca esperamos Drive/API antes do 200.
   app.post('/api/integrations/asten/webhook',async(req,res)=>{

@@ -10,6 +10,7 @@ export function publicFileAuthorized(process: ProcessData | undefined, jobs: Sig
   if (!process || process.status !== 'CONCLUIDO' || !declarationReady(process, jobs)) return false;
   const acervo = process.acervo;
   if (!acervo?.submittedAt || !acervo.authorizationConfirmedAt || acervo.publicationWithdrawnAt ||
+      (acervo.publicationChange&&acervo.publicationChange.status!=='COMPLETED') ||
       acervo.publicationState !== 'PUBLIC' || !acervo.publicationSyncedAt) return false;
   if (kind === 'trabalho-completo') {
     return acervo.publishFullWork === true && Boolean(acervo.trabalhoCompletoFileId && acervo.publicFullWorkFileId) &&
