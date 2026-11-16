@@ -2162,9 +2162,10 @@ async function readGovbrPdf(job:SignatureJob,fileId:string,expectedSha256:string
 async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promise<void>{
   if(!job.postArchivePending||job.status!=='ARCHIVED')return;
   const liveProcess=processesStore.find(item=>item.id===job.processId);
-  const historicalRecord=legacyAcademicRecordsStore.find(item=>item.id===job.processId);
-  if(liveProcess&&historicalRecord)throw Error('Identidade de processo duplicada no catálogo.');
-  const process=liveProcess||(historicalRecord?historicalPublicationProcess(historicalRecord):undefined);
+  const historicalIndex=legacyAcademicRecordsStore.findIndex(item=>item.id===job.processId);
+  const historicalRecord=legacyAcademicRecordsStore[historicalIndex];
+  if(liveProcess&&historicalIndex>=0)throw Error('Identidade de processo duplicada no catálogo.');
+  const process=liveProcess||(historicalIndex>=0?historicalPublicationProcess(historicalRecord):undefined);
   if(!process||job.sourceDataRevision!==signatureDocumentRevision(process,job.documentType)){
     job.postArchivePending=undefined;
     job.lastError=undefined;
@@ -2181,7 +2182,7 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
       const required=[process.aluno1.email,process.aluno2?.email,process.orientador.email].filter(Boolean).map(email=>String(email).trim().toLowerCase());
       if(required.some(email=>!job.signers.some(s=>s.email.trim().toLowerCase()===email&&s.status==='SIGNED')))throw Error('O novo termo aguarda a assinatura de todos os autores e do orientador.');
     }
-    if(historicalRecord){
+    if(historicalIndex>=0){
       const change=process.acervo.publicationChange;
       if(job.documentType!=='TERMO'||change?.signatureJobId!==job.id||change.status!=='AWAITING_SIGNATURE')throw Error('Termo histórico desatualizado.');
       const record=historicalRecord;
