@@ -2161,7 +2161,10 @@ async function readGovbrPdf(job:SignatureJob,fileId:string,expectedSha256:string
 
 async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promise<void>{
   if(!job.postArchivePending||job.status!=='ARCHIVED')return;
-  const process=processesStore.find(item=>item.id===job.processId)||publicationProcessById(job.processId);
+  const liveProcess=processesStore.find(item=>item.id===job.processId);
+  const historicalRecord=legacyAcademicRecordsStore.find(item=>item.id===job.processId);
+  if(liveProcess&&historicalRecord)throw Error('Identidade de processo duplicada no catálogo.');
+  const process=liveProcess||(historicalRecord?historicalPublicationProcess(historicalRecord):undefined);
   if(!process||job.sourceDataRevision!==signatureDocumentRevision(process,job.documentType)){
     job.postArchivePending=undefined;
     job.lastError=undefined;
@@ -2173,10 +2176,15 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
     if(run&&run.status!=='COMPLETED')throw new Error('A rotina publicada aguarda retomada.');
   };
   try{
-    if(process.legacyRecord){
+    if(job.documentType==='TERMO'&&process.acervo.publicationChange){
+      assertRenewedPublicationSigners(process,job);
+      const required=[process.aluno1.email,process.aluno2?.email,process.orientador.email].filter(Boolean).map(email=>String(email).trim().toLowerCase());
+      if(required.some(email=>!job.signers.some(s=>s.email.trim().toLowerCase()===email&&s.status==='SIGNED')))throw Error('O novo termo aguarda a assinatura de todos os autores e do orientador.');
+    }
+    if(historicalRecord){
       const change=process.acervo.publicationChange;
       if(job.documentType!=='TERMO'||change?.signatureJobId!==job.id||change.status!=='AWAITING_SIGNATURE')throw Error('Termo histórico desatualizado.');
-      const record=legacyAcademicRecordsStore.find(r=>r.id===process.id);if(!record)throw Error('Registro histórico indisponível.');
+      const record=historicalRecord;
       const token=await getGoogleWorkspaceAccessToken();
       for(const [kind,id,sha] of [['TRABALHO_COMPLETO',process.acervo.trabalhoCompletoFileId,process.acervo.trabalhoCompletoSha256],['RESUMO_EXPANDIDO',process.acervo.resumoExpandidoFileId,process.acervo.resumoExpandidoSha256]]){
         if(!(kind==='TRABALHO_COMPLETO'?change.publishFullWork:change.publishExpandedAbstract))continue;

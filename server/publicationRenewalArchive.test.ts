@@ -66,7 +66,7 @@ function harness() {
     status: 'ARCHIVED',
     driveSignedFileId: 'term-signed',
     postArchivePending: true,
-    signers: [],
+    signers: ['author@example.invalid','advisor@example.invalid'].map(email=>({email,status:'SIGNED'})),
   };
   p.acervo.publicationChange!.signatureJobId = job.id;
   jobs.push(job);
@@ -79,6 +79,8 @@ function harness() {
     Error,
     signatureDocumentRevision,
     processesStore: [p],
+    legacyAcademicRecordsStore: [],
+    assertRenewedPublicationSigners: ()=>{},
     signatureJobsStore: jobs,
     declarationReady,
     publicationRequested: (v: any) => Boolean(v.acervo.publishFullWork || v.acervo.publishExpandedAbstract),
@@ -147,6 +149,17 @@ test('Drive failure after signature stays blocked and retries without a second s
   assert.equal(h.p.acervo.publicationChange!.status, 'COMPLETED');
   assert.equal(h.published.length, 1);
   assert.equal(h.jobs.length, 2);
+});
+test('an archived status cannot publish before the advisor has signed the renewed term', async () => {
+  const h = harness();
+  h.job.signers[1].status = 'PENDING';
+  await h.finish();
+  assert.equal(h.p.acervo.publicationChange!.status, 'AWAITING_SIGNATURE');
+  assert.equal(h.published.length, 0);
+  assert.equal(publicFileAuthorized(h.p, h.jobs, 'trabalho-completo'), false);
+  h.job.signers[1].status = 'SIGNED';
+  await h.finish();
+  assert.equal(h.p.acervo.publicationChange!.status, 'COMPLETED');
 });
 test('late signature callback cannot undo a newer author restriction', async () => {
   const h = harness();
