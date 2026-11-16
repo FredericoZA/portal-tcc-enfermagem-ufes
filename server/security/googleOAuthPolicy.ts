@@ -23,3 +23,14 @@ export function assertCurrentGoogleOAuthActor(input: OAuthActorPolicy): string {
   }
   return email;
 }
+
+
+/** Google returns a Gmail mailbox's primary address, while Portal roles retain the exact login alias. */
+export function googleAccountMatchesAuthorizedActor(accountEmail:string,actorEmail:string):boolean {
+  const account=accountEmail.trim().toLowerCase(),actor=actorEmail.trim().toLowerCase();
+  if(!account||!actor)return false;
+  if(account===actor)return true;
+  const accountParts=account.split('@'),actorParts=actor.split('@');
+  return accountParts.length===2&&actorParts.length===2&&accountParts[0].length>0&&actorParts[0].length>0&&accountParts[1]==='gmail.com'&&actorParts[1]==='gmail.com'
+    &&!accountParts[0].includes('+')&&actorParts[0].includes('+')&&actorParts[0].split('+')[0]===accountParts[0];
+}

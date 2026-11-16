@@ -133,7 +133,7 @@ import { reusableAstenSignatureJob } from './server/workflow/signatureOrder';
 import {signatureAuditMetadata,recordSignatureAudit} from './server/workflow/signatureAuditMetadata';
 import {captureSignaturePolicySnapshot,signatureSignersFromSnapshot,deriveSignatureSigners as registeredSignatureSigners,assertSignatureEligibility as assertRegisteredSignatureEligibility,canInitiateSignature as registeredSignaturePermission,assertDocumentSignatureOpen,publicationRequested,repositoryDataComplete} from './server/workflow/signaturePolicy';
 import {finalDocumentFilesLocked,publicFileAuthorized} from './server/workflow/publicationAccess';
-import {assertCurrentGoogleOAuthActor} from './server/security/googleOAuthPolicy';
+import {assertCurrentGoogleOAuthActor,googleAccountMatchesAuthorizedActor} from './server/security/googleOAuthPolicy';
 import {mergeOperationalMetadata} from './server/backup/operationalMetadata';
 import {createVerifiedPortalBackup} from './server/backup/verifiedBackup';
 import { operationalConfig, presentVariables, registrationQuestions, isRegistrationIdentifierField, registrationAnswersWithoutIdentifiers } from './src/utils/operationalConfig';
@@ -3007,7 +3007,7 @@ export async function createPortalApp() {
     res.json({otp:{configured:otp.configured},google:{oauthConfigured:google.oauthConfigured,connected:google.connected},bootstrapMasterConfigured:Boolean(process.env.PORTAL_BOOTSTRAP_MASTER_EMAIL)});
   });
 
-  app.get('/api/integrations/google/oauth/start',async(req,res)=>{
+  app.get('/api/integrations/google/oauth/start',rateLimit({windowMs:60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     try{
       const google=await getGoogleWorkspaceStatus();
       const identity=getPortalIdentity(req);
@@ -3022,13 +3022,13 @@ export async function createPortalApp() {
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível iniciar a autorização Google.'});}
   });
 
-  app.get('/api/integrations/google/oauth/callback',async(req,res)=>{
+  app.get('/api/integrations/google/oauth/callback',rateLimit({windowMs:60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     try{
       const state=decodeGoogleOAuthState(String(req.query.state||''));
       const identity=getPortalIdentity(req);
       const expected=assertCurrentGoogleOAuthActor({state,masterEmail:currentSettings.masterEmail,sessionValidAfter:currentSettings.sessionValidAfter,identityEmail:identity?.email,administrator:Boolean(identity&&hasFullAdministration(identity.email)),recentAuthentication:Boolean(identity&&hasRecentAuthentication(identity))});
       const authorization=await exchangeGoogleAuthorizationCode(String(req.query.code||''));
-      if(expected&&normalizeEmail(authorization.email)!==expected)throw new Error(`Autorize a conta Google esperada (${expected}).`);
+      if(expected&&!googleAccountMatchesAuthorizedActor(authorization.email,expected))throw new Error(`Autorize a conta Google esperada (${expected}).`);
       await persistGoogleWorkspaceAuthorization(authorization);
       const manifest=await bootstrapGoogleDriveStructure(authorization.accessToken,{rootFolderName:resolveInstallationProfile(currentSettings).driveRootFolderName});
       currentSettings={...currentSettings,driveRootFolderId:manifest.rootFolderId,updatedAt:new Date().toISOString()};
