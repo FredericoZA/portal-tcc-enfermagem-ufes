@@ -4355,7 +4355,7 @@ export async function createPortalApp() {
     res.status(submission.workflowPending ? 202 : 201).json(submission);
   });
 
-  app.get('/api/processes/:id/location-proof/download',requireAuthenticated,async(req,res)=>{
+  app.get('/api/processes/:id/location-proof/download',requireAuthenticated,rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     const identity=getPortalIdentity(req)!;const process=processesStore.find(p=>p.id===req.params.id);
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Comprovante não encontrado.'});
     const receiptId=typeof req.query.receipt==='string'?req.query.receipt:undefined;
@@ -5225,7 +5225,7 @@ export async function createPortalApp() {
     try{const accessToken=await sourceFilesAccessToken();const artifactType=isFull?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO';const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType,allowPublicRead:true,expectedSha256:String(authorizedHash||'')});if(createHash('sha256').update(file.pdf).digest('hex')!==String(authorizedHash||'').toLowerCase())return res.status(409).json({error:'O arquivo mudou desde a autorização de publicação. A publicação precisa ser revisada.',code:'PUBLICATION_FILE_CHANGED'});if(etag)res.setHeader('ETag',etag);await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`public:${req.ip||'unknown'}:${process.id}:${artifactType}`,cacheControl:PUBLIC_PDF_CACHE_CONTROL});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o PDF.'});}
   });
 
-  app.get('/api/processes/:id/files/:kind/download',requireAuthenticated,rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false,message:{error:'Limite temporário de consultas aos PDFs atingido.'}}),async(req,res)=>{
+  app.get('/api/processes/:id/files/:kind/download',requireAuthenticated,rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false,message:{error:'Limite temporário de consultas aos PDFs atingido.'}}),async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Arquivo não encontrado.'});
@@ -5518,7 +5518,7 @@ export async function createPortalApp() {
     res.json(processDocumentsFor(proc,actorEmail));
   });
 
-  app.get('/api/processes/:id/documents/:docId/download',requireAuthenticated,async(req,res)=>{
+  app.get('/api/processes/:id/documents/:docId/download',requireAuthenticated,rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process||!canAccessSignatureDocument(identity.email,process,req.params.docId==='doc-declaracao'?'DECLARACAO':''))return res.status(404).json({error:'Documento não encontrado.'});
@@ -6096,7 +6096,7 @@ export async function createPortalApp() {
       res.json(result);
     }catch(error){res.status((error as {status?:number})?.status||409).json({error:error instanceof Error?error.message:'O PDF não pôde ser recebido.'});}
   });
-  app.post('/api/signatures/jobs/:id/govbr/approve',requireAuthenticated,requirePresidencyOperator,async(req,res)=>{
+  app.post('/api/signatures/jobs/:id/govbr/approve',requireAuthenticated,requirePresidencyOperator,rateLimit({windowMs:60*1000,limit:60,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     const identity=getPortalIdentity(req)!;
     try{
       const {job,process}=govbrJobForRequest(req);
