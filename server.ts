@@ -3007,7 +3007,7 @@ export async function createPortalApp() {
     res.json({otp:{configured:otp.configured},google:{oauthConfigured:google.oauthConfigured,connected:google.connected},bootstrapMasterConfigured:Boolean(process.env.PORTAL_BOOTSTRAP_MASTER_EMAIL)});
   });
 
-  app.get('/api/integrations/google/oauth/start',async(req,res)=>{
+  app.get('/api/integrations/google/oauth/start',rateLimit({windowMs:60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     try{
       const google=await getGoogleWorkspaceStatus();
       const identity=getPortalIdentity(req);
@@ -3022,7 +3022,7 @@ export async function createPortalApp() {
     }catch(error){res.status(400).json({error:error instanceof Error?error.message:'Não foi possível iniciar a autorização Google.'});}
   });
 
-  app.get('/api/integrations/google/oauth/callback',async(req,res)=>{
+  app.get('/api/integrations/google/oauth/callback',rateLimit({windowMs:60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     try{
       const state=decodeGoogleOAuthState(String(req.query.state||''));
       const identity=getPortalIdentity(req);
