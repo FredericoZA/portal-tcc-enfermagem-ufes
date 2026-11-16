@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCurrentGoogleOAuthActor } from './googleOAuthPolicy';
+import { assertCurrentGoogleOAuthActor,googleAccountMatchesAuthorizedActor } from './googleOAuthPolicy';
 const now = 1_792_100_000;
 const state = { email: 'master@example.org', bootstrap: true, exp: (now + 600) * 1000 };
 const base = { state, masterEmail: 'master@example.org', administrator: false, recentAuthentication: false };
@@ -18,4 +18,12 @@ test('reconexão revalida sessão, papel atual e autenticação recente no callb
   for (const patch of [{ identityEmail: undefined }, { identityEmail: 'outro@example.org' }, { administrator: false }, { recentAuthentication: false }]) {
     assert.throws(() => assertCurrentGoogleOAuthActor({ ...reconnect, ...patch }), /administrador/);
   }
+});
+
+
+test('Gmail primary account matches its exact Portal plus alias without relaxing actor authorization',()=>{
+ assert.equal(googleAccountMatchesAuthorizedActor('tccenfermagemufes@gmail.com','tccenfermagemufes+master@gmail.com'),true);
+ for(const [account,actor] of [['other@gmail.com','tccenfermagemufes+master@gmail.com'],['tccenfermagemufes@evil.invalid','tccenfermagemufes+master@gmail.com'],['master@example.org','master+admin@example.org'],['',''],['@gmail.com','+master@gmail.com']])assert.equal(googleAccountMatchesAuthorizedActor(account,actor),false);
+ const reconnect={...base,state:{...state,email:'tccenfermagemufes+master@gmail.com',bootstrap:false},identityEmail:'tccenfermagemufes@gmail.com',administrator:true,recentAuthentication:true};
+ assert.throws(()=>assertCurrentGoogleOAuthActor(reconnect),/administrador/);
 });
