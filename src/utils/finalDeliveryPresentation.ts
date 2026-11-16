@@ -12,7 +12,7 @@ export function publicationDeclined(process:Pick<ProcessData,'acervo'>):boolean{
  return Boolean(delivery?.submittedAt&&!delivery.publishFullWork&&!delivery.publishExpandedAbstract&&!delivery.publicationWithdrawnAt);
 }
 export function administrativeDocumentAvailability(process:Pick<ProcessData,'acervo'>,document:Pick<ProcessDocument,'type'|'status'|'driveDownloadUrl'|'versions'>,publicReadOnly=false):{publicationDeclined:boolean;available:boolean}{
- const declined=!publicReadOnly&&document.type==='TERMO'&&publicationDeclined(process);
+ const declined=!publicReadOnly&&document.type==='TERMO'&&document.status!=='ASSINADO'&&publicationDeclined(process);
  const version=document.versions?.find(item=>item.isCurrent)||document.versions?.[0];
  return {publicationDeclined:declined,available:!declined&&Boolean(document.driveDownloadUrl||version?.driveDownloadUrl)&&(document.status==='DISPONIVEL'||document.status==='ASSINADO')};
 }

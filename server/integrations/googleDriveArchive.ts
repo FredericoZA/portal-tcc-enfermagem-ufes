@@ -117,7 +117,7 @@ export async function uploadProcessFormPdf(input:{accessToken:string;processFold
   const version=String(Math.max(1,Math.floor(input.version||1)));
   const finish=async(file:any)=>{
     if(input.readerEmails?.length&&['CADASTRO_INICIAL','CONFIRMACAO_LOCAL'].includes(input.formType)){
-      await resolvePrivateDriveBrowserLinks({accessToken:input.accessToken,fileId:String(file.id),email:input.readerEmails[0],readerEmails:input.readerEmails,processId:input.processId,artifactType:input.formType,formVersion:input.version,expectedSha256:input.sha256});
+      await resolvePrivateDriveBrowserLinks({accessToken:input.accessToken,fileId:String(file.id),email:input.readerEmails[0],readerEmails:input.readerEmails,processId:input.processId,artifactType:input.formType,formVersion:input.version,expectedSha256:input.sha256,allowPublicRead:input.formType==='CONFIRMACAO_LOCAL'});
     }
     return file;
   };
@@ -159,7 +159,7 @@ async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;ac
   const existing = (await existingResponse.json()).files || [];
   const finish=async(file:any)=>{
     if(input.readerEmails?.length&&(input.lifecycle==='ASSINADO'||input.documentType==='CONVITE')){
-      await resolvePrivateDriveBrowserLinks({accessToken:input.accessToken,fileId:String(file.id),email:input.readerEmails[0],readerEmails:input.readerEmails,processId:input.processId,artifactType:input.documentType,signatureJobId:input.jobId,expectedSha256:input.sha256});
+      await resolvePrivateDriveBrowserLinks({accessToken:input.accessToken,fileId:String(file.id),email:input.readerEmails[0],readerEmails:input.readerEmails,processId:input.processId,artifactType:input.documentType,signatureJobId:input.jobId,expectedSha256:input.sha256,allowPublicRead:true});
     }
     return file;
   };
@@ -330,7 +330,8 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(fileId))throw new Error('Identificador de arquivo inválido.');
   const legacyPublic=!expected&&/^[a-f0-9]{64}$/i.test(legacyAcademicSha256||'');
   const publicAcademic=legacyPublic||expected?.allowPublicRead===true&&Boolean(expected.processId)&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(expected.artifactType||'')&&/^[a-f0-9]{64}$/i.test(expected.expectedSha256||'');
-  if(publicAcademic){
+  const publicAdministrative=Boolean(expected?.processId)&&(expected?.allowPublicRead===true&&['CONVITE','ATA','TERMO','DECLARACAO'].includes(expected.artifactType||'')||expected?.formType==='CONFIRMACAO_LOCAL'&&expected.formVersion!==undefined);
+  if(publicAcademic||publicAdministrative){
     const acl=await listDriveFilePermissions(accessToken,fileId);
     if(acl.some(p=>isUnsafePrivateContainerPermission(p)&&!(p.type==='anyone'&&p.role==='reader')))throw Error('Compartilhamento amplo não permitido no PDF.');
   }else await assertPrivateContainer(accessToken,fileId);
@@ -349,7 +350,8 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
   let pdf:Buffer;
   try{pdf=await readBoundedResponse(contentResponse,50*1024*1024);}
   catch(error){if(error instanceof ResponseSizeError)throw new Error('O PDF armazenado ultrapassa o limite seguro de 50 MB ou possui tamanho inválido.');throw error;}
-  if(publicAcademic&&createHash('sha256').update(pdf).digest('hex')!==String(legacyPublic?legacyAcademicSha256:expected!.expectedSha256).toLowerCase())throw Error('O PDF difere do arquivo autorizado para publicação.');
+  const authorizedSha=legacyPublic?legacyAcademicSha256:expected?.expectedSha256;
+  if(authorizedSha&&createHash('sha256').update(pdf).digest('hex')!==authorizedSha.toLowerCase())throw Error('O PDF difere do arquivo autorizado para publicação.');
   if(!pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O arquivo armazenado não é um PDF válido.');
   const storedSha256=String(metadata.appProperties?.sha256||'').toLowerCase();
   if(storedSha256&&createHash('sha256').update(pdf).digest('hex')!==storedSha256)throw new Error('O conteúdo do PDF no Drive diverge do hash registrado pelo portal.');
@@ -380,11 +382,12 @@ export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return null;
   const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
   const publicAcademic=input.allowPublicRead===true&&['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(input.artifactType)&&/^[a-f0-9]{64}$/i.test(input.expectedSha256||'');
-  if(permissions.some(p=>isUnsafePrivateContainerPermission(p)&&!(publicAcademic&&p.type==='anyone'&&p.role==='reader')))throw new Error('Arquivo privado possui compartilhamento amplo no Google Drive.');
+  const publicAdministrative=input.allowPublicRead===true&&['CONVITE','ATA','TERMO','DECLARACAO','CONFIRMACAO_LOCAL'].includes(input.artifactType);
+  if(permissions.some(p=>isUnsafePrivateContainerPermission(p)&&!((publicAcademic||publicAdministrative)&&p.type==='anyone'&&p.role==='reader')))throw new Error('Arquivo privado possui compartilhamento amplo no Google Drive.');
   // Portal membership alone does not grant access to the Google account.
   const hasAccess=()=>permissions.some(p=>p.type==='user'&&p.view!=='metadata'&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileOrganizer','writer','commenter','reader'].includes(p.role));
   const mayEnroll=input.readerEmails?.some(email=>email.toLowerCase()===input.email.toLowerCase());
-  if(!(publicAcademic&&permissions.some(p=>p.type==='anyone'&&p.role==='reader'))&&!hasAccess()&&!mayEnroll&&!input.reconcileReaders)return null;
+  if(!((publicAcademic||publicAdministrative)&&permissions.some(p=>p.type==='anyone'&&p.role==='reader'))&&!hasAccess()&&!mayEnroll&&!input.reconcileReaders)return null;
   const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,mimeType,trashed,appProperties,sha256Checksum,webViewLink,webContentLink&supportsAllDrives=true`,input.accessToken);
   const file=await response.json(),properties=file.appProperties||{};
   const typeMatches=input.formVersion!==undefined?properties.formType===input.artifactType&&properties.formVersion===String(input.formVersion):properties.artifactType===input.artifactType;

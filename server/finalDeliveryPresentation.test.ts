@@ -23,7 +23,8 @@ test('documento administrativo assinado listado pela API pública não depende d
  assert.equal(term.driveDownloadUrl,data.documents[0].url);
  assert.equal(process.acervo?.publishFullWork,false);assert.equal(process.acervo?.publishExpandedAbstract,false);
  assert.equal(administrativeDocumentAvailability(process,documents.find(document=>document.type==='ATA')!,true).available,false,'documento ausente da lista pública continua indisponível');
- assert.deepEqual(administrativeDocumentAvailability(process,term,false),{publicationDeclined:true,available:false},'a regra da entrega privada permanece inalterada');
+ assert.deepEqual(administrativeDocumentAvailability(process,term,false),{publicationDeclined:false,available:true},'termo já expedido continua disponível também ao participante');
+ assert.deepEqual(administrativeDocumentAvailability(process,{...term,status:'AGUARDANDO_ASSINATURA'},false),{publicationDeclined:true,available:false},'não antecipa termo ainda não expedido');
 });
 test('mensagem confirma entrega, instrui sobre termo e não oculta pendência de envio',()=>{
  const process={status:'AGUARDANDO_ASSINATURA' as const,acervo:{publishFullWork:true} as any};

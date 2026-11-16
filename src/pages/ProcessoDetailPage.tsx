@@ -740,11 +740,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     const destination=window.open('about:blank','_blank');
     if(destination)destination.opener=null;
     try{
-      const {links}=readOnly?{links:null}:await apiClient.getDocumentDriveLinks(processId,doc.id);
+      const {links}=['CONVITE','ATA','TERMO','DECLARACAO'].includes(doc.type)?await apiClient.getPublicDocumentDriveLinks(process.legacyRecord?doc.driveDownloadUrl||'':`/api/public/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(doc.id)}/download`):readOnly?{links:null}:await apiClient.getDocumentDriveLinks(processId,doc.id);
       if(links&&destination){destination.location.replace(mode==='view'?links.view:links.download);return;}
       destination?.close();
       if(mode==='view')setSelectedPreviewDoc(doc);else handleDirectDownload(doc);
-    }catch(error){destination?.close();portalNotice(error instanceof Error?error.message:'Não foi possível abrir o documento.');}
+    }catch(error){destination?.close();if(!readOnly){if(mode==='view')setSelectedPreviewDoc(doc);else handleDirectDownload(doc);}else portalNotice(error instanceof Error?error.message:'Não foi possível abrir o documento.');}
   };
 
   const handleDirectDownload = (doc: ProcessDocument) => {
@@ -1094,7 +1094,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   status = 'Publicação não autorizada';
                   statusDescription = 'O termo de autorização não foi gerado.';
                 } else if (isDownloadable) {
-                  status = type==='ATA'?'Ata assinada':docInfo.generated;
+                  status = process.legacyRecord?'Documento histórico disponível':type==='ATA'?'Ata assinada':docInfo.generated;
                   statusDescription = doc.signatureProvider
                     ? doc.signatureProvider==='ASTEN'?'Assinatura realizada pela ASTEN, com solicitação enviada automaticamente por e-mail.':'Assinatura realizada pelo Gov.br.'
                     : readOnly

@@ -14,7 +14,7 @@ function fixture(t:any){
    return Response.json({permissions:[{id:'owner',type:'user',role:'owner'},...(target===source?[{id:'collaborator',type:'user',role:state.writer?'writer':'reader'}]:[]),...((target===source&&state.shared)||(target===copy&&state.copyShared)?[{id:'public-permission',type:'anyone',role:'reader'}]:[])]});
   }
   if(method==='DELETE'){if(u.pathname.includes('/'+source+'/'))state.shared=false;else state.copyShared=false;return new Response(null,{status:204});}
-  if(method==='PATCH'){if(u.pathname.endsWith('/collaborator')){assert.deepEqual(body,{role:'reader'});state.writer=false;}else{assert.equal(u.pathname,'/drive/v3/files/'+copy);assert.deepEqual(body,{trashed:true});state.trashed=true;}return Response.json({});}
+  if(method==='PATCH'){if(u.pathname.endsWith('/collaborator')){assert.deepEqual(body,{role:'reader'});state.writer=false;}else if(u.pathname==='/drive/v3/files/'+source&&body.appProperties){Object.assign(sourceMetadata.appProperties,body.appProperties);}else{assert.equal(u.pathname,'/drive/v3/files/'+copy);assert.deepEqual(body,{trashed:true});state.trashed=true;}return Response.json({});}
   if(u.pathname==='/drive/v3/files')return Response.json({files:state.existing&&!state.trashed?[copyMetadata]:[]});
   return Response.json(sourceMetadata);
  });
@@ -108,4 +108,23 @@ test('inherited editing is isolated in an owner-only child while preserving the 
  });
  const input={accessToken:'fixture',sourceFileId:sourceId,scope:'process-1',sha256:sha,artifactType:'TRABALHO_COMPLETO' as const,assertAuthorized:async()=>true};
  assert.equal((await publicRepositoryDriveLinks(input)).view,source().webViewLink);await publicRepositoryDriveLinks(input);assert.equal(created,1);assert.equal(moved,true);assert.equal(limited,true);assert.equal(shared,true);
+});
+
+test('issued public documents bind the exact signature job and cache content validation by original hash',async t=>{
+ const f=fixture(t);Object.assign(f.sourceMetadata.appProperties,{artifactType:'ATA',portalSignatureJobId:'job-1'});let checks=0;
+ const input={...f.input,artifactType:'ATA' as const,signatureJobId:'job-1',validatePublicContent:async()=>{checks++;}};
+ await publicRepositoryDriveLinks(input);await publicRepositoryDriveLinks(input);
+ assert.equal(checks,1);assert.equal(f.state.shared,true);assert.ok(!f.calls.some(c=>c.path.endsWith('/copy')));
+ await assert.rejects(publicRepositoryDriveLinks({...input,signatureJobId:'wrong-job'}),/outro processo ou versão/);
+});
+test('unsafe issued documents are never made public and lose previous public read permission',async t=>{
+ const f=fixture(t);Object.assign(f.sourceMetadata.appProperties,{artifactType:'CONVITE'});f.state.shared=true;
+ await assert.rejects(publicRepositoryDriveLinks({...f.input,artifactType:'CONVITE',validatePublicContent:async()=>{throw Error('credencial de acesso pessoal');}}),/credencial/);
+ assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
+});
+
+test('document binding is checked again after the public content review',async t=>{
+ const f=fixture(t);Object.assign(f.sourceMetadata.appProperties,{artifactType:'ATA',portalSignatureJobId:'job-1'});
+ await assert.rejects(publicRepositoryDriveLinks({...f.input,artifactType:'ATA',signatureJobId:'job-1',validatePublicContent:async()=>{f.sourceMetadata.appProperties.portalProcessId='other-process';}}),/mudou durante/);
+ assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
 });

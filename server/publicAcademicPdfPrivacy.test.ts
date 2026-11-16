@@ -74,3 +74,10 @@ test('metadados JSON e links de autenticidade não ocultam segredos explícitos 
   }
  }
 });
+
+test('issued administrative public originals retain their content but still refuse access credentials',async()=>{
+ const process=structuredClone(DEMO_PROCESSES[0]);
+ const bytes=await pdf('Ata oficial da defesa. Assinante: pessoa@example.invalid. CPF: 000.000.000-00.');const before=Buffer.from(bytes);
+ await assertPublicAcademicPdf(bytes,process,{issuedAdministrativeDocument:true});assert.deepEqual(bytes,before);
+ await assert.rejects(assertPublicAcademicPdf(await pdf('Ata oficial da defesa. senha=segredo_fixture'),process,{issuedAdministrativeDocument:true}),/credencial/);
+});

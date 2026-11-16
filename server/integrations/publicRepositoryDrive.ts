@@ -8,6 +8,14 @@ async function request(token:string,path:string,init:RequestInit={}){
  if(!r.ok){const data=await r.json().catch(()=>({}));throw Object.assign(Error('Não foi possível conferir a publicação no Google Drive.'),{driveStatus:r.status,driveReason:String(data?.error?.errors?.[0]?.reason||'').replace(/[^a-zA-Z0-9_]/g,'').slice(0,80)});}return r;
 }
 function browserLink(value:unknown){try{const u=new URL(String(value));return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(u.hostname)&&!['token','access_token','key'].some(k=>u.searchParams.has(k))?u.href:'';}catch{return '';}}
+/** Issued invitation identity is stored by the workflow; read only its canonical fingerprint. */
+export async function publicInvitationFingerprint(token:string,fileId:string,processId:string):Promise<string>{
+ if(!idOk(fileId))throw Error('Identificador de convite inválido.');
+ const file=await(await request(token,`/files/${encodeURIComponent(fileId)}?fields=id,mimeType,trashed,appProperties,sha256Checksum&supportsAllDrives=true`)).json();
+ const props=file.appProperties||{},sha=String(props.sha256||'').toLowerCase();
+ if(file.id!==fileId||file.trashed||file.mimeType!=='application/pdf'||props.portal!=='portal-tcc'||props.portalProcessId!==processId||props.artifactType!=='CONVITE'||!/^[a-f0-9]{64}$/.test(sha)||(file.sha256Checksum&&String(file.sha256Checksum).toLowerCase()!==sha))throw Error('O convite não corresponde ao processo.');
+ return sha;
+}
 /** A folder owned by another account can impose editing rights on its children.
  * Keep the same original ID in a restricted child owned by the institutional account. */
 async function isolateOriginal(input:{token:string;source:any;scope:string;ownerId:string;current:()=>Promise<void>}){
@@ -37,7 +45,7 @@ async function isolateOriginal(input:{token:string;source:any;scope:string;owner
  return moved;
 }
 /** Publish the consent-bound original, never copy or transfer its bytes through the Portal. */
-export async function publicRepositoryDriveLinks(input:{accessToken:string;sourceFileId:string;scope:string;sha256:string;artifactType?:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO';assertAuthorized:()=>Promise<boolean>}){
+export async function publicRepositoryDriveLinks(input:{accessToken:string;sourceFileId:string;scope:string;sha256:string;artifactType?:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO'|'CONVITE'|'ATA'|'TERMO'|'DECLARACAO'|'CONFIRMACAO_LOCAL';formVersion?:number;signatureJobId?:string;validatePublicContent?:(fileId:string)=>Promise<void>;assertAuthorized:()=>Promise<boolean>}){
  const {accessToken:token,sourceFileId,scope}=input,sha=input.sha256.toLowerCase();
  if(!idOk(sourceFileId)||!/^[a-f0-9]{64}$/.test(sha)||!scope||!await input.assertAuthorized())throw Error('Publicação não autorizada.');
  const endpoint=`/files/${encodeURIComponent(sourceFileId)}`;
@@ -48,7 +56,19 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
  const valid=(f:any)=>f?.id===sourceFileId&&!f.trashed&&f.mimeType==='application/pdf'&&String(f.sha256Checksum||'').toLowerCase()===sha;
  let source=await metadata();
  if(!valid(source)){await revoke();throw Error('O PDF difere do arquivo autorizado para publicação.');}
- if(input.artifactType&&(source.appProperties?.portal!=='portal-tcc'||source.appProperties?.portalProcessId!==scope||source.appProperties?.artifactType!==input.artifactType))throw Error('O PDF pertence a outro processo.');
+ const bound=(file:any)=>{
+  if(!input.artifactType)return true;
+  const props=file.appProperties||{};
+  const typeMatches=input.artifactType==='CONFIRMACAO_LOCAL'?props.formType===input.artifactType&&props.formVersion===String(input.formVersion):props.artifactType===input.artifactType;
+  return props.portal==='portal-tcc'&&props.portalProcessId===scope&&typeMatches&&(!input.signatureJobId||props.portalSignatureJobId===input.signatureJobId);
+ };
+ if(!bound(source))throw Error('O PDF pertence a outro processo ou versão.');
+ if(input.validatePublicContent&&source.appProperties?.portalPublicDocumentSha256!==sha){
+  try{await input.validatePublicContent(sourceFileId);}catch(error){await revoke();throw error;}
+  await current();
+  await request(token,`${endpoint}?fields=id&supportsAllDrives=true`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({appProperties:{portalPublicDocumentSha256:sha}})});
+  source=await metadata();if(!valid(source)||!bound(source)){await revoke();throw Error('O PDF mudou durante a conferência pública.');}
+ }
  // A public file never makes its containing folder public.
  if(!Array.isArray(source.parents)||source.parents.length!==1||!idOk(source.parents[0]))throw Error('Pasta de origem não confirmada.');
  if((await listDriveFilePermissions(token,source.parents[0])).some(isUnsafePrivateContainerPermission))throw Error('A pasta de origem precisa permanecer privada.');
@@ -75,10 +95,11 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
  acl=await permissions();
  if(!acl.some(p=>p.type==='anyone'&&p.role==='reader'))await request(token,`${endpoint}/permissions?supportsAllDrives=true`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'anyone',role:'reader',allowFileDiscovery:false})});
   source=await metadata();acl=await permissions();
-  if(!valid(source)||!acl.some(p=>p.type==='anyone'&&p.role==='reader')||acl.some(p=>p.role!=='owner'&&(p.role!=='reader'||!['user','anyone'].includes(p.type))))throw Error('Leitura pública sem edição não confirmada.');
+  if(!valid(source)||!bound(source)||!acl.some(p=>p.type==='anyone'&&p.role==='reader')||acl.some(p=>p.role!=='owner'&&(p.role!=='reader'||!['user','anyone'].includes(p.type))))throw Error('Leitura pública sem edição não confirmada.');
   await current();
   const view=browserLink(source.webViewLink),download=browserLink(source.webContentLink);
   if(!view||!download)throw Error('Links públicos do Drive não confirmados.');
+  if(input.artifactType&&['CONVITE','ATA','TERMO','DECLARACAO','CONFIRMACAO_LOCAL'].includes(input.artifactType))return {view,download};
   // Migrate only verified duplicates produced by the former implementation.
   const q=`trashed = false and appProperties has { key='portal' and value='portal-tcc' } and appProperties has { key='publicationSourceFileId' and value='${esc(sourceFileId)}' } and appProperties has { key='portalProcessId' and value='${esc(scope)}' }`;
   const found=await (await request(token,`/files?${new URLSearchParams({q,fields:`files(${fields}),nextPageToken`,pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true'})}`)).json();

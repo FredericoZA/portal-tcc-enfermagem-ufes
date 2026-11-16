@@ -10,7 +10,7 @@ import {DEMO_PROCESSES,INITIAL_SETTINGS} from '../src/services/demoSeed';
 import {storeReviewPdf} from './localReviewFiles';
 import {assertPublicAcademicPdf} from './publicAcademicDocuments';
 async function pdf(text:string){const d=await PDFDocument.create(),font=await d.embedFont(StandardFonts.Helvetica);d.addPage().drawText(text,{x:40,y:700,font,size:12});return Buffer.from(await d.save());}
-test('cópias administrativas públicas preservam bytes e recusam contato e registro acadêmico',async()=>{
+test('verificação restrita preserva bytes e recusa contato e registro acadêmico',async()=>{
  const p=structuredClone(DEMO_PROCESSES[0]);const clean=await pdf('Ata da defesa de Ana Silva, Universidade Federal.');const hash=createHash('sha256').update(clean).digest('hex');await assertPublicAcademicPdf(clean,p);assert.equal(createHash('sha256').update(clean).digest('hex'),hash);
  const contact=await pdf('Ata de Ana Silva. E-mail do signatario professor@example.invalid');await assert.rejects(assertPublicAcademicPdf(contact,p));
  const registration=await pdf('Ata da defesa de Ana Silva. Matricula: 9988776655');await assert.rejects(assertPublicAcademicPdf(registration,p));
@@ -37,6 +37,6 @@ test('HTTP público: protocolo abre ficha sanitizada e somente documentos expedi
 test('catálogo público só lista documentos aceitos e termo aplicável, sem campos operacionais',async()=>{
  const {publicAcademicDocuments}=await import('./publicAcademicDocuments');const p=structuredClone(DEMO_PROCESSES[0]);p.acervo={...p.acervo,publishFullWork:false,publishExpandedAbstract:false} as any;
  const docs=['CONVITE','ATA','TERMO','DECLARACAO'].map((type,index)=>({id:'doc-'+type.toLowerCase(),type,title:type,status:type==='CONVITE'?'DISPONIVEL':'ASSINADO',currentVersion:1,driveFileId:'internal-file',visibleToRoles:['STUDENT']})) as any;
- assert.deepEqual(publicAcademicDocuments(p,docs).map(d=>d.type),['CONVITE','ATA','DECLARACAO']);p.acervo!.publishExpandedAbstract=true;assert.equal(publicAcademicDocuments(p,docs).length,4);
+ assert.deepEqual(publicAcademicDocuments(p,docs).map(d=>d.type),['CONVITE','ATA','TERMO','DECLARACAO']);p.acervo!.publishExpandedAbstract=true;assert.equal(publicAcademicDocuments(p,docs).length,4);
  docs[1].status='AGUARDANDO_ASSINATURA';assert.equal(publicAcademicDocuments(p,docs).length,3);assert.doesNotMatch(JSON.stringify(publicAcademicDocuments(p,docs)),/internal-file|visibleToRoles/);
 });

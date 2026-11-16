@@ -15,7 +15,7 @@ export function verifyLegacyPdf(file: VerifiedLegacyFile, pdf: Buffer): Buffer {
   return pdf;
 }
 
-/** Academic originals may be public; administrative documents retain private ACL checks. */
+/** Known public document kinds accept reader ACLs; internal evaluation instruments remain private. */
 export async function readLegacyAcademicPdf(file: VerifiedLegacyFile & {kind?:string}): Promise<Buffer> {
   if (localReviewFilesEnabled()) {
     const sourceName=file.sourceFileName||file.fileName;
@@ -23,6 +23,6 @@ export async function readLegacyAcademicPdf(file: VerifiedLegacyFile & {kind?:st
     const directory = path.join(process.env.PORTAL_DATA_DIR || path.join(process.cwd(),'.portal-data'),'legacy-import','drive-pdfs');
     return verifyLegacyPdf(file, await readFile(path.join(directory,sourceName)));
   }
-  const stored = await downloadDrivePdf(await getGoogleWorkspaceAccessToken(),file.driveFileId,undefined,['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(file.kind||'')?file.sha256:undefined);
+  const stored = await downloadDrivePdf(await getGoogleWorkspaceAccessToken(),file.driveFileId,undefined,['TRABALHO_COMPLETO','RESUMO_EXPANDIDO','CONVITE','ATA','TERMO','DECLARACAO'].includes(file.kind||'')?file.sha256:undefined);
   return verifyLegacyPdf(file,stored.pdf);
 }

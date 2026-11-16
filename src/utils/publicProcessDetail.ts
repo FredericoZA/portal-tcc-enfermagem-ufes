@@ -12,7 +12,7 @@ export function publicProcessDetail(data: any): { process: ProcessData; document
     avaliacao: data.avaliacao || { status: 'PENDENTE' },
     dataRevision: 0,
   } as ProcessData;
-  const documents = (data.legacyRecord?[]:Object.keys(administrativeDocumentLabels) as DocumentType[]).map(type => {
+  const documents = (data.legacyRecord?(Object.keys(administrativeDocumentLabels) as DocumentType[]).filter(type=>data.documents?.some((doc:any)=>doc.type===type)):Object.keys(administrativeDocumentLabels) as DocumentType[]).map(type => {
     const published = data.documents?.find((doc: any) => doc.type === type);
     return {
       id: published?.id || `public-${type}`, type, title: administrativeDocumentLabels[type].title,

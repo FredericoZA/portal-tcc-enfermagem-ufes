@@ -2,7 +2,7 @@ import type {ProcessData,ProcessDocument} from '../src/types';
 import {hasPersonalEmailAccess} from './integrations/emailAuditCopy';
 /** Only issued invitation and archived signed academic documents may be offered publicly. */
 export function publicAcademicDocuments(process:ProcessData,documents:ProcessDocument[]){
- return documents.filter(doc=>['CONVITE','ATA','TERMO','DECLARACAO'].includes(doc.type)&&(doc.type!=='TERMO'||Boolean(process.acervo?.publishFullWork||process.acervo?.publishExpandedAbstract))&&(doc.type==='CONVITE'?doc.status==='DISPONIVEL':doc.status==='ASSINADO')).map(doc=>({id:doc.id,type:doc.type,title:doc.title||doc.type,status:doc.status,version:doc.currentVersion,...(doc.type==='ATA'&&doc.signatureProvider?{signatureProvider:doc.signatureProvider}:{}),url:`/api/public/processes/${encodeURIComponent(process.protocolo)}/documents/${encodeURIComponent(doc.id)}/download`}));
+ return documents.filter(doc=>['CONVITE','ATA','TERMO','DECLARACAO'].includes(doc.type)&&(doc.type==='CONVITE'?doc.status==='DISPONIVEL':doc.status==='ASSINADO')).map(doc=>({id:doc.id,type:doc.type,title:doc.title||doc.type,status:doc.status,version:doc.currentVersion,...(doc.type==='ATA'&&doc.signatureProvider?{signatureProvider:doc.signatureProvider}:{}),url:`/api/public/processes/${encodeURIComponent(process.protocolo)}/documents/${encodeURIComponent(doc.id)}/download`}));
 }
 function normalizedCredentialText(text:string):string{
  for(let i=0;i<3;i++){
@@ -60,7 +60,8 @@ function containsPrivateParticipantData(text:string,process:ProcessData):boolean
   return !!identifier&&identifier.length>=5&&tokens.has(identifier);
  });
 }
-export async function assertPublicAcademicPdf(bytes:Buffer,processData:ProcessData,options:{portalBaseUrl?:string}={}){
+/** Unclassified documents retain strict privacy; issued administrative originals follow their explicit public policy. Access credentials are always refused. */
+export async function assertPublicAcademicPdf(bytes:Buffer,processData:ProcessData,options:{portalBaseUrl?:string;issuedAdministrativeDocument?:boolean}={}){
  const {getDocument,OPS}=await import('pdfjs-dist/legacy/build/pdf.mjs');
  const imageOperators=new Set<number>([
   OPS.paintImageXObject,OPS.paintImageXObjectRepeat,OPS.paintInlineImageXObject,
@@ -76,16 +77,16 @@ export async function assertPublicAcademicPdf(bytes:Buffer,processData:ProcessDa
    extracted+=content;text+=content+' '+JSON.stringify(await page.getAnnotations());
    // The text layer cannot attest that a scanned image contains no private data.
    const operations=await page.getOperatorList();
-   if(operations.fnArray.some((operator:number)=>imageOperators.has(operator)))throw new Error('Documento contém imagem sem conferência pública.');
+   if(!options.issuedAdministrativeDocument&&operations.fnArray.some((operator:number)=>imageOperators.has(operator)))throw new Error('Documento contém imagem sem conferência pública.');
   }
   const metadata=await pdf.getMetadata();text+=' '+JSON.stringify(metadata.info||{})+' '+JSON.stringify(metadata.metadata?.getAll?.()||{});
-  if(extracted.trim().length<20)throw new Error('Não foi possível conferir o conteúdo do documento.');
+  if(!options.issuedAdministrativeDocument&&extracted.trim().length<20)throw new Error('Não foi possível conferir o conteúdo do documento.');
   const normalizedText=normalizedCredentialText(text);
   const credentialText=withoutPublicVerificationUrls(normalizedText,options.portalBaseUrl||String(process.env.PORTAL_PUBLIC_URL||process.env.APP_URL||''));
   if(hasPersonalEmailAccess(credentialText)
     || hasExplicitCredential(explicitCredentialEvidence(normalizedText)))throw new Error('Documento contém credencial de acesso pessoal.');
-  if (containsPrivateParticipantData(normalizedText,processData)
+  if (!options.issuedAdministrativeDocument&&(containsPrivateParticipantData(normalizedText,processData)
     || /\b(?:CPF|RG|CNH|passaporte|telefone|celular|data\s+de\s+nascimento)\s*[:nº°.-]*\s*[\d(]/i.test(text)
-    || /(?<!\d)\d{3}\.\d{3}\.\d{3}-\d{2}(?!\d)/.test(text)) throw new Error('Documento contém identificação privada.');
+    || /(?<!\d)\d{3}\.\d{3}\.\d{3}-\d{2}(?!\d)/.test(text))) throw new Error('Documento contém identificação privada.');
  }finally{if(pdf&&typeof pdf.destroy==='function')await pdf.destroy();else await task.destroy();}
 }
