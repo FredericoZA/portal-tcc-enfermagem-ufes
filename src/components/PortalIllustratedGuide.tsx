@@ -156,7 +156,7 @@ export const guideActivities: GuideActivity[] = [
   },
   {
     id: 'documentos', title: 'Conferir, assinar e baixar documentos', roles: ['aluno', 'orientador', 'examinador'], imageId: 'documentos-concluidos',
-    imageCaption: 'Documentos administrativos em um processo concluído. Nos legados, o instrumento histórico da banca aparece como sexto item.',
+    imageCaption: 'Documentos administrativos em um processo concluído. Nos legados, o instrumento de avaliação aparece antes da ata.',
     illustrationsByRole: {
       orientador: {imageId: 'documentos', imageCaption: 'Documentos administrativos na visão do orientador, com a ata ainda em assinatura.'},
       examinador: {imageId: 'documentos-examinador', imageCaption: 'Documentos administrativos na visão do examinador, com as ações permitidas para a ata.'},
@@ -208,7 +208,7 @@ export const guideActivities: GuideActivity[] = [
       'Confira tudo e clique em Confirmar entrega e ir para documentos. Os campos ficam bloqueados. Havendo publicação autorizada, o Portal gera o termo e solicita automaticamente pela ASTEN as assinaturas dos autores e do orientador. Cada signatário recebe um link por e-mail; acompanhe o andamento em Documentos administrativos.',
       'Se ainda permitido, clique em Editar entrega, leia o aviso e informe o motivo solicitado. A reabertura invalida a autorização da entrega anterior; confirme novamente os arquivos e as escolhas de publicação. Havendo publicação autorizada, será necessário assinar o novo termo. Documentos já assinados permanecem no histórico. Depois da assinatura da declaração ou da conclusão, essa opção deixa de estar disponível.',
     ],
-    done: 'A entrega foi registrada. A continuidade está em Documentos administrativos; o encerramento depende dos documentos obrigatórios arquivados.',
+    done: 'A entrega foi registrada. A continuidade está em Documentos administrativos; o encerramento depende dos documentos obrigatórios arquivados. Após a conclusão, os autores vinculados e o Master podem usar o botão vermelho Alterar publicação dos arquivos, no canto superior direito do Repositório acadêmico. O próprio formulário permite alterar a publicação e substituir os PDFs. Nos legados, essa ação é exclusiva do Master. Uma nova liberação exige novo termo assinado por todos os autores e pelo orientador; o PDF do termo anterior é excluído do Drive após a confirmação da alteração.',
     help: [
       'Entrega bloqueada: confira se a ata foi realmente assinada e arquivada. Escolher o método ou apenas devolver um PDF não conclui a assinatura.',
       'Publicação do resumo indisponível: anexe o resumo expandido antes de marcar sua publicação.',
@@ -262,11 +262,11 @@ export const guideActivities: GuideActivity[] = [
     steps: [
       'No mesmo Repositório, procure códigos como 001 - Legado. A numeração identifica os trabalhos antigos importados.',
       'Abra o código e consulte as mesmas abas dos demais TCCs. Dados ou arquivos ausentes na origem podem permanecer sem preenchimento. Um trabalho antigo pode ter apenas resumo expandido.',
-      'O resumo síntese pode ser lido na tabela e na ficha. Os PDFs acadêmicos só ficam públicos com autorização confirmada. Convite, ata, termo quando houver e declaração históricos identificados ficam públicos. O instrumento histórico da banca continua restrito e aparece no sexto cartão para o Master.',
+      'O resumo síntese pode ser lido na tabela e na ficha. Os PDFs acadêmicos só ficam públicos com autorização confirmada. Convite, ata, termo quando houver e declaração históricos identificados ficam públicos. O instrumento de avaliação continua restrito e aparece antes da ata para o Master.',
       'O registro histórico não inicia outro cadastro, defesa ou assinatura. Não crie um novo processo para completar um trabalho antigo.',
     ],
     done: 'Você consultou os dados e os arquivos disponíveis do registro histórico.',
-    help: ['O instrumento histórico de avaliação e arquivos sem classificação pública permanecem restritos. TCC e resumo expandido exigem a autorização registrada para cada PDF.'],
+    help: ['O instrumento de avaliação e arquivos sem classificação pública permanecem restritos. TCC e resumo expandido exigem a autorização registrada para cada PDF.'],
   },
   {
     id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'examinador', 'visitante'], imageId: 'sugestoes',

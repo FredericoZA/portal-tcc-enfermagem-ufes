@@ -2804,7 +2804,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       {loginResendSeconds>0&&<span>Disponível em {loginResendSeconds} s</span>}
                     </div>
                   )}
-                  {loginMessage&&<p role="status" className={`rounded-lg border px-3 py-2 text-xs ${loginMessage.startsWith('Código enviado')?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-amber-200 bg-amber-50 text-amber-900'}`}>{loginMessage}</p>}
+                  {loginMessage&&<p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-900">{loginMessage}</p>}
 
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                     <button

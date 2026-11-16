@@ -5,6 +5,7 @@ import {repositorySubmissionConfirmed} from '../utils/repositorySubmissionConfir
 import {hasPendingAutomaticSignature} from '../utils/pendingAutomaticSignature';
 import {documentSignatureProgress,signatureProgressDescription} from '../utils/documentSignatureProgress';
 import {AuditLogsPage} from './AuditLogsPage';
+import type {PublicationChoiceView} from '../types/publicationChoice';
 import {formatDateTimeWithWeekday} from '../utils/formatters';
 import {participantRole} from '../utils/officialParticipants';
 import {WorkflowRecoveryPanel} from '../components/WorkflowRecoveryPanel';
@@ -269,6 +270,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [acervoResumoExpandido, setAcervoResumoExpandido] = useState('');
   const [acervoTrabalhoCompleto, setAcervoTrabalhoCompleto] = useState('');
   const termSignatureProvider='ASTEN' as const;
+  const [publicationEditing,setPublicationEditing]=useState(false);
+  const [publicationView,setPublicationView]=useState<PublicationChoiceView|null>(null);
+  const [publicationBusy,setPublicationBusy]=useState(false);
+  useEffect(()=>{setPublicationEditing(false);setPublicationView(null);},[processId,userEmail]);
   const [acervoIsPublic, setAcervoIsPublic] = useState(false);
   const [acervoExpandedPublic, setAcervoExpandedPublic] = useState(false);
   const [isSubmittingAcervo, setIsSubmittingAcervo] = useState(false);
@@ -540,7 +545,19 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const isAcervoSubmitted = Boolean(process.acervo?.submittedAt);
   const hasReservationReceipt = Boolean(process.defesa.departmentResponse || process.defesa.reservationHistory?.some(item=>item.departmentResponse||item.localConfirmedAt) || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
   const canSubmitAcervo = isAuthenticated && isStudent;
-  const acervoFieldsLocked = !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
+  const canChangePublication=isAuthenticated&&(isMasterAdmin||(!process.legacyRecord&&isStudent))&&(process.legacyRecord||process.status==='CONCLUIDO');
+  const acervoFieldsLocked = publicationEditing ? (!canChangePublication||publicationBusy||isSubmittingAcervo||Boolean(acervoUploading)) : !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
+  const openPublicationEditing=async()=>{
+    if(!canChangePublication||publicationBusy)return;
+    setPublicationBusy(true);
+    try{
+      const view=await apiClient.getPublicationChoice(processId);setPublicationView(view);
+      setAcervoIsPublic(view.publishFullWork);setAcervoExpandedPublic(view.publishExpandedAbstract);
+      if(process.legacyRecord){setAcervoTrabalhoCompleto(privateLegacyData?.files.find(f=>f.kind==='TRABALHO_COMPLETO')?.fileName||'');setAcervoResumoExpandido(privateLegacyData?.files.find(f=>f.kind==='RESUMO_EXPANDIDO')?.fileName||'');setAcervoResumo(privateLegacyData?.resumo||'');setAcervoKeywords(privateLegacyData?.palavrasChave.join(', ')||'');}
+      setPublicationEditing(true);editingSectionRef.current='acervo';
+    }catch(error){portalNotice(error instanceof Error?error.message:'Não foi possível abrir a edição.');}
+    finally{setPublicationBusy(false);}
+  };
   const handleReopenRepository=async()=>{
     if(repositoryReopenInFlight.current||!canSubmitAcervo||readOnly)return;
     repositoryReopenInFlight.current=true;
@@ -767,6 +784,20 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const handleSubmitAcervo = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(publicationEditing){
+      if(!publicationView||publicationBusy||isSubmittingAcervo||acervoUploading)return;
+      setPublicationBusy(true);setIsSubmittingAcervo(true);
+      try{
+        const pending=publicationView.request&&publicationView.request.status!=='COMPLETED'&&publicationView.request.status!=='EDITING';
+        const same=acervoIsPublic===publicationView.publishFullWork&&acervoExpandedPublic===publicationView.publishExpandedAbstract;
+        const result=await apiClient.changePublicationChoice(processId,{publishFullWork:acervoIsPublic,publishExpandedAbstract:acervoExpandedPublic,expectedRevision:publicationView.revision,confirmed:true,...(pending&&same?{requestId:publicationView.request!.id}:{})});
+        setPublicationView(result);setPublicationEditing(false);editingSectionRef.current=null;
+        await loadData({quiet:true});
+        portalNotice(result.request?.lastError||(result.request?.status==='COMPLETED'?'Publicação atualizada.':'Solicitação registrada. O novo termo aguarda assinatura e sincronização.'));
+      }catch(error){portalNotice(error instanceof Error?error.message:'Não foi possível salvar a alteração.');}
+      finally{setPublicationBusy(false);setIsSubmittingAcervo(false);}
+      return;
+    }
     if (!canSubmitAcervo || isAcervoSubmitted || isSubmittingAcervo || repositorySubmitInFlight.current || acervoUploading) return;
     if (!ataIsArchived) {
       portalNotice('Aguarde o arquivamento da Ata assinada para salvar a entrega final.');
@@ -851,7 +882,14 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     if(file.size>24*1024*1024){portalNotice('O PDF deve ter no máximo 24 MB.');return;}
     setAcervoUploading(kind);
     try{
-      const uploaded=await apiClient.uploadProcessPdfFile(processId,kind,file);
+      let publicationRevision:number|undefined;
+      if(publicationEditing){
+        if(!publicationView)throw Error('Reabra a edição antes de substituir o arquivo.');
+        const prepared=await apiClient.preparePublicationFileEdit(processId,publicationView.revision);
+        setPublicationView(prepared);publicationRevision=prepared.revision;
+      }
+      const uploaded=await apiClient.uploadProcessPdfFile(processId,kind,file,publicationRevision);
+      if(publicationEditing)setPublicationView(await apiClient.getPublicationChoice(processId));
       if(kind==='trabalho-completo')setAcervoTrabalhoCompleto(uploaded.fileName);else setAcervoResumoExpandido(uploaded.fileName);
       portalNotice(uploaded.id.startsWith('local_review_')?'PDF de demonstração salvo neste computador, vinculado a este TCC.':'PDF armazenado com segurança na pasta deste TCC no Google Drive.');
       await loadData({ preserveAcervoDraft: true });
@@ -1070,6 +1108,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               {(Object.keys(administrativeDocumentLabels) as ProcessDocument['type'][]).map(type => {
                 const docInfo = administrativeDocumentLabels[type];
                 const doc = documents.find(item => item.type === type);
+                if (!doc && type === 'TERMO' && process.acervo?.publicationChange) {
+                  const change = process.acervo.publicationChange;
+                  return <ProcessDocumentCard key={type} title={docInfo.title} signerNote={docInfo.signer}
+                    status={change.status === 'AWAITING_SIGNATURE' ? 'Novo termo pendente' : 'Termo anterior retirado'}
+                    statusDescription="A versão anterior permanece no histórico privado do processo."
+                    available={false} onView={()=>{}} onDownload={()=>{}} />;
+                }
                 if (!doc) return <ProcessDocumentCard key={type} title={docInfo.title} signerNote={docInfo.signer}
                   status={docInfo.pending} available={false} onView={()=>{}} onDownload={()=>{}} />;
                 const {publicationDeclined:termDeclined,available:isDownloadable}=administrativeDocumentAvailability(process,doc,readOnly);
@@ -1144,9 +1189,9 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       {localFormat.showSectionAcervo !== false && isTabVisible('acervo') && (
         <div id="acervo-digital-section" className="overflow-hidden">
           <div className="portal-repository-content">
-            {readOnly ? (
+            {canChangePublication&&!publicationEditing&&<div className="flex justify-end pb-3"><button type="button" className="portal-action" style={{background:'#b91c1c',borderColor:'#b91c1c',color:'#fff'}} disabled={publicationBusy} onClick={()=>void openPublicationEditing()}>Alterar publicação dos arquivos</button></div>}
+            {readOnly&&!publicationEditing ? (
               <div className="portal-repository-grid">
-                {privateLegacyData&&(privateLegacyData.files.some(f=>f.isPublic)||privateLegacyData.publicationWithdrawal?.drivePending)&&<section className="rounded-xl border border-slate-200 bg-white p-4"><button type="button" className="portal-action" disabled={withdrawingLegacy} onClick={()=>void withdrawHistoricalPublication()}>{withdrawingLegacy?'Retirando publicação…':privateLegacyData.publicationWithdrawal?.drivePending?'Concluir retirada no Drive':'Retirar publicação histórica'}</button>{privateLegacyData.publicationWithdrawal?.drivePending&&<p role="status" className="mt-2 text-xs">Os PDFs já estão bloqueados no Portal. A retirada das cópias do Drive está pendente.</p>}</section>}
                 {privateLegacyAccess?.error&&<p role="alert" className="portal-instruction p-3 text-xs">{privateLegacyAccess.error}</p>}
                 {privateLegacyAccess&&legacyAcademicDownloadError&&<p role="alert" className="portal-instruction p-3 text-xs">{legacyAcademicDownloadError}</p>}
                 <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-justify text-sm">{privateLegacyData?.resumo||process.acervo?.resumoSintese||(process.legacyRecord?'Resumo não localizado no acervo importado.':'Resumo ainda não informado.')}</p></section>
@@ -1161,9 +1206,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 }).map(file=><section key={`${file.kind}-${file.privateIndex??'public'}`} className="portal-tcc-document-card flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"><div className="min-w-0"><h3 className="text-xs font-bold">{file.title}</h3><p className="mt-2 text-sm">{file.url?(file.isPublic?'Disponível para consulta pública':'Disponível para consulta restrita'):'Não disponível para consulta pública'}</p>{file.fileName&&<p className="mt-1 break-all text-xs text-slate-600">{file.fileName}</p>}</div>{file.url&&file.isPublic?<PublicRepositoryFileActions url={file.privateIndex!==undefined?`/api/legacy-academic-records/${encodeURIComponent(process.id)}/files/${file.privateIndex}/download`:file.url}/>:file.privateIndex!==undefined?<button type="button" disabled={!file.url||legacyAcademicDownload!==null} className="portal-action shrink-0" onClick={()=>void downloadPrivateLegacyFile(file.privateIndex!)}><Download className="h-4 w-4"/>{legacyAcademicDownload===file.privateIndex?'Baixando…':'Baixar original restrito'}</button>:null}</section>)}
               </div>
             ) : (
+              <>
               <form id="repository-delivery-form" data-delivery-locked={acervoFieldsLocked} onSubmit={handleSubmitAcervo} className="space-y-2">
                 {repositoryReopenNotice&&<aside role="status" className="portal-instruction p-3 text-sm"><p>{repositoryReopenNotice}</p><button type="button" disabled={isSubmittingAcervo} className="portal-action mt-2" onClick={()=>void retryRepositoryDocuments()}>Atualizar documentos</button></aside>}
-                {!isAcervoSubmitted&&<aside role="status" className="portal-instruction mx-auto w-fit max-w-[calc(100%_-_1rem)] p-3 text-left text-sm sm:max-w-[calc(100%_-_2rem)]"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
+                {!isAcervoSubmitted&&!publicationEditing&&<aside role="status" className="portal-instruction mx-auto w-fit max-w-[calc(100%_-_1rem)] p-3 text-left text-sm sm:max-w-[calc(100%_-_2rem)]"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
                 <fieldset disabled={acervoFieldsLocked} className={`portal-repository-grid ${acervoFieldsLocked?'portal-repository-locked':''}`}>
                                   {/* Card 2: Resumo Síntese */}
                   <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
@@ -1180,7 +1226,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                     <textarea
                       required
-                      disabled={!ataIsArchived} value={acervoResumo}
+                      disabled={!ataIsArchived||publicationEditing} value={acervoResumo}
                       aria-label="Resumo síntese do TCC"
                       aria-describedby="acervo-resumo-limit"
                       maxLength={2000}
@@ -1204,7 +1250,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">{Array.from({length:5},(_,index)=><input key={index} aria-label={`Palavra-chave ${index+1}`} required disabled={!ataIsArchived} className="portal-input" value={acervoKeywords.split(',')[index]||''} onChange={event=>{editingSectionRef.current='acervo';const words=Array.from({length:5},(_,i)=>acervoKeywords.split(',')[i]||'');words[index]=event.target.value.replaceAll(',','');setAcervoKeywords(words.join(','));}}/>)}</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">{Array.from({length:5},(_,index)=><input key={index} aria-label={`Palavra-chave ${index+1}`} required disabled={!ataIsArchived||publicationEditing} className="portal-input" value={acervoKeywords.split(',')[index]||''} onChange={event=>{editingSectionRef.current='acervo';const words=Array.from({length:5},(_,i)=>acervoKeywords.split(',')[i]||'');words[index]=event.target.value.replaceAll(',','');setAcervoKeywords(words.join(','));}}/>)}</div>
                     {/* Preview of Tags */}
                     {acervoKeywords.trim() && (
                       <div className="flex flex-wrap justify-center gap-1.5 pt-1">
@@ -1294,7 +1340,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
 
                   <div className="flex justify-center py-2 text-center" aria-label="Confirmação da entrega final">
-                    {isAcervoSubmitted ? <>
+                    {publicationEditing?<><button type="button" className="portal-action mr-2" disabled={publicationBusy||Boolean(acervoUploading)} onClick={()=>{setPublicationEditing(false);editingSectionRef.current=null;void loadData({quiet:true});}}>Cancelar</button><button type="submit" className="portal-action portal-button-primary" disabled={acervoFieldsLocked}><Save className="h-4 w-4"/>{isSubmittingAcervo?'Salvando…':'Salvar alterações'}</button></>:isAcervoSubmitted ? <>
                       {canSubmitAcervo&&process.status!=='CONCLUIDO'&&!documentSignatureCompleted(signatureJobs,process.id,'DECLARACAO')&&<button type="button" disabled={isSubmittingAcervo} className="portal-action" onClick={()=>void handleReopenRepository()}>Editar entrega</button>}
                     </> : <>
                       {canSubmitAcervo ? <button type="submit" disabled={acervoFieldsLocked} className="portal-action portal-button-primary"><Save className="h-4 w-4"/>{isSubmittingAcervo?'Confirmando entrega…':'Confirmar entrega e ir para documentos'}</button> : <p className="text-xs">A confirmação da entrega é feita por um dos autores.</p>}
@@ -1303,6 +1349,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                 </div>
               </form>
+              </>
             )}
           </div>
         </div>

@@ -194,6 +194,10 @@ export interface EvaluationInfo {
 }
 
 export interface ProcessAcervoInfo {
+  /** Completed declarations do not need to be reissued for a new consent term. */
+  declarationDataRevision?: number;
+  publicationAuthorizationFileIds?: string[];
+  publicationChange?: import('./publicationChoice').PublicationChoiceRequest;
   palavrasChave?: string[];
   resumoSintese?: string;
   resumoExpandidoFileUrl?: string;

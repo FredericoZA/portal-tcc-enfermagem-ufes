@@ -90,6 +90,7 @@ const phases = [
       'Informe o resumo e exatamente cinco palavras-chave. Anexe o PDF final do TCC, obrigatório para os trabalhos novos. O resumo expandido é opcional.',
       'Escolha separadamente se autoriza publicar o trabalho completo, o resumo expandido, ambos ou nenhum. Entregar o TCC não significa autorizar sua publicação.',
       'Use Confirmar entrega e ir para documentos. Para corrigir enquanto a etapa permitir, use Editar entrega e informe o motivo. Confirme novamente as escolhas de publicação; uma nova autorização exige novo termo e novas assinaturas.',
+      'Após a conclusão, os autores vinculados e o Master podem clicar no botão vermelho Alterar publicação dos arquivos, no canto superior direito do Repositório acadêmico. O mesmo formulário libera as escolhas de publicação e a substituição dos PDFs. Nos legados, somente o Master pode fazer essa alteração. A restrição retira o termo anterior da versão vigente. Uma nova liberação exige novo termo assinado por todos os autores e pelo orientador. O PDF do termo anterior é excluído do Drive após a confirmação da alteração.',
     ],
     gate: 'Arquivo obrigatório, resumo, palavras-chave e escolhas de publicação registrados.',
     result: 'Entrega confirmada e continuidade em Documentos administrativos.',

@@ -28,7 +28,7 @@ export function legacyAdministrativeFiles(record: Pick<LegacyAcademicRecord,'pro
 export function publicLegacyAdministrativeDocuments(record:LegacyAcademicRecord){
   const labels:Record<string,string>={CONVITE:'Carta convite',ATA:'Ata',TERMO:'Termo de autorização',DECLARACAO:'Declaração'};
   const academicIds=new Set(record.attachments.map(file=>file.driveFileId));
-  return legacyAdministrativeFiles(record).flatMap((file,index)=>labels[file.kind]&&!academicIds.has(file.driveFileId)?[{id:`legacy-document-${index}`,type:file.kind,title:labels[file.kind],status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`}]:[]);
+  return legacyAdministrativeFiles(record).flatMap((file,index)=>labels[file.kind]&&!academicIds.has(file.driveFileId)&&!(file.kind==='TERMO'&&record.provenance.publicationOverride&&!((record.provenance.publicationOverride as any).currentTermFileId===file.driveFileId&&(record.provenance.publicationOverride as any).status==='COMPLETED'))?[{id:`legacy-document-${index}`,type:file.kind,title:labels[file.kind],status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`}]:[]);
 }
 export function legacyProtocol(id: string): string {
   if (!/^legado-\d{4}$/.test(id) || Number(id.slice(7)) < 1 || Number(id.slice(7)) > 999) throw new Error('Identificador legado inválido.');
@@ -36,6 +36,10 @@ export function legacyProtocol(id: string): string {
 }
 /** Historical consent is independent of live-process signatures and required uploads. */
 export function legacyAuthorization(provenance: Record<string, unknown>): LegacyAcademicRecord['authorizationDecision'] {
+  const override=provenance.publicationOverride as any;
+  const withdrawal=provenance.publicationWithdrawal as {withdrawnAt?:string}|undefined;
+  if(withdrawal?.withdrawnAt && (!override?.syncedAt || !(Date.parse(override.syncedAt)>Date.parse(withdrawal.withdrawnAt))))return 'DENIED';
+  if(override)return override.status==='COMPLETED'&&override.signedTermJobId&&override.syncedAt&&(override.publishFullWork||override.publishExpandedAbstract)?'AUTHORIZED':'DENIED';
   if(provenance?.publicationWithdrawal&&typeof provenance.publicationWithdrawal==='object'&&typeof (provenance.publicationWithdrawal as any).withdrawnAt==='string')return 'DENIED';
   const values = Array.isArray(provenance?.originalConsent) ? provenance.originalConsent : [];
   const normalized = values.map(v => String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase());
@@ -45,7 +49,13 @@ export function legacyAuthorization(provenance: Record<string, unknown>): Legacy
 }
 export function legacyFileIsPublic(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
   return legacyAuthorization(record.provenance) === 'AUTHORIZED' &&
+    legacyImportAllowsPublication(record, file) &&
     (file.kind === 'TRABALHO_COMPLETO' ? record.publishFullWork : file.kind === 'RESUMO_EXPANDIDO' && record.publishExpandedAbstract) && /^[a-f0-9]{64}$/.test(file.sha256 || '');
+}
+function legacyImportAllowsPublication(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
+  if (record.provenance.publicationOverride) return true;
+  const baseline = record.provenance.publicationImportBaseline as {publicFiles?: Array<{kind:string;sha256:string}>} | undefined;
+  return !baseline || (Array.isArray(baseline.publicFiles) && baseline.publicFiles.some(f => f.kind === file.kind && f.sha256 === file.sha256));
 }
 const legacy011BoardSource = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQucIwgv0TbpZzsFIqGvaCh7meVsKRZtF8o17sBNh604utu_cY3m4syMp7jao69-LNIBaxZzS8IcriE/pubhtml';
 
@@ -74,8 +84,9 @@ export function canonicalLegacyRecord(record: LegacyAcademicRecord): LegacyAcade
   const attachments = record.attachments.map(file => ({...file, sourceFileName:file.sourceFileName||file.fileName, fileName:buildProcessArchiveFileName({protocol,studentNames:record.autores,title:record.titulo,artifactLabel:file.kind,version:1}), sha256: file.sha256 || /SHA256:([a-f0-9]{64})/.exec(file.evidence)?.[1] || ''}));
   const authorizationDecision = legacyAuthorization(record.provenance);
   const authorized = authorizationDecision === 'AUTHORIZED';
-  const publishFullWork = authorized && attachments.some(f => f.kind === 'TRABALHO_COMPLETO' && /^[a-f0-9]{64}$/.test(f.sha256));
-  const publishExpandedAbstract = authorized && attachments.some(f => f.kind === 'RESUMO_EXPANDIDO' && /^[a-f0-9]{64}$/.test(f.sha256));
+  const override=record.provenance.publicationOverride as any;
+  const publishFullWork = authorized && (!override||override.publishFullWork===true) && attachments.some(f => f.kind === 'TRABALHO_COMPLETO' && /^[a-f0-9]{64}$/.test(f.sha256) && legacyImportAllowsPublication(record,f));
+  const publishExpandedAbstract = authorized && (!override||override.publishExpandedAbstract===true) && attachments.some(f => f.kind === 'RESUMO_EXPANDIDO' && /^[a-f0-9]{64}$/.test(f.sha256) && legacyImportAllowsPublication(record,f));
   const isPublic = publishFullWork || publishExpandedAbstract;
   const { examinadores, provenance } = legacy011Board(record);
   return {...record, titulo: renderTccTitle(record.titulo), autores: record.autores.map(normalizePersonName), orientador: normalizePersonName(record.orientador), coorientador: normalizePersonName(record.coorientador), examinadores: examinadores.map(p=>({...p,nome:normalizePersonName(p.nome)})), provenance, protocolo: protocol, attachments, authorizationDecision,

@@ -2,8 +2,8 @@ import {validateSignatureRecipientRoles} from './signatureRecipientRoles';
 import type {ProcessData} from '../types';
 import type {SignatureJob} from '../types/signatures';
 
-export function signatureDocumentRevision(process: {dataRevision:number; avaliacao?: Pick<ProcessData['avaliacao'],'documentRevision'>}, type: string): number {
- return type === 'ATA' ? process.avaliacao?.documentRevision ?? process.dataRevision : process.dataRevision;
+export function signatureDocumentRevision(process: {dataRevision:number; avaliacao?: Pick<ProcessData['avaliacao'],'documentRevision'>;acervo?:ProcessData['acervo']}, type: string): number {
+ return type === 'ATA' ? process.avaliacao?.documentRevision ?? process.dataRevision : type==='DECLARACAO' ? process.acervo?.declarationDataRevision ?? process.dataRevision : process.dataRevision;
 }
 
 /** A pending provider remains independent; a completed signature closes the document. */

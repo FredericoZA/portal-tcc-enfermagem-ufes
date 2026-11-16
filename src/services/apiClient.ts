@@ -370,6 +370,9 @@ export const apiClient = {
     method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify(data),
   }),
   reopenRepository:(id:string,reason:string)=>fetchApi<ProcessData>(`/api/processes/${encodeURIComponent(id)}/repository/reopen`,{method:'POST',body:JSON.stringify({reason})}),
+  preparePublicationFileEdit:(id:string,expectedRevision:number)=>fetchApi<import('../types/publicationChoice').PublicationChoiceView>(`/api/processes/${encodeURIComponent(id)}/publication-choice/edit`,{method:'POST',body:JSON.stringify({expectedRevision}),timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
+  getPublicationChoice:(id:string)=>fetchApi<import('../types/publicationChoice').PublicationChoiceView>(`/api/processes/${encodeURIComponent(id)}/publication-choice`),
+  changePublicationChoice:(id:string,input:import('../types/publicationChoice').PublicationChoice&{expectedRevision:number;confirmed:true;requestId?:string})=>fetchApi<import('../types/publicationChoice').PublicationChoiceView>(`/api/processes/${encodeURIComponent(id)}/publication-choice`,{method:'POST',body:JSON.stringify(input),timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   reopenEvaluation: (id: string, reason: string) => fetchApi<ProcessData>(`/api/processes/${id}/reopen`, {
     method: 'POST', body: JSON.stringify({ reason })
   }),
@@ -494,10 +497,10 @@ export const apiClient = {
     return fetchApi<any>(path,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({reviewedStudioRevision})});
   },
   submitFinalData:(id:string,data:any)=>fetchApi<WorkflowProcessResponse>(`/api/processes/${id}/final-data`,{method:'POST',body:JSON.stringify(data)}),
-  uploadProcessPdfFile:(id:string,kind:'trabalho-completo'|'resumo-expandido',file:File)=>withDevelopmentFallback(file,async()=>{
+  uploadProcessPdfFile:(id:string,kind:'trabalho-completo'|'resumo-expandido',file:File,expectedPublicationRevision?:number)=>withDevelopmentFallback(file,async()=>{
     const staged=await stageFile(file,{purpose:kind==='trabalho-completo'?'PROCESS_FULL_WORK':'PROCESS_EXPANDED_ABSTRACT',processId:id});
-    return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type})});
-  },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
+    return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type,expectedPublicationRevision})});
+  },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file),expectedPublicationRevision})})),
   getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
   downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
