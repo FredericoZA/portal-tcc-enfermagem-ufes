@@ -357,6 +357,25 @@ export async function downloadDrivePdf(accessToken:string,fileId:string,expected
 }
 
 /** Resolve browser links without downloading PDF bytes or changing Drive permissions. */
+/** Metadata-only inventory of replaced academic originals for reader revocation. */
+export async function listSupersededProcessAcademicFiles(accessToken:string,processId:string):Promise<Array<{fileId:string;artifactType:string;expectedSha256:string}>>{
+  const q=`trashed = false and mimeType = 'application/pdf' and appProperties has { key='portal' and value='portal-tcc' } and appProperties has { key='portalProcessId' and value='${escapeQuery(processId)}' } and appProperties has { key='lifecycle' and value='SUPERSEDED' } and (appProperties has { key='artifactType' and value='TRABALHO_COMPLETO' } or appProperties has { key='artifactType' and value='RESUMO_EXPANDIDO' })`;
+  const files:Array<{fileId:string;artifactType:string;expectedSha256:string}>=[],seen=new Set<string>(),ids=new Set<string>();let pageToken='';
+  do{
+    const params=new URLSearchParams({q,fields:'files(id,mimeType,trashed,appProperties,sha256Checksum),nextPageToken',pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true',...(pageToken?{pageToken}:{})});
+    const result=await(await driveRequest(`${DRIVE_API}/files?${params}`,accessToken)).json();
+    if(!Array.isArray(result.files))throw Error('O Drive não confirmou as versões anteriores do repositório.');
+    for(const file of result.files){
+      const props=file.appProperties||{},sha=String(props.sha256||'').toLowerCase();
+      if(!/^[a-zA-Z0-9_-]{10,150}$/.test(file.id||'')||ids.has(file.id)||file.trashed||file.mimeType!=='application/pdf'||props.portal!=='portal-tcc'||props.portalProcessId!==processId||props.lifecycle!=='SUPERSEDED'||!['TRABALHO_COMPLETO','RESUMO_EXPANDIDO'].includes(props.artifactType)||!/^[a-f0-9]{64}$/.test(sha)||(file.sha256Checksum&&String(file.sha256Checksum).toLowerCase()!==sha))throw Error('Uma versão anterior não corresponde ao acervo do processo.');
+      ids.add(file.id);files.push({fileId:file.id,artifactType:props.artifactType,expectedSha256:sha});
+    }
+    pageToken=result.nextPageToken||'';
+    if(pageToken){if(seen.has(pageToken)||seen.size>=5)throw Error('A lista de versões anteriores excedeu o lote permitido.');seen.add(pageToken);}
+  }while(pageToken);
+  return files;
+}
+
 export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;fileId:string;email:string;processId:string;artifactType:string;signatureJobId?:string;expectedSha256?:string;allowPublicRead?:boolean;readerEmails?:string[];formVersion?:number;reconcileReaders?:boolean}):Promise<{view:string;download:string}|null>{
   if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId))return null;
   const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);

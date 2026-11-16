@@ -52,7 +52,7 @@ import {deleteProcessCalendarEvents} from './server/integrations/googleWorkspace
 import {deleteProcessSupabaseObjects} from './server/integrations/supabaseStorageStaging';
 import {unlinkSync} from 'node:fs';
 import {collectProcessDriveFileIds,isProcessDeletionInProgress,processDeletionLeaseMs,processDeletionNextRetryAt,processDeletionSummary,processDeletionTask,restoresDeletedProcess,selectDueProcessDeletions,type ProcessDeletionTask} from './server/workflow/processDeletion';
-import {resolvePrivateDriveBrowserLinks,deleteProcessDriveArtifacts} from './server/integrations/googleDriveArchive';
+import {resolvePrivateDriveBrowserLinks,listSupersededProcessAcademicFiles,deleteProcessDriveArtifacts} from './server/integrations/googleDriveArchive';
 import {loadRetainedProcessProtocols,purgeSupabaseProcessHistory} from './server/integrations/supabase';
 import {notificationReadStore} from './server/integrations/notificationReadStore';
 import type {PortalNotificationDetail} from './src/types/courseOperations';
@@ -5995,6 +5995,7 @@ export async function createPortalApp() {
           for(const job of formArchiveJobsStore.filter(j=>j.processId===process.id&&j.status==='ARCHIVED'&&j.driveFileId&&j.sha256&&['CADASTRO_INICIAL','CONFIRMACAO_LOCAL'].includes(j.formType))){
             files.push({fileId:job.driveFileId!,artifactType:job.formType,expectedSha256:job.sha256,formVersion:job.version});
           }
+          files.push(...await listSupersededProcessAcademicFiles(accessToken,process.id));
           // Share only allowed documents, never the folder containing private custom responses.
           for(const file of files){
             const links=await resolvePrivateDriveBrowserLinks({accessToken,...file,processId:process.id,email:readerEmails[0]||getPortalIdentity(req)!.email,readerEmails,reconcileReaders:true});

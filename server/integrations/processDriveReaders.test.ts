@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {processDriveReaderEmails,grantMissingDriveReaders} from './processDriveReaders';
-import {resolvePrivateDriveBrowserLinks,ensurePortalProcessDriveFolder,uploadProcessFormPdf} from './googleDriveArchive';
+import {resolvePrivateDriveBrowserLinks,ensurePortalProcessDriveFolder,uploadProcessFormPdf,listSupersededProcessAcademicFiles} from './googleDriveArchive';
 import {createHash} from 'node:crypto';
 
 test('automatic readers come only from persisted authors and advisor',()=>{
@@ -106,4 +106,15 @@ test('custom submission PDFs remain private even if reader emails are accidental
   });
   await uploadProcessFormPdf({accessToken:'fixture',processFolderId:'process_folder',processId:'process-1',protocol:'TEST-1',studentNames:['Fixture'],formType:'CUSTOM_examiner',version:1,pdf:Buffer.from('%PDF-fixture'),sha256:'a'.repeat(64),readerEmails:['author@example.invalid']});
   assert.equal(writes,0);
+});
+
+test('replaced academic originals are inventoried without PDF transfer and unrelated forms are rejected',async t=>{
+  let calls=0,artifactType='TRABALHO_COMPLETO';
+  t.mock.method(globalThis,'fetch',async(url,init)=>{
+    calls++;assert.equal(init?.method,undefined);const u=new URL(String(url));assert.equal(u.pathname,'/drive/v3/files');
+    assert.match(u.searchParams.get('q')||'',/SUPERSEDED/);assert.ok(!u.searchParams.has('alt'));
+    return Response.json({files:[{id:'old_academic_12345',mimeType:'application/pdf',appProperties:{portal:'portal-tcc',portalProcessId:'process-1',lifecycle:'SUPERSEDED',artifactType,sha256:'a'.repeat(64)},sha256Checksum:'a'.repeat(64)}]});
+  });
+  assert.deepEqual(await listSupersededProcessAcademicFiles('fixture','process-1'),[{fileId:'old_academic_12345',artifactType,expectedSha256:'a'.repeat(64)}]);
+  artifactType='CUSTOM_examiner';await assert.rejects(listSupersededProcessAcademicFiles('fixture','process-1'),/não corresponde/);assert.equal(calls,2);
 });
