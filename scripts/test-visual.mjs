@@ -119,7 +119,7 @@ try {
     }
     await page.waitForTimeout(150);
     await page.waitForFunction(() => document.body.innerText.trim().length > 80);
-    if (await page.locator('vite-error-overlay').count()) throw new Error(`${name}: overlay de erro do Vite.`);
+    if (await page.locator('#rsbuild-error-overlay').count()) throw new Error(`${name}: erro de compilação na interface.`);
     const file = `${name}.png`;
     await page.screenshot({ path: path.join(output, file), fullPage: true });
     // Inventário dos valores EFETIVOS de font-size no Chromium, por página e modal.

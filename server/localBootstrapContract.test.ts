@@ -10,7 +10,7 @@ const entry=fileURLToPath(new URL('../scripts/prepare-local.mjs',import.meta.url
 function fixture(content='NODE_ENV="development"\nPORTAL_SESSION_SECRET=""\nPORTAL_OTP_PEPPER=""\n') {
   const cwd=mkdtempSync(join(tmpdir(),'portal-tcc-local-'));
   mkdirSync(join(cwd,'node_modules','.bin'),{recursive:true});
-  writeFileSync(join(cwd,'node_modules','.bin',process.platform==='win32'?'vite.cmd':'vite'),'');
+  writeFileSync(join(cwd,'node_modules','.bin',process.platform==='win32'?'rsbuild.cmd':'rsbuild'),'');
   writeFileSync(join(cwd,'.env.development.example'),content);
   const exec=()=>spawnSync(process.execPath,[entry],{cwd,encoding:'utf8',timeout:10_000});
   return {cwd,exec,cleanup:()=>rmSync(cwd,{recursive:true,force:true})};

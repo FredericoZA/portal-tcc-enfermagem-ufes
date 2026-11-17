@@ -125,9 +125,13 @@ test('signature-triggered recovery retains its FIFO and full refresh before work
  assert.match(source,/if\(state\.registrationDrafts\)registrationDraftsStore=/);
 });
 
-test('production startup does not import the development Vite server eagerly',async()=>{
+test('production startup does not import the development frontend compiler',async()=>{
  const source=await readFile('server.ts','utf8');
- assert.doesNotMatch(source,/^import .*from ['"]vite['"]/m);
- const index=source.indexOf("await import('vite')");assert.ok(index>source.indexOf('export async function createPortalApp'));
- assert.match(source.slice(index,index+300),/createViteServer\(/);
+ assert.doesNotMatch(source,/^import .*from ['"]@rsbuild\/core['"]/m);
+ const localFrontend=source.slice(source.indexOf("if (typeof __PORTAL_COMPILED_SERVER__ === 'undefined' && !serveCompiledClient) {"));
+ assert.match(localFrontend,/await import\('@rsbuild\/core'\)/);
+ assert.match(localFrontend,/await createRsbuild\(/);
+ assert.match(localFrontend,/frontend \?\?= startDevelopmentClient\(\)/);
+ const build=await readFile('scripts/build-server.mjs','utf8');
+ assert.match(build,/define:\s*\{\s*__PORTAL_COMPILED_SERVER__:\s*'true'/);
 });

@@ -90,7 +90,7 @@ test('nome de arquivo remove caracteres impróprios do Drive', () => {
     version: 1,
     extension: '.p$d$f'
   });
-  assert.equal(fileName, '00 - Registro Cadastro inicial - TCC 2026 0001 - Aluno Teste - v001.pdf');
+  assert.equal(fileName, '00 - Registro cadastro inicial - TCC 2026 0001 - Aluno Teste - v001.pdf');
 });
 
 

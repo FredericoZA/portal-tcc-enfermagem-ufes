@@ -646,7 +646,7 @@ async function ensureDocumentModelFolders(accessToken:string,manifest:GoogleDriv
   let typeFolderId=manifest.folders[`documents.${type}`];
   if(!typeFolderId){
     const known=DRIVE_DOCUMENT_MODEL_FOLDERS[type as keyof typeof DRIVE_DOCUMENT_MODEL_FOLDERS];
-    const folderName=known?.name||`99 - ${type.replace(/_/g, ' ')}`;
+    const folderName=known?.name||`99 - ${documentModelLabel(type)}`;
     typeFolderId=(await ensureAliasedFolder(accessToken,folderName,known?.aliases||[folderName,`99_${type}`],manifest.folders.models)).file.id;
     manifest.folders[`documents.${type}`]=typeFolderId;
   }
@@ -730,12 +730,14 @@ export async function accessListGoogleSheetsTemplate(input:{accessToken:string;r
   await verifyPrivateDriveFolder(token,input.rootFolderId);
   const documents=await ensureAliasedFolder(token,DRIVE_FOLDER_NAMES.models,DRIVE_ACADEMIC_FOLDER_ALIASES.documents,input.rootFolderId);
   const mimeType='application/vnd.google-apps.spreadsheet';
-  const name='MODELO_LISTA_ACESSO_V3';
-  let existing=await findChild(token,name,documents.file.id,mimeType);
+  const name='Modelo de lista de acesso - v3';
+  const previousName='MODELO_LISTA_ACESSO_V3';
+  let existing=await findChild(token,name,documents.file.id,mimeType)
+    ||await findChild(token,previousName,documents.file.id,mimeType);
   // Read compatibility for a template created before the two-folder layout.
   if(!existing){
     const oldSystem=await findChild(token,DRIVE_FOLDER_NAMES.system,input.rootFolderId,FOLDER_MIME);
-    if(oldSystem){await verifyPrivateDriveFolder(token,oldSystem.id);existing=await findChild(token,name,oldSystem.id,mimeType);}
+    if(oldSystem){await verifyPrivateDriveFolder(token,oldSystem.id);existing=await findChild(token,previousName,oldSystem.id,mimeType);}
   }
   const file=existing||await uploadBinary(token,{name,parentId:documents.file.id,mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',targetMimeType:mimeType,content:input.content,appProperties:{purpose:'access-list-template',schema:'3'}});
   return {id:file.id,url:`https://docs.google.com/spreadsheets/d/${encodeURIComponent(file.id)}/copy`,created:!existing};
@@ -954,7 +956,8 @@ export async function prepareAttendanceReferencePdf(input:{fileId:string;sourceC
   const pdf=await renderBlankAttendanceReferencePdf({accessToken:token,fileId:input.fileId,verifiedDocxBytes:bytes,temporaryParentId:folder.id});
   if(pdf.length>2*1024*1024||pdf.subarray(0,5).toString()!=='%PDF-')throw new Error('PDF em branco inválido ou maior que 2 MB.');
   const sha256=createHash('sha256').update(pdf).digest('hex');
-  const file=await uploadBinary(token,{name:`DECLARACAO_COMPARECIMENTO_V${input.sourceVersion}_${sha256.slice(0,16)}.pdf`,parentId:folder.id,mimeType:'application/pdf',content:pdf,appProperties:{documentType:'DECLARACAO_COMPARECIMENTO',lifecycle:'approved-blank-reference',sourceContentSha256:input.sourceContentSha256,sourceVersion:String(input.sourceVersion),sha256}});
+  const fileName=`Declaração de comparecimento - PDF aprovado do modelo v${input.sourceVersion} - ${sha256.slice(0,16)}.pdf`;
+  const file=await uploadBinary(token,{name:fileName,parentId:folder.id,mimeType:'application/pdf',content:pdf,appProperties:{documentType:'DECLARACAO_COMPARECIMENTO',lifecycle:'approved-blank-reference',sourceContentSha256:input.sourceContentSha256,sourceVersion:String(input.sourceVersion),sha256}});
   const artifact={driveFileId:file.id,sha256,byteLength:pdf.length,sourceContentSha256:input.sourceContentSha256,sourceVersion:input.sourceVersion,publishedAt:new Date().toISOString()};
   await readAttendanceReferencePdf(artifact,input.rootFolderId,token);
   return artifact;

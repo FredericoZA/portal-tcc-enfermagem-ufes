@@ -14,6 +14,10 @@ const LEGACY_WIDTH_PREFIX = 'portal_tcc_v1043_widths_';
 const LEGACY_WRAP_PREFIX = 'portal_tcc_v1043_wrap_';
 const MIN_WIDTH = 72;
 const MAX_WIDTH = 720;
+export const PORTAL_MANAGED_COLUMN_EVENT = 'portal:managed-column-change';
+export type ManagedColumnChange =
+  | {columnKey:string; sort:'asc'|'desc'}
+  | {columnKey:string; values:string[]|null};
 
 let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
@@ -87,7 +91,9 @@ function applyFilters(table: HTMLTableElement) {
     row.classList.toggle('portal-core-filter-hidden', !visible);
   });
   headers.forEach((header, index) => {
-    const active = state.filters.has(keyForHeader(header, index));
+    const active = header.dataset.portalManagedColumn === 'true'
+      ? header.dataset.portalFilterSelected !== undefined
+      : state.filters.has(keyForHeader(header, index));
     header.querySelector<HTMLButtonElement>('.portal-core-column-menu')?.setAttribute('data-filter-active', active ? 'true' : 'false');
   });
 }
@@ -140,6 +146,28 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, a
     ?? Array.from(table.tBodies[0]?.rows || [], (row) => cellValue(row, index));
   const values = Array.from(new Set(options))
     .sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+  const managedKey = header.dataset.portalManagedColumn === 'true' ? header.dataset.portalColumnKey : undefined;
+  let managedValues = header.dataset.portalFilterSelected === undefined
+    ? undefined
+    : new Set(header.dataset.portalFilterSelected.split('|').filter(Boolean));
+  const selectedValues = () => managedKey ? managedValues : state.filters.get(key);
+  const change = (detail:ManagedColumnChange) =>
+    table.dispatchEvent(new CustomEvent(PORTAL_MANAGED_COLUMN_EVENT,{detail,bubbles:true}));
+  const selectValues = (selection?:Set<string>) => {
+    if (managedKey) {
+      managedValues = selection;
+      change({columnKey:managedKey,values:selection ? [...selection] : null});
+    } else {
+      if (selection) state.filters.set(key,selection);
+      else state.filters.delete(key);
+      applyFilters(table);
+    }
+  };
+  const sort = (direction:'asc'|'desc') => {
+    if (managedKey) change({columnKey:managedKey,sort:direction});
+    else sortRows(table,key,header.cellIndex,direction);
+    closePortalTablePopup();
+  };
 
   const popup = document.createElement('div');
   popup.className = 'portal-core-column-popup';
@@ -157,12 +185,10 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, a
   sortActions.className = 'portal-core-sort-actions';
   sortActions.append(
     menuButton('Ordenar A → Z / menor → maior', 'portal-core-menu-action', () => {
-      sortRows(table, key, header.cellIndex, 'asc');
-      closePortalTablePopup();
+      sort('asc');
     }),
     menuButton('Ordenar Z → A / maior → menor', 'portal-core-menu-action', () => {
-      sortRows(table, key, header.cellIndex, 'desc');
-      closePortalTablePopup();
+      sort('desc');
     }),
   );
   popup.appendChild(sortActions);
@@ -175,13 +201,11 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, a
   const selectionActions = document.createElement('div');
   selectionActions.className = 'portal-core-selection-actions';
   const selectAll = menuButton('Selecionar tudo', 'portal-core-selection-action', () => {
-    state.filters.delete(key);
-    applyFilters(table);
+    selectValues();
     renderValues(search.value);
   });
   const clearAll = menuButton('Limpar tudo', 'portal-core-selection-action', () => {
-    state.filters.set(key, new Set());
-    applyFilters(table);
+    selectValues(new Set());
     renderValues(search.value);
   });
   selectionActions.append(selectAll, clearAll);
@@ -199,7 +223,7 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, a
 
   const renderValues = (term = '') => {
     list.replaceChildren();
-    const allowed = state.filters.get(key);
+    const allowed = selectedValues();
     const normalizedTerm = normalizePortalTableText(term);
     values
       .filter((value) => normalizePortalTableText(value).includes(normalizedTerm))
@@ -210,12 +234,10 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, a
         checkbox.type = 'checkbox';
         checkbox.checked = !allowed || allowed.has(value);
         checkbox.addEventListener('change', () => {
-          const next = state.filters.has(key) ? new Set(state.filters.get(key)!) : new Set(values);
+          const next = new Set(selectedValues() ?? values);
           if (checkbox.checked) next.add(value);
           else next.delete(value);
-          if (next.size === values.length) state.filters.delete(key);
-          else state.filters.set(key, next);
-          applyFilters(table);
+          selectValues(next.size === values.length ? undefined : next);
           renderValues(search.value);
         });
         const text = document.createElement('span');
@@ -232,8 +254,7 @@ function openColumnMenu(table: HTMLTableElement, header: HTMLTableCellElement, a
   footer.className = 'portal-core-popup-footer';
   footer.append(
     menuButton('Limpar filtro', 'portal-core-clear-filter', () => {
-      state.filters.delete(key);
-      applyFilters(table);
+      selectValues();
       renderValues(search.value);
     }),
     menuButton('Concluir', 'portal-core-done', closePortalTablePopup),

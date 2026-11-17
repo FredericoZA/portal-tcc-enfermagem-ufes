@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { once } from 'node:events';
+import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -13,6 +14,7 @@ const root=fileURLToPath(new URL('..',import.meta.url));
 const serverBundle=path.join(root,'dist/server/server.cjs');
 const clientDirectory=path.join(root,'dist/client');
 if(!existsSync(serverBundle)||!existsSync(path.join(clientDirectory,'index.html')))throw new Error('Execute npm run build antes do smoke test HTTP.');
+assert.doesNotMatch(await readFile(serverBundle,'utf8'),/import\(["']@rsbuild\/core["']\)/,'O bundle publicável não deve depender do compilador local.');
 
 const socket=createServer();socket.listen(0,'127.0.0.1');await once(socket,'listening');
 const address=socket.address();if(!address||typeof address==='string')throw new Error('Não foi possível reservar uma porta local.');
@@ -31,7 +33,20 @@ try{
   if(scriptPolicy!=="script-src 'self'")throw new Error('O cliente compilado deve manter a política de scripts restrita à própria origem.');
   const attemptedSource=await request('/server.ts');const attemptedText=await attemptedSource.text();if(attemptedText.includes('PersistedPortalState')||attemptedText.includes('createPortalServer'))throw new Error('Código-fonte do servidor ficou acessível no diretório público.');
   const publicFiles=await readdir(clientDirectory,{recursive:true});if(publicFiles.some(name=>String(name).endsWith('.map')||String(name).includes('server.cjs')))throw new Error('Bundle do servidor ou sourcemap encontrado em dist/client.');
-  console.log('Smoke HTTP: saúde, SPA, cabeçalhos e separação cliente/servidor aprovados.');
+  const entry=html.match(/<script\b[^>]*\bsrc="(\/assets\/index-[a-f\d]+\.js)"/i)?.[1];
+  const stylesheet=html.match(/<link\b[^>]*\bhref="(\/assets\/[^"]+\.css)"/i)?.[1];
+  assert.ok(entry&&stylesheet,'A SPA carrega o JavaScript e o CSS por arquivos da própria origem.');
+  const script=await request(entry);
+  assert.ok(script.ok&&/javascript/i.test(script.headers.get('content-type')||''));
+  const css=await request(stylesheet);
+  assert.ok(css.ok&&/text\/css/i.test(css.headers.get('content-type')||''));
+  assert.match(await css.text(),/\.items-center\{/,'O CSS compilado inclui utilitários Tailwind usados pela interface.');
+  const workerPath=publicFiles.find(name=>/^assets\/pdf\.worker\.min-[a-f\d]+\.mjs$/i.test(String(name).replaceAll('\\','/')));
+  assert.ok(workerPath,'O worker de PDF precisa existir como um recurso estático da mesma origem.');
+  const worker=await request('/'+String(workerPath).replaceAll('\\','/'));
+  assert.ok(worker.ok&&/javascript/i.test(worker.headers.get('content-type')||''));
+  assert.deepEqual(Buffer.from(await worker.arrayBuffer()),await readFile(path.join(root,'node_modules/pdfjs-dist/build/pdf.worker.min.mjs')));
+  console.log('Smoke HTTP: saúde, SPA, cabeçalhos, CSS, worker de PDF e separação cliente/servidor aprovados.');
 }finally{
   child.kill('SIGTERM');
   await Promise.race([once(child,'exit'),new Promise(resolve=>setTimeout(resolve,2000))]);
