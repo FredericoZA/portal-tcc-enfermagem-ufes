@@ -48,6 +48,88 @@ function markdownText(value:unknown):string {
   return text?text.replace(/[\\`*_{}\[\]<>#|]/g,'\\$&'):'Não cadastrado';
 }
 
+function evidenceObject(value:unknown):Record<string,unknown>|undefined {
+  return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:undefined;
+}
+
+/** Only academic text from the explicit sheet schema; never stringify nested provenance. */
+function evidenceText(value:unknown):string {
+  if(typeof value!=='string'&&!(typeof value==='number'&&Number.isFinite(value)))return 'Não cadastrado';
+  const text=String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'')
+    .replace(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9.-]*[A-Z0-9])?/gi,'[contato omitido]');
+  return markdownText(text).replace(/\n/g,'\n  ');
+}
+
+function legacySpreadsheetMarkdown(record:LegacyAcademicRecord):string[] {
+  const evidence=evidenceObject(record.provenance?.legacySpreadsheetEvidence);
+  if(evidence?.schemaVersion!==1)return [];
+  const list=(value:unknown):unknown[]=>Array.isArray(value)?value:[];
+  const field=(label:string,value:unknown)=>`- **${label}:** ${evidenceText(value)}`;
+  const coordinates=(value:unknown)=>{
+    const item=evidenceObject(value);
+    return item&&Number.isSafeInteger(item.column)&&Number(item.column)>0&&typeof item.cell==='string'&&/^[A-Z]{1,3}[1-9]\d*$/.test(item.cell)?`${item.cell} (coluna ${item.column})`:undefined;
+  };
+  const source=(entry:Record<string,unknown>):string[]|undefined=>{
+    const match=evidenceObject(entry.match),origin=evidenceObject(entry.source);
+    if(!match||match.canonicalId!==record.id||match.sourceFingerprint!==record.sourceFingerprint||
+      !origin||typeof origin.fileId!=='string'||!/^[\w-]{10,150}$/.test(origin.fileId)||typeof origin.sheet!=='string'||
+      !Number.isSafeInteger(origin.row)||Number(origin.row)<1)return undefined;
+    return [field('Arquivo de origem (ID)',origin.fileId),field('Aba de origem',origin.sheet),field('Linha de origem',origin.row)];
+  };
+  const cell=(value:unknown,allowed:(header:string)=>boolean,label?:string):string[]=>{
+    const item=evidenceObject(value),location=coordinates(item);
+    if(!item||typeof item.header!=='string'||!allowed(item.header)||!location||
+      (typeof item.value!=='string'&&!(typeof item.value==='number'&&Number.isFinite(item.value))))return [];
+    return [field(label||`Campo ${item.header} — valor informado na fonte`,item.value),field('Célula de origem',location)];
+  };
+  const roles={A:'Orientador (1)',B:'Examinador (2)',C:'Examinador (3)'} as const;
+  const evaluations=list(evidence.evaluations).flatMap((value,index)=>{
+    const entry=evidenceObject(value),origin=entry&&source(entry);if(!entry||!origin)return [];
+    const groups=list(entry.groups).flatMap(value=>{
+      const group=evidenceObject(value),key=group?.group;
+      if(!group||(key!=='A'&&key!=='B'&&key!=='C'))return [];
+      const evaluator=evidenceObject(group.evaluator),location=coordinates(evaluator);
+      const evaluatorLines=evaluator?.roleHeader===roles[key]&&typeof evaluator.name==='string'
+        ?[field('Função informada na fonte',evaluator.roleHeader),field('Avaliador informado na fonte',evaluator.name),...(location?[field('Célula do avaliador',location)]:[])]:[];
+      return [`#### Grupo ${key}`,'',...evaluatorLines,
+        ...list(group.grades).flatMap(grade=>cell(grade,header=>new RegExp(`^(?:[1-9]|10)${key}$`).test(header))),
+        ...cell(group.reportedTotal,header=>header===`Total ${key}`,`Total ${key} informado na fonte`),''];
+    });
+    const summary=list(entry.reportedSummary).flatMap(value=>cell(value,header=>['Média ABC','Situação','Parecer'].includes(header),
+      evidenceObject(value)?.header==='Parecer'?'Parecer informado na fonte':evidenceObject(value)?.header==='Situação'?'Situação informada na fonte':'Média ABC informada na fonte'));
+    if(!groups.length&&!summary.length)return [];
+    return [`### Avaliação histórica ${index+1}`,'',...origin,'',...groups,...summary,''];
+  });
+  const people=(value:unknown)=>list(value).flatMap(value=>{
+    const person=evidenceObject(value);return person&&typeof person.nome==='string'?[`${person.nome}${typeof person.instituicao==='string'&&person.instituicao.trim()?` — ${person.instituicao}`:''}`]:[];
+  }).join('; ');
+  const conflicts=list(evidence.conflicts).flatMap((value,index)=>{
+    const entry=evidenceObject(value),origin=entry&&source(entry);
+    if(!entry||!origin||entry.status!=='PRESERVE_SOURCE_ASSERTION_DO_NOT_OVERWRITE_CANONICAL')return [];
+    const assertions=list(entry.assertions).flatMap(value=>{
+      const assertion=evidenceObject(value),path=assertion&&list(assertion.fieldPath);
+      if(!assertion||!path||path.length!==1||!['orientador','examinadores'].includes(String(path[0])))return [];
+      const board=path[0]==='examinadores';
+      const columns=list(assertion.sourceColumns).flatMap(value=>{
+        const column=evidenceObject(value),location=coordinates(column);
+        return column&&location&&(Object.values(roles) as readonly unknown[]).includes(column.header)?[field(`Coluna da fonte — ${column.header}`,location)]:[];
+      });
+      return [field('Campo divergente',board?'Banca examinadora (examinadores)':'Orientador (orientador)'),
+        field('Valor atual no Portal',board?people(record.examinadores):record.orientador),
+        field('Valor cadastrado na revisão da fonte',board?people(assertion.canonicalValueAtReview):assertion.canonicalValueAtReview),
+        field('Valor informado na fonte',board?people(assertion.reportedValue):assertion.reportedValue),
+        ...columns,field('Motivo registrado na revisão',assertion.reason),''];
+    });
+    return assertions.length?[`### Divergência preservada ${index+1}`,'',...origin,'',...assertions]:[];
+  });
+  return [
+    ...(evaluations.length?['','## Avaliações históricas da fonte','',
+      'Notas, totais, média, situação e parecer são valores informados na fonte histórica, preservados sem recálculo ou alteração da decisão acadêmica atual.','',...evaluations]:[]),
+    ...(conflicts.length?['','## Divergências preservadas','',
+      'As afirmações divergentes da fonte permanecem identificadas abaixo. Os valores atuais do Portal foram preservados.','',...conflicts]:[])
+  ];
+}
+
 /** Explicit academic projection: never serialize raw process/provenance, contacts or credentials. */
 export function buildDriveProcessDataMarkdown(record:ProcessData|LegacyAcademicRecord):string {
   const legacy='autores' in record;
@@ -88,6 +170,7 @@ export function buildDriveProcessDataMarkdown(record:ProcessData|LegacyAcademicR
     '## Solicitação de alteração da reserva','',...(request?[
       field('Situação',readable(request.status)),field('Solicitada em',request.requestedAt),field('Início solicitado',request.startAt),field('Fim solicitado',request.endAt),field('Local solicitado',request.local),field('Resolvida em',request.resolvedAt)
     ]:['Não cadastrado']),'',
-    '## Resumo','',markdownText(summary),'','## Palavras-chave','',keywords.length?keywords.map(word=>`- ${markdownText(word)}`).join('\n'):'Não cadastrado',''
+    '## Resumo','',markdownText(summary),'','## Palavras-chave','',keywords.length?keywords.map(word=>`- ${markdownText(word)}`).join('\n'):'Não cadastrado','',
+    ...(legacy?legacySpreadsheetMarkdown(record):[])
   ].join('\n');
 }
