@@ -13,10 +13,10 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
  const g=authorGrammar(p),variables=personPresentationVariables(p);let out=text;
  // Keep institutional issuer names canonical without changing individual signatories.
  out=out.replace(/Comissão (?:de |dos? )?(?:Trabalhos? de Conclusão de Curso|de TCC)/gu,COMMISSION_NAME);
- const faculty=[p.orientador,p.coorientador,...p.banca].filter(Boolean) as Array<ProcessData['orientador']>;
+ const faculty=[p.orientador,p.coorientador,...p.banca].filter(person=>person!==null&&person!==undefined);
  const genericTitle=String.raw`(?:Prof(?:essor)?\s*\((?:a|ª|º)\)\.?\s*)(?:Dr\s*\((?:a|ª|º)\)\.?\s*)?`;
  for(const person of faculty.sort((a,b)=>plainPersonName(b).length-plainPersonName(a).length)){
-  const full=academicName(person,'abbreviated'),article=person.tratamento==='Professora'?'a':person.tratamento==='Professor'?'o':'';
+  const full=academicName(person,'abbreviated'),article=person.tratamento==='Professora'||person.tratamento==='Senhora'?'a':person.tratamento==='Professor'||person.tratamento==='Senhor'?'o':'';
   const aliases=[...new Set([full,academicName(person,'full'),person.nome,plainPersonName(person)])].filter(Boolean).sort((a,b)=>b.length-a.length).map(escape).join('|');
   const names=`(?:${aliases})(?![\\p{L}\\p{N}])`;
   out=out.replace(new RegExp(String.raw`(o\(a\)\s+)?${genericTitle}((?:co)?orientador\(a\)\s+)?${names}`,'giu'),(_,originalArticle:string,role:string)=>{
@@ -72,11 +72,15 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
  const advisorLabel=`${matchCase('Orientador',facultyRole(p.orientador,'orientador'))} e Presidente`;
  out=out.replace(/(^|\n)([ \t]*)(?:Orientação(?: e presidência(?: da (?:banca|sessão))?)?|Orientador(?:a)?(?: e Presidente)?)(?=\s*(?::|\n|$))/gi,(_,line:string,indent:string)=>line+indent+advisorLabel);
  if(type==='CONVITE'){
-  out=out.replace(/(^|\n)([ \t]*)À\s+(?:Comissão|Banca)\s+Examinadora\b/giu,'$1$2Aos docentes convidados')
+  const hasNonTeachingMember=p.banca.some(person=>person.funcao!=='ORIENTADOR'&&
+    person.tratamento!=='Professor'&&person.tratamento!=='Professora');
+  const salutation=hasNonTeachingMember?'Aos membros convidados para a banca':'Aos docentes convidados';
+  const invitees=hasNonTeachingMember?'as pessoas abaixo relacionadas':'os docentes abaixo relacionados';
+  out=out.replace(/(^|\n)([ \t]*)(?:À\s+(?:Comissão|Banca)\s+Examinadora|Aos docentes convidados)\b/giu,`$1$2${salutation}`)
    .replace(/Demais integrantes da comissão/gi,'Membros convidados para a banca')
    .replace(/Comissão\s+Examinadora\s+da defesa/gi,'banca de defesa')
    .replace(/Comissão\s+Examinadora/gi,'banca')
-   .replace(/convida Vossas Senhorias para integrar a banca/gi,'convida os docentes abaixo relacionados a participar da banca')
+   .replace(/convida (?:Vossas Senhorias para integrar a|os docentes abaixo relacionados a participar da) banca/gi,`convida ${invitees} a participar da banca`)
    .replace(/Agradecemos a participação e a contribuição para/gi,'Agradecemos a atenção ao convite e esperamos contar com sua contribuição para');
   const participants=officialParticipantLines(p);
   const authors=participants.filter(person=>person.key.startsWith('ALUNO_'));

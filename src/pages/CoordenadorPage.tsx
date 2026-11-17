@@ -8,6 +8,7 @@ import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTimeExtenso } from '../utils/formatters';
+import {academicName} from '../utils/personPresentation';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
@@ -536,7 +537,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {memb?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('membro1', formatProfessorName(memb.nome), coordTextFormat)}
+                    {formatCellText('membro1', academicName(memb, 'abbreviated'), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}
@@ -559,7 +560,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {memb?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('membro2', formatProfessorName(memb.nome), coordTextFormat)}
+                    {formatCellText('membro2', academicName(memb, 'abbreviated'), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(memb.instituicao || installationProfile.defaultInstitutionName)}

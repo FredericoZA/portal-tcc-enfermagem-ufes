@@ -6,26 +6,30 @@ export function orderedAuthors(p:Pick<ProcessData,'aluno1'|'aluno2'|'authorOrder
 export const authorNames=(p:Pick<ProcessData,'aluno1'|'aluno2'|'authorOrder'>)=>orderedAuthors(p).map(person=>person.nome).join(' e ');
 export const STUDENT_TREATMENTS=['Aluno','Aluna'] as const;
 export const FACULTY_TREATMENTS=['Professor','Professora'] as const;
+export const COMMITTEE_TREATMENTS=[...FACULTY_TREATMENTS,'Senhor','Senhora'] as const;
 export const ACADEMIC_DEGREES=['Doutor','Doutora','Mestre','Mestra','Especialista','Sem titulação'] as const;
-export type PersonTreatment='Aluno'|'Aluna'|'Professor'|'Professora';
+export type CommitteeTreatment=typeof COMMITTEE_TREATMENTS[number];
+export type PersonTreatment=typeof STUDENT_TREATMENTS[number]|CommitteeTreatment;
 export type AcademicDegree=typeof ACADEMIC_DEGREES[number];
 export const isPresentationField=(key:string)=>/_(TRATAMENTO|TITULACAO)$/.test(key);
 export type AcademicPerson={nome:string;tratamento?:string;titulacao?:string};
+const abbreviatedTreatments: Record<CommitteeTreatment,string>={Professor:'Prof.',Professora:'Prof.ª',Senhor:'Sr.',Senhora:'Sra.'};
 export function plainPersonName(person?:AcademicPerson|null):string{
  if(!person)return '';
- return person.nome.replace(/^(?:(?:prof(?:essor(?:a)?|a|[.．]?[ªº])?|dr(?:a|[.．]?[ªº])?|doutor(?:a)?|me|ma|mestre|mestra|esp(?:ecialista)?)\.?\s+)+/i,'').trim();
+ return person.nome.replace(/^(?:(?:prof(?:essor(?:a)?|a|[.．]?[ªº])?|dr(?:a|[.．]?[ªº])?|doutor(?:a)?|me|ma|mestre|mestra|esp(?:ecialista)?|senhora?|sra?)\.?\s+)+/i,'').trim();
 }
 /** Canonical participant data stays separate; document representations are derived. */
 export function academicName(person?:AcademicPerson|null,style:'full'|'abbreviated'='full'):string{
  if(!person)return '';if(person.tratamento===undefined||person.tratamento===null)return person.nome.trim();
  const name=plainPersonName(person),short=style==='abbreviated';
- const treatment=person.tratamento==='Professora'?(short?'Prof.ª':'Professora'):person.tratamento==='Professor'?(short?'Prof.':'Professor'):'';
+ const selectedTreatment=COMMITTEE_TREATMENTS.find(treatment=>treatment===person.tratamento);
+ const treatment=selectedTreatment&&short?abbreviatedTreatments[selectedTreatment]:selectedTreatment;
  const degrees:Record<string,string>=short?{Doutor:'Dr.',Doutora:'Dr.ª',Mestre:'Me.',Mestra:'Ma.',Especialista:'Esp.'}:{Doutor:'Doutor',Doutora:'Doutora',Mestre:'Mestre',Mestra:'Mestra',Especialista:'Especialista'};
  return [treatment,degrees[person.titulacao||'']||'',name].filter(Boolean).join(' ');
 }
 export function facultyRole(person:AcademicPerson|undefined|null,role:'orientador'|'coorientador'|'examinador'):string{
  if(!person?.tratamento)return role==='examinador'?'Integrante da banca':role==='coorientador'?'Coorientador':'Orientador';
- return role+(person.tratamento==='Professora'?'a':'');
+ return role+(person.tratamento==='Professora'||person.tratamento==='Senhora'?'a':'');
 }
 export function authorGrammar(p:Pick<ProcessData,'aluno1'|'aluno2'>){
  const people=[p.aluno1,p.aluno2].filter(Boolean) as ProcessData['aluno1'][];

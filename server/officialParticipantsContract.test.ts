@@ -58,6 +58,15 @@ test('assunto e conteúdo do e-mail não juntam alunos nem usam Autoria e Avalia
   assert.match(mail.html,/<strong>Aluna autora:<\/strong> Ana Maria/);
 });
 
+test('convite por e-mail usa o tratamento civil cadastrado e omite titulação inexistente',()=>{
+  const p=structuredClone(fixture);
+  p.banca[0]={...p.banca[0],tratamento:'Senhor',titulacao:'Sem titulação'};
+  p.banca[1]={...p.banca[1],tratamento:'Senhora',titulacao:'Sem titulação'};
+  const mail=officialInvitationEmail(p,'https://portal-tcc-enfermagem-ufes.vercel.app/');
+  assert.match(mail.text,/Examinador: Sr\. João da Silva\nExaminadora: Sra\. Luísa Costa/);
+  assert.doesNotMatch(mail.text,/Dr\. João|Drª\. Luísa|Sem titulação/);
+});
+
 test('carta substitui trechos aglutinados do modelo ativo sem alterar o arquivo fonte',()=>{
   const corrections=invitationTemplateCorrections(fixture,new Date('2026-11-03T12:00:00Z'));
   const map=Object.fromEntries(corrections.map(({find,replace})=>[find,replace]));

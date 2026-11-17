@@ -32,3 +32,42 @@ test('examiners may omit the teaching treatment in new and previously configured
  const configured={formTemplates:[{id:'form-reserva-aluno',questions:[{fieldKey:'EXAMINADOR_2_TRATAMENTO',fieldType:'select',required:true,label:'Tratamento docente'}]}]} as any;
  assert.equal(registrationQuestions(configured).find(q=>q.fieldKey==='EXAMINADOR_2_TRATAMENTO')!.required,false);
 });
+
+test('examiners may use Senhor and Senhora with no academic degree on existing forms', () => {
+  const configured = { formTemplates: [{
+    id: 'form-reserva-aluno',
+    questions: [2, 3].map(number => ({
+      fieldKey: `EXAMINADOR_${number}_TRATAMENTO`,
+      fieldType: 'select',
+      required: true,
+      label: 'Tratamento docente',
+      options: ['Professor', 'Professora'],
+      validation: { pattern: '^Professor(a)?$' },
+    })),
+  }] } as Parameters<typeof registrationQuestions>[0];
+  const questions = registrationQuestions(configured);
+  for (const number of [2, 3]) {
+    const question = questions.find(field => field.fieldKey === `EXAMINADOR_${number}_TRATAMENTO`)!;
+    assert.equal(question.label, 'Tratamento');
+    assert.equal(question.required, false);
+    assert.deepEqual(question.options, ['Professor', 'Professora', 'Senhor', 'Senhora']);
+    assert.ok(questions.find(field => field.fieldKey === `EXAMINADOR_${number}_TITULACAO`)?.options?.includes('Sem titulação'));
+  }
+  const answers = {
+    ...base(),
+    AUTORIA_REFERENCIA: 'a aluna',
+    EXAMINADOR_2_TRATAMENTO: 'Senhora',
+    EXAMINADOR_2_TITULACAO: 'Sem titulação',
+    EXAMINADOR_3_TRATAMENTO: 'Senhor',
+    EXAMINADOR_3_TITULACAO: 'Sem titulação',
+  };
+  const payload = registrationPayload(answers, 'America/Sao_Paulo');
+  const accepted = acceptRegistration(payload, configured);
+  assert.deepEqual(accepted.banca.map(({ tratamento, titulacao }) => [tratamento, titulacao]), [
+    ['Senhora', 'Sem titulação'],
+    ['Senhor', 'Sem titulação'],
+  ]);
+  assert.throws(() => acceptRegistration({
+    ...payload, registrationAnswers: { ...answers, ORIENTADOR_TRATAMENTO: 'Senhor' },
+  }, configured), /opção publicada/);
+});

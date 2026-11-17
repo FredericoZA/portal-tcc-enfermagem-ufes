@@ -89,7 +89,7 @@ import {signatureDocumentRevision} from './src/utils/documentSignatureState';
 import {inspectAstenDelivery} from './server/integrations/astenReadiness';
 import {documentVariables} from './src/utils/documentVariables';
 import {adaptDocumentLanguage} from './src/utils/documentLanguage';
-import {authorNames,orderedAuthors,academicName,STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES} from './src/utils/personPresentation';
+import {authorNames,orderedAuthors,academicName,STUDENT_TREATMENTS,FACULTY_TREATMENTS,COMMITTEE_TREATMENTS,ACADEMIC_DEGREES} from './src/utils/personPresentation';
 import {localReviewFilesEnabled,sourceFilesAccessToken,sourceFilesFolder,uploadSourceFile,downloadSourceFile} from './server/localReviewFiles';
 import {modelForRendering} from './server/workflow/modelPreviewSource';
 import type {DriveModelFingerprint} from './server/integrations/googleWorkspace';
@@ -4918,7 +4918,8 @@ export async function createPortalApp() {
       const people=key==='banca'&&Array.isArray(value)?value:['aluno1','aluno2','orientador','coorientador'].includes(key)?[value]:[];
       for(const [index,person] of (people as any[]).entries()){
         if(!person)continue;const student=key.startsWith('aluno');const previous=key==='banca'?(existing.banca.find(member=>member.id===person.id)||existing.banca[index]):(existing as any)[key];
-        if(person.tratamento!==undefined&&person.tratamento!==previous?.tratamento&&!(key==='banca'&&person.tratamento==='')&&!((student?STUDENT_TREATMENTS:FACULTY_TREATMENTS) as readonly string[]).includes(person.tratamento))return res.status(400).json({error:'Escolha um tratamento válido.'});
+        const treatments: readonly string[] = student ? STUDENT_TREATMENTS : key === 'banca' ? COMMITTEE_TREATMENTS : FACULTY_TREATMENTS;
+        if(person.tratamento!==undefined&&person.tratamento!==previous?.tratamento&&!(key==='banca'&&person.tratamento==='')&&!treatments.includes(person.tratamento))return res.status(400).json({error:'Escolha um tratamento válido.'});
         if(!student&&person.titulacao!==undefined&&person.titulacao!==previous?.titulacao&&!(ACADEMIC_DEGREES as readonly string[]).includes(person.titulacao))return res.status(400).json({error:'Escolha uma titulação válida.'});
       }
     }
