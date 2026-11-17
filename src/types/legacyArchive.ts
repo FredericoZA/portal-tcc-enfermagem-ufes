@@ -44,6 +44,20 @@ export type LegacyAdministrativeFileView = Pick<LegacyAdministrativeFile, 'fileN
   index: number;
   downloadUrl: string;
 };
+/** Administrative view only; never include these email bindings in a public projection. */
+export interface LegacyEvaluationParticipantsView {
+  revision: string;
+  authors: Array<{nome: string; email: string}>;
+  advisor: {nome: string; email: string};
+  confirmed: boolean;
+  hasStoredBinding: boolean;
+  verifiedAt?: string;
+}
+export type LegacyEvaluationParticipantsUpdate = {
+  expectedRevision: string;
+  reason: string;
+  source: string;
+} & ({clear: true} | {clear?: false; authorEmails: string[]; advisorEmail: string});
 /** Master-only academic view; publication consent is unchanged by private access. */
 export interface PrivateLegacyAcademicView {
   publicationWithdrawal?: {withdrawnAt:string;drivePending:boolean};

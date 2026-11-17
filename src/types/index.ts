@@ -252,6 +252,7 @@ export interface AuthorizedStudent {
 export interface ProcessData {
   /** Historical repository projection; never a live defense workflow. */
   legacyRecord?: boolean;
+  canAccessLegacyEvaluation?: boolean;
   authorOrder?: 'ALUNO_1_FIRST' | 'ALUNO_2_FIRST';
   previousProtocols?: string[];
   registrationAnswers?: Record<string, string | number | boolean>;

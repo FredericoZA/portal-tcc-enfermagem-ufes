@@ -173,6 +173,7 @@ export const guideActivities: GuideActivity[] = [
       'Pedido de assinatura ainda não recebido: confira o estado e os responsáveis em Documentos administrativos. O ASTEN encaminha os links quando as condições do documento estiverem atendidas.',
       'Solicitação Asten pendente: acompanhe o estado e o e-mail cadastrado; não crie outra solicitação para o mesmo documento.',
       'PDF devolvido pelo Gov.br: aguarde a conferência do Master. O envio isolado ainda não libera a próxima etapa.',
+      'Nos legados, autores e orientador só consultam o instrumento de avaliação privado depois que o Master confirma seus e-mails e papéis com evidência, mantendo os nomes do catálogo. Essa confirmação não envia e-mail ou convite automaticamente. O Master mantém a gestão e a revogação dos acessos; visitantes e examinadores não consultam o instrumento.',
     ],
   },
   {
@@ -262,7 +263,7 @@ export const guideActivities: GuideActivity[] = [
     steps: [
       'No mesmo Repositório, procure códigos como 001 - Legado. A numeração identifica os trabalhos antigos importados.',
       'Abra o código e consulte as mesmas abas dos demais TCCs. Dados ou arquivos ausentes na origem podem permanecer sem preenchimento. Um trabalho antigo pode ter apenas resumo expandido.',
-      'O resumo síntese pode ser lido na tabela e na ficha. Nos legados, os PDFs acadêmicos ficam públicos somente quando correspondem ao conjunto anteriormente fornecido para publicação. Apenas ata, termo de autorização quando houver e declaração identificados com segurança são documentos administrativos públicos. Instrumento de avaliação e convite permanecem privados. Na dúvida, o arquivo fica privado.',
+      'O resumo síntese pode ser lido na tabela e na ficha. Nos legados, os PDFs acadêmicos ficam públicos somente quando correspondem ao conjunto anteriormente fornecido para publicação, com hiperlink na própria linha do trabalho na tabela histórica. Constar em ANEXOS não autoriza publicação. TCC e resumo expandido são independentes: cada hiperlink vale somente para o tipo e conteúdo do arquivo vinculado. Apenas ata, termo de autorização quando houver e declaração identificados com segurança são documentos administrativos públicos. Instrumento de avaliação e convite permanecem privados. Na dúvida, o arquivo fica privado.',
       'O registro histórico não inicia outro cadastro, defesa ou assinatura. Não crie um novo processo para completar um trabalho antigo.',
     ],
     done: 'Você consultou os dados e os arquivos disponíveis do registro histórico.',

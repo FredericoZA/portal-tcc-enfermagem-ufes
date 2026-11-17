@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
-import {canonicalLegacyRecord,legacyHistoricalFileApproved,legacyPublicationScopeAllowed,publicLegacyAcademicView,publicLegacyAdministrativeDocuments} from './legacyArchive';
+import {canonicalLegacyRecord,legacyHistoricalFileApproved,legacyPublicationScopeAllowed,mergeLegacyBatch,publicLegacyAcademicView,publicLegacyAdministrativeDocuments} from './legacyArchive';
 import {installPublicationChoiceRoutes} from './publicationChoiceRoutes';
 
 function fixture():any {
@@ -24,6 +24,35 @@ test('a signed renewal cannot expand a historical kind/hash or publish a replace
 test('a private classification anywhere takes priority over an otherwise approved original',()=>{
  const r=fixture();r.provenance.publicationImportBaseline.privateFileIds=['original_full_fixture'];
  assert.equal(canonicalLegacyRecord(r).isPublic,false);
+});
+test('merging an existing historical record cannot expand its approved baseline, including while private',()=>{
+ for(const consent of ['Sim','Não']){
+  const existing=fixture();existing.provenance.originalConsent=[consent];
+  const current:any=canonicalLegacyRecord(existing),incoming=structuredClone(current);
+  incoming.provenance.publicationImportBaseline.publicFiles.push({kind:'RESUMO_EXPANDIDO',sha256:'b'.repeat(64)});
+  assert.throws(()=>mergeLegacyBatch([current],[canonicalLegacyRecord(incoming)]),/dados diferentes/);
+  assert.deepEqual(current.provenance.publicationImportBaseline.publicFiles,[{kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64)}]);
+ }
+});
+test('a historical PDF needs the exact hyperlink in its own captured row, independently of kind/hash approval',()=>{
+ const r=fixture();r.dataDefesa='2025-08-28';r.attachments[0].sourceFileName='original.pdf';
+ const proof={kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64),sourceRecordId:r.id,sourcePageRecordId:'legado-0037',sourceFileName:'original.pdf',sourceUrl:'https://course.example.invalid/files/original.pdf#overlay-context=original-page',sourceRowFingerprint:'d'.repeat(64)};
+ r.provenance.publicationImportBaseline={policy:'BODY_ROW_LINK_AND_VERIFIED_KIND_HASH_REQUIRED',cutoffDate:'2025-08-28',publicFiles:[proof]};
+ r.provenance.pageRecords=[{legacyId:proof.sourcePageRecordId,sourceFingerprint:'d'.repeat(64),sourceLinks:[proof.sourceUrl]}];
+ assert.equal(canonicalLegacyRecord(r).publishFullWork,true);
+ for(const mutate of [
+  (copy:any)=>{copy.provenance.pageRecords[0].legacyId='legado-0030';},
+  (copy:any)=>{copy.provenance.pageRecords[0].sourceLinks=['https://course.example.invalid/files/other.pdf'];},
+  (copy:any)=>{copy.provenance.publicationImportBaseline.publicFiles[0].sourceRowFingerprint='e'.repeat(64);},
+  (copy:any)=>{copy.provenance.publicationImportBaseline.publicFiles[0].sourceRecordId='legado-0030';},
+  (copy:any)=>{copy.provenance.publicationImportBaseline.publicFiles[0].sourcePageRecordId='legado-0030';},
+  (copy:any)=>{delete copy.provenance.publicationImportBaseline.publicFiles[0].sourcePageRecordId;},
+  (copy:any)=>{copy.provenance.publicationImportBaseline.publicFiles[0].sourceUrl=proof.sourceUrl.split('#')[0];},
+  (copy:any)=>{copy.provenance.publicationImportBaseline.publicFiles[0].sourceFileName='another-work.pdf';},
+  (copy:any)=>{copy.dataDefesa='2025-08-29';},
+  (copy:any)=>{delete copy.provenance.publicationImportBaseline.publicFiles[0].sourceUrl;},
+ ]) {const copy=structuredClone(r);mutate(copy);assert.equal(canonicalLegacyRecord(copy).isPublic,false);}
+ r.attachments[0].sourceFileName='renamed-original.pdf';assert.equal(canonicalLegacyRecord(r).publishFullWork,true,'renaming does not change the approved content');
 });
 test('only ata, authorization term and declaration may appear in historical public documents',()=>{
  const r=fixture();r.provenance.administrativeDocuments=['AVALIACAO','CONVITE','ATA','TERMO','DECLARACAO'].map((kind,i)=>({kind,driveFileId:'admin_fixture_file_'+i,folderId:'private_folder_fixture',sha256:'c'.repeat(64),fileName:kind+'.pdf',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'}));
