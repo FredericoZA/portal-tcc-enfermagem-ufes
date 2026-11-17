@@ -5,12 +5,11 @@ import {apiClient} from '../services/apiClient';
 import {portalNotice} from '../services/portalDialogs';
 import type {ReservationReceiptSummary} from '../types/workflowOperations';
 import {formatDateNumericWithWeekday, formatTime24h} from '../utils/formatters';
-
-const DocumentFilePreview=React.lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
+import {openDriveDocument} from '../utils/driveDocumentAccess';
 
 export function ProcessDocumentActions({available, working = false, onView, onDownload, viewRef}: {available: boolean; working?: boolean; onView: () => void; onDownload: () => void; viewRef?: React.Ref<HTMLButtonElement>}) {
   return <div className="portal-document-actions flex flex-wrap items-stretch gap-2 pt-2.5 border-t border-slate-100">
-    <button ref={viewRef} type="button" onClick={onView} disabled={!available || working} className="portal-document-view basis-20 flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:cursor-not-allowed" title="Visualizar documento em tela"><Eye className="w-3.5 h-3.5"/><span>Ver</span></button>
+    <button ref={viewRef} type="button" onClick={onView} disabled={!available || working} className="portal-document-view basis-20 flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer disabled:cursor-not-allowed" title="Abrir arquivo no Google Drive"><Eye className="w-3.5 h-3.5"/><span>Ver</span></button>
     <button type="button" onClick={onDownload} disabled={!available || working} className={`portal-document-download basis-20 flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-2xs ${available ? 'text-white bg-[var(--portal-brand-header)] hover:bg-[#004827] cursor-pointer' : 'bg-slate-200 text-[var(--portal-text-muted)] cursor-not-allowed'}`} title="Baixar PDF do documento"><Download className="w-3.5 h-3.5"/><span>{working ? 'Baixando…' : 'Baixar PDF'}</span></button>
   </div>;
 }
@@ -67,19 +66,17 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
   const scope = JSON.stringify([receiptProtocol, currentStatus, revision, downloadUrl, privateProcessId, historical, initialItems]);
   const scopeRef = React.useRef(scope);
   scopeRef.current = scope;
+  React.useEffect(()=>{scopeRef.current=scope;return()=>{scopeRef.current='';};},[scope]);
   const [collection, setCollection] = React.useState<ReceiptCollection>({scope: '', loading: false, items: []});
   const [retry, setRetry] = React.useState(0);
   const [picker, setPicker] = React.useState<{scope: string; mode: 'view' | 'download'} | null>(null);
-  const [preview, setPreview] = React.useState<{scope: string; item: ReservationReceiptSummary; url: string} | null>(null);
   const [downloadingScope, setDownloadingScope] = React.useState<string | null>(null);
   const downloadingRef = React.useRef(false);
   const viewButtonRef = React.useRef<HTMLButtonElement>(null);
-  const previewTitleId = React.useId();
 
   React.useEffect(() => {
     let active = true;
     setPicker(null);
-    setPreview(null);
     if (!receiptProtocol) {
       setCollection({scope, loading: false, items: []});
       return () => { active = false; };
@@ -109,22 +106,12 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
     (item.decision === 'CONFIRMED' ? accepted : refused));
   const available = !loading && !error && items.length > 0;
   const downloading = downloadingScope === scope;
-  const visiblePreview = preview?.scope === scope ? preview : null;
   const visiblePicker = picker?.scope === scope ? picker : null;
-  const closePreview = () => { setPreview(null); viewButtonRef.current?.focus(); };
   const closePicker = () => setPicker(null);
   const view = (item: ReservationReceiptSummary) => {
     if (!receiptProtocol) return;
-    {
-      const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
-      void apiClient.getPublicDocumentDriveLinks(receiptPreviewUrl(receiptProtocol,item)).then(({links})=>{
-        if(scopeRef.current!==scope){tab?.close();return;}
-        if(links&&tab)tab.location.replace(links.view);
-        else{tab?.close();if(links)portalNotice('Permita a abertura de uma nova aba para acessar o PDF.');else setPreview({scope,item,url:receiptPreviewUrl(receiptProtocol,item,privateProcessId)});}
-      }).catch(error=>{tab?.close();if(scopeRef.current!==scope)return;if(privateProcessId)setPreview({scope,item,url:receiptPreviewUrl(receiptProtocol,item,privateProcessId)});else portalNotice(error instanceof Error?error.message:'Não foi possível abrir o comprovante.');});
-      return;
-    }
-
+    void openDriveDocument(()=>privateProcessId?apiClient.getReservationReceiptDriveLinks(privateProcessId,item.id):apiClient.getPublicDocumentDriveLinks(receiptPreviewUrl(receiptProtocol,item)),()=>scopeRef.current===scope)
+      .catch(error=>{if(scopeRef.current===scope)portalNotice(error instanceof Error?error.message:'Não foi possível abrir o comprovante no Google Drive.');});
   };
   const download = async (item: ReservationReceiptSummary) => {
     if (!receiptProtocol || downloadingRef.current) return;
@@ -190,9 +177,6 @@ export function ReservationReceiptCard({protocol, currentStatus, revision, downl
           {item.respondedAt && <p className="mt-1 text-[11px] text-slate-600">Resposta: {formatDateNumericWithWeekday(item.respondedAt)}, {formatTime24h(item.respondedAt)}.</p>}
         </button>)}
       </div>
-    </PortalModalShell>
-    <PortalModalShell open={Boolean(visiblePreview)} onClose={closePreview} title="Comprovante de reserva" labelledBy={previewTitleId} icon={FileCheck} maxWidthClass="max-w-5xl" heightClass="max-h-[90vh]" bodyClassName="p-3 overflow-auto" footer={<button type="button" className="portal-action" autoFocus onClick={closePreview}>Fechar</button>}>
-      {visiblePreview && <React.Suspense fallback={<p role="status">Carregando comprovante…</p>}><DocumentFilePreview url={visiblePreview.url} format="pdf" label="Comprovante de reserva"/></React.Suspense>}
     </PortalModalShell>
   </>;
 }

@@ -11,7 +11,7 @@ test('Drive link resolver preserves authentication, process access and local PDF
  const directory=await mkdtemp(path.join(tmpdir(),'portal-public-revalidate-'));
  const bytes=Buffer.from('%PDF-1.4\nfixture for byte transfer test\n%%EOF');
  const hash=createHash('sha256').update(bytes).digest('hex'),key='d'.repeat(64);
- const p=structuredClone(DEMO_PROCESSES[0]);p.status='CONCLUIDO';p.defesa.localStatus='CONFIRMADO';p.defesa.invitationDriveFileId='local_review_'+key;p.defesa.invitationSentAt='2026-11-15T00:00:00Z';p.dataRevision=2;p.acervo={...p.acervo,submittedAt:'2026-11-15T00:00:00Z',authorizationConfirmedAt:'2026-11-15T00:00:00Z',publishFullWork:true,publishExpandedAbstract:false,publicationState:'PUBLIC',publicationSyncedAt:'2026-11-15T00:00:00Z',publicationWithdrawnAt:undefined,trabalhoCompletoFileId:'local_review_'+key,publicFullWorkFileId:'public-copy',trabalhoCompletoSha256:hash};
+ const p=structuredClone(DEMO_PROCESSES[0]);p.status='CONCLUIDO';p.defesa.localStatus='CONFIRMADO';p.defesa.invitationDriveFileId='local_review_'+key;p.defesa.invitationSentAt='2026-11-15T00:00:00Z';p.dataRevision=2;p.acervo={...p.acervo,submittedAt:'2026-11-15T00:00:00Z',authorizationConfirmedAt:'2026-11-15T00:00:00Z',publishFullWork:true,publishExpandedAbstract:false,publicationState:'PUBLIC',publicationSyncedAt:'2026-11-15T00:00:00Z',publicationWithdrawnAt:undefined,trabalhoCompletoFileId:'exact_drive_work_original_123',publicFullWorkFileId:'public-copy',trabalhoCompletoSha256:hash};
  const jobs:any[]=[];
  await mkdir(path.join(directory,'arquivos-demonstrativos'));
  const file=path.join(directory,'arquivos-demonstrativos',key+'.pdf');await writeFile(file,bytes);
@@ -37,5 +37,10 @@ test('Drive link resolver preserves authentication, process access and local PDF
   assert.deepEqual(await response.json(),{links:null});
   const fallback=await fetch(route,{headers});assert.equal(fallback.status,200,await fallback.clone().text());assert.deepEqual(Buffer.from(await fallback.arrayBuffer()),bytes);
   assert.equal((await fetch(route.replace('doc-convite','doc-ata')+'?delivery=drive-links',{headers})).status,404);
+  const academic=base+`/api/processes/${p.id}/files/trabalho-completo/download`;
+  assert.equal((await fetch(academic+'?delivery=drive-links')).status,401);
+  assert.equal((await fetch(academic+'?delivery=drive-links',{headers:{'x-demo-user-email':'outsider@fixture.invalid'}})).status,404);
+  assert.deepEqual(await (await fetch(academic+'?delivery=drive-links',{headers})).json(),{links:{view:'https://drive.google.com/file/d/exact_drive_work_original_123/view',download:'https://drive.google.com/uc?export=download&id=exact_drive_work_original_123'}});
+  const opened=await fetch(academic+'?view=1',{headers,redirect:'manual'});assert.equal(opened.status,302);assert.equal(opened.headers.get('location'),'https://drive.google.com/file/d/exact_drive_work_original_123/view');
  }finally{await stop();await rm(directory,{recursive:true,force:true});}
 });

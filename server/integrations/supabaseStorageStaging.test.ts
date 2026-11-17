@@ -224,6 +224,7 @@ test('autoriza envio no Drive, valida os bytes e limpa a transferência sem grav
       if(common)return common;
       if(address.includes('/permissions?'))return Response.json({permissions:[{type:'user',role:'owner'}]});
       if(address.includes('/files/technical_root_123?'))return Response.json({id:'technical_root_123',mimeType:'application/vnd.google-apps.folder',parents:['owner_root'],capabilities:{canAddChildren:true}});
+      if(address.includes('/files/owner_root?'))return Response.json({id:'owner_root',mimeType:'application/vnd.google-apps.folder',parents:[]});
       if(address.startsWith('https://www.googleapis.com/drive/v3/files?q='))return Response.json({files:[{id:'transfer_folder_123',name:'03_TEMPORARIOS_DOCUMENTAIS'}]});
       if(address.startsWith('https://www.googleapis.com/drive/v3/files?')&&method==='POST'){
         storedFile=JSON.parse(String(init?.body));

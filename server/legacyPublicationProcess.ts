@@ -7,7 +7,16 @@ import { legacyAdministrativeFiles, canonicalLegacyRecord, publicLegacyAcademicV
  * It never enters processesStore or fabricates an ATA/signature/completion. */
 export function historicalPublicationProcess(record: LegacyAcademicRecord): ProcessData {
   const saved = record.provenance.publicationProcess as ProcessData | undefined;
-  if (saved?.id === record.id && saved.legacyRecord === true) return saved;
+  const registeredFolderId = typeof record.provenance.processFolderId === 'string' ? record.provenance.processFolderId : '';
+  if (saved?.id === record.id && saved.legacyRecord === true) {
+    // The archive owns the canonical folder binding. An older consent context
+    // must not restore a folder displaced by a later physical migration.
+    const driveFolderId = registeredFolderId || saved.driveFolderId;
+    saved.protocolo=record.protocolo;saved.driveFolderId=driveFolderId;
+    if(driveFolderId)saved.driveFolderUrl=`https://drive.google.com/drive/folders/${driveFolderId}`;
+    else delete saved.driveFolderUrl;
+    return saved;
+  }
   const p = legacyRepositoryProcess(publicLegacyAcademicView(record));
   const full = record.attachments.find((f) => f.kind === 'TRABALHO_COMPLETO');
   const abstract = record.attachments.find((f) => f.kind === 'RESUMO_EXPANDIDO');
@@ -32,7 +41,8 @@ export function historicalPublicationProcess(record: LegacyAcademicRecord): Proc
         ? { matricula: '', ...p.aluno2, ...contacts.authors[1] }
         : p.aluno2,
     orientador: contacts?.verifiedBy && contacts.advisor ? contacts.advisor : p.orientador,
-    driveFolderId: String(record.provenance.processFolderId || ''),
+    driveFolderId: registeredFolderId,
+    ...(registeredFolderId ? {driveFolderUrl: `https://drive.google.com/drive/folders/${registeredFolderId}`} : {}),
     acervo: {
       ...p.acervo,
       publicationAuthorizationFileIds: legacyAdministrativeFiles(record)

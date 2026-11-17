@@ -1,4 +1,5 @@
 import {PublicRepositoryFileActions} from '../components/PublicRepositoryFileActions';
+import {openDriveDocument} from '../utils/driveDocumentAccess';
 import { displayParticipantInstitution } from '../utils/institutionName';
 import {signatureSignerNote,currentDocumentSignatureJob,frozenGovbrDownloadJob} from '../utils/signatureRecipientPresentation';
 import {repositorySubmissionConfirmed} from '../utils/repositorySubmissionConfirmation';
@@ -45,7 +46,6 @@ import {ProcessDeletionDialog} from '../components/ProcessDeletionDialog';
 import type {DeletionDialogTarget} from '../utils/processDeletionDialog';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
-import { DocumentPreviewModal } from '../components/DocumentPreviewModal';
 import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
@@ -141,6 +141,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const legacyAccessKey = `${processId}|${userEmail}|${isAuthenticated}|${isMasterAdmin}|${readOnly}`;
   const legacyAccessScope = useRef(legacyAccessKey);
   legacyAccessScope.current = legacyAccessKey;
+  useEffect(()=>{legacyAccessScope.current=legacyAccessKey;return()=>{legacyAccessScope.current='';};},[legacyAccessKey]);
   const [privateLegacyAcademic, setPrivateLegacyAcademic] = useState<{accessKey:string;data:PrivateLegacyAcademicView|null;error:string}|null>(null);
   const privateLegacyAccess = isAuthenticated && isMasterAdmin && privateLegacyAcademic?.accessKey === legacyAccessKey ? privateLegacyAcademic : null;
   const privateLegacyData = privateLegacyAccess?.data;
@@ -213,8 +214,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     window.addEventListener('keydown', closeHistoryOnEscape);
     return () => window.removeEventListener('keydown', closeHistoryOnEscape);
   }, [showAuditLogModal]);
-  const [selectedPreviewDoc, setSelectedPreviewDoc] = useState<ProcessDocument | null>(null);
   const [correctionDoc, setCorrectionDoc] = useState<ProcessDocument | null>(null);
+  const [retryingDriveData,setRetryingDriveData]=useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletionTarget,setDeletionTarget]=useState<DeletionDialogTarget|null>(null);
   const deletionScopeRef=useRef('');
@@ -753,15 +754,16 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   };
 
   const handleDocumentAccess = async (doc:ProcessDocument,mode:'view'|'download') => {
-    // Open synchronously so browsers do not block a window after the permission read.
-    const destination=window.open('about:blank','_blank');
-    if(destination)destination.opener=null;
-    try{
-      const {links}=['CONVITE','ATA','TERMO','DECLARACAO'].includes(doc.type)?await apiClient.getPublicDocumentDriveLinks(process.legacyRecord?doc.driveDownloadUrl||'':`/api/public/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(doc.id)}/download`):readOnly?{links:null}:await apiClient.getDocumentDriveLinks(processId,doc.id);
-      if(links&&destination){destination.location.replace(mode==='view'?links.view:links.download);return;}
-      destination?.close();
-      if(mode==='view')setSelectedPreviewDoc(doc);else handleDirectDownload(doc);
-    }catch(error){destination?.close();if(!readOnly){if(mode==='view')setSelectedPreviewDoc(doc);else handleDirectDownload(doc);}else portalNotice(error instanceof Error?error.message:'Não foi possível abrir o documento.');}
+    if(mode==='download'){handleDirectDownload(doc);return;}
+    const scope=legacyAccessScope.current;
+    try{await openDriveDocument(()=>readOnly?apiClient.getPublicDocumentDriveLinks(`/api/public/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(doc.id)}/download`):apiClient.getDocumentDriveLinks(processId,doc.id),()=>scope===legacyAccessScope.current);}
+    catch(error){if(scope===legacyAccessScope.current)portalNotice(error instanceof Error?error.message:'Não foi possível abrir o documento no Google Drive.');}
+  };
+
+  const openAcademicDocument=async(kind:'trabalho-completo'|'resumo-expandido',legacyIndex?:number)=>{
+    const scope=legacyAccessScope.current;
+    try{await openDriveDocument(()=>legacyIndex===undefined?apiClient.getProcessAcademicDriveLinks(processId,kind):apiClient.getLegacyAcademicDriveLinks(processId,legacyIndex),()=>scope===legacyAccessScope.current);}
+    catch(error){if(scope===legacyAccessScope.current)portalNotice(error instanceof Error?error.message:'Não foi possível abrir o arquivo no Google Drive.');}
   };
 
   const handleDirectDownload = (doc: ProcessDocument) => {
@@ -1006,6 +1008,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         {id:'cadastral',label:'Dados do processo',icon:FileText,show:localFormat.showSectionCadastral!==false||localFormat.showSectionBanca!==false},{id:'avaliacao',label:'Conceito e Ata',icon:Award,show:localFormat.showSectionAvaliacao!==false},{id:'acervo',label:'Repositório acadêmico',icon:BookOpen,show:localFormat.showSectionAcervo!==false},{id:'docs',label:'Documentos administrativos',icon:FileCheck,show:localFormat.showSectionDocs!==false},{id:'andamento',label:'Andamento e retomada do processo',icon:RefreshCw,show:isMasterAdmin&&!readOnly}
       ].filter(t=>t.show!==false).map(tab=>{const Icon=tab.icon;const selected=activeTab===tab.id;return <button key={tab.id} data-process-tab={tab.id} type="button" onClick={()=>{setActiveTab(tab.id);setProcessLink(process.id,tab.id as ProcessSection);}} aria-pressed={selected} className={`flex min-h-9 min-w-0 flex-1 justify-center items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold ${selected?'portal-tcc-tab-selected border-[var(--portal-brand-header)] bg-white text-slate-950':'border-white bg-white text-slate-700'}`}><Icon className="h-3.5 w-3.5 text-[var(--portal-brand-action)]"/><span>{tab.label}</span></button>})}</div></section>
       <div className="portal-tcc-workspace-content p-3">
+      {!readOnly&&process.driveDataSync?.status==='PENDING'&&<aside role="status" className="portal-instruction mb-3 p-3 text-xs"><p>{process.driveDataSync.lastError||'Os dados estão salvos no Portal. A atualização do arquivo de dados no Google Drive está pendente.'}</p>{isMasterAdmin&&<button type="button" className="portal-action mt-2" disabled={retryingDriveData} onClick={()=>{setRetryingDriveData(true);void apiClient.retryProcessDriveData(process.id).then(async result=>{if(result.driveDataSync?.status!=='SYNCED')portalNotice(result.driveDataSync?.lastError||'A sincronização continua pendente. Confira a conexão Google em Configurações.');await loadData({quiet:true});}).catch(error=>portalNotice(error instanceof Error?error.message:'Não foi possível sincronizar os dados no Drive.')).finally(()=>setRetryingDriveData(false));}}>{retryingDriveData?'Sincronizando…':'Sincronizar dados no Drive'}</button>}</aside>}
       {isMasterAdmin&&!readOnly&&isTabVisible('andamento')&&<section key={process.id} aria-label="Registro de logs deste TCC"><AuditLogsPage embedded processId={process.id} recoveryVersion={recoveryVersion} processRecovery={<WorkflowRecoveryPanel processId={process.id} onUpdated={async()=>{setRecoveryVersion(version=>version+1);await loadData({quiet:true});}}/>}/></section>}
 
       {!readOnly && !process.legacyRecord && isTabVisible('cadastral') && effectiveDefenseReservationStatus(process) !== 'CONFIRMADO' && <ProcessFlowPanel process={process} jobs={signatureJobs} canConfirm={(isStudent || isMasterAdmin) && !readOnly} showStatus={localFormat.showSectionCadastral === false || !reservationStatusAlert(process)} onUpdated={loadData}/> }
@@ -1143,7 +1146,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   statusDescription = doc.signatureProvider
                     ? doc.signatureProvider==='ASTEN'?'Assinatura realizada pela ASTEN, com solicitação enviada automaticamente por e-mail.':'Assinatura realizada pelo Gov.br.'
                     : readOnly
-                    ? 'Documento emitido. O Portal confere a versão pública ao abrir o PDF.'
+                    ? 'Documento emitido. Abra o original no Google Drive.'
                     : type === 'CONVITE' && !process.defesa.invitationSentAt
                       ? 'Documento disponível para consulta. Envio à banca pendente.'
                       : 'Documento disponível para consulta.';
@@ -1173,6 +1176,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   tone={termDeclined?'denied':pendingSignature?'progress':isDownloadable?'available':'pending'}
                   available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
                   onView={()=>void handleDocumentAccess(doc,'view')} onDownload={()=>void handleDocumentAccess(doc,'download')}>
+                  {!readOnly&&isDownloadable&&<button type="button" className="portal-action text-xs" onClick={()=>setCorrectionDoc(doc)}>Solicitar ajuste / correção</button>}
                   {(automaticStatus || canUseGovbr || canSendAsten) && <div className="portal-document-signature-actions flex flex-col gap-2">
                     {automaticStatus && !pendingSignature && <p role="status" className="text-center text-xs font-semibold">{automaticStatus}</p>}
                     {canSendAsten && <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
@@ -1203,7 +1207,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 ].flatMap(definition=>{
                   const originals=privateLegacyData?.files.filter(file=>file.kind===definition.kind)||[];
                   return originals.length?originals.map(file=>({...definition,url:file.downloadUrl,fileName:file.fileName,privateIndex:file.index,isPublic:file.isPublic})):[{...definition,fileName:undefined,privateIndex:undefined,isPublic:Boolean(definition.url)}];
-                }).map(file=><section key={`${file.kind}-${file.privateIndex??'public'}`} className="portal-tcc-document-card flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"><div className="min-w-0"><h3 className="text-xs font-bold">{file.title}</h3><p className="mt-2 text-sm">{file.url?(file.isPublic?'Disponível para consulta pública':'Disponível para consulta restrita'):'Não disponível para consulta pública'}</p>{file.fileName&&<p className="mt-1 break-all text-xs text-slate-600">{file.fileName}</p>}</div>{file.url&&file.isPublic?<PublicRepositoryFileActions url={file.privateIndex!==undefined?`/api/legacy-academic-records/${encodeURIComponent(process.id)}/files/${file.privateIndex}/download`:file.url}/>:file.privateIndex!==undefined?<button type="button" disabled={!file.url||legacyAcademicDownload!==null} className="portal-action shrink-0" onClick={()=>void downloadPrivateLegacyFile(file.privateIndex!)}><Download className="h-4 w-4"/>{legacyAcademicDownload===file.privateIndex?'Baixando…':'Baixar original restrito'}</button>:null}</section>)}
+                }).map(file=><section key={`${file.kind}-${file.privateIndex??'public'}`} className="portal-tcc-document-card flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4"><div className="min-w-0"><h3 className="text-xs font-bold">{file.title}</h3><p className="mt-2 text-sm">{file.url?(file.isPublic?'Disponível para consulta pública':'Disponível para consulta restrita'):'Não disponível para consulta pública'}</p>{file.fileName&&<p className="mt-1 break-all text-xs text-slate-600">{file.fileName}</p>}</div>{file.url&&file.isPublic?<PublicRepositoryFileActions url={file.privateIndex!==undefined?`/api/legacy-academic-records/${encodeURIComponent(process.id)}/files/${file.privateIndex}/download`:file.url}/>:file.privateIndex!==undefined?<div className="flex flex-wrap gap-2"><button type="button" disabled={!file.url} className="portal-action" onClick={()=>void openAcademicDocument(file.kind==='TRABALHO_COMPLETO'?'trabalho-completo':'resumo-expandido',file.privateIndex)}>Ver</button><button type="button" disabled={!file.url||legacyAcademicDownload!==null} className="portal-action shrink-0" onClick={()=>void downloadPrivateLegacyFile(file.privateIndex!)}><Download className="h-4 w-4"/>{legacyAcademicDownload===file.privateIndex?'Baixando…':'Baixar original restrito'}</button></div>:null}</section>)}
               </div>
             ) : (
               <>
@@ -1279,7 +1283,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                     {!acervoFieldsLocked&&<><button type="button" className="portal-action" onClick={()=>document.getElementById('repository-upload-trabalho-completo')?.click()}><Upload className="h-4 w-4"/>Escolher arquivo</button><input id="repository-upload-trabalho-completo" aria-label="Enviar PDF do trabalho completo" type="file" accept="application/pdf,.pdf" className="hidden" disabled={acervoFieldsLocked} onChange={(e)=>{void handleAcervoPdfUpload('trabalho-completo',e.target.files?.[0]);e.target.value='';}}/></>}
                     <p className="portal-repository-file-status text-[11px] text-[var(--portal-brand-header)] font-semibold break-all" aria-hidden={!acervoTrabalhoCompleto}>{acervoTrabalhoCompleto ? <>Armazenado: {acervoTrabalhoCompleto}</> : null}</p>
-                    {process.acervo?.trabalhoCompletoFileId&&<div className="flex gap-2"><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/trabalho-completo/download?view=1`} target="_blank" rel="noreferrer">Ver</a><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/trabalho-completo/download`} target="_blank" rel="noreferrer">Baixar PDF</a></div>}
+                    {process.acervo?.trabalhoCompletoFileId&&<div className="flex gap-2"><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/trabalho-completo/download?view=1`} target="_blank" rel="noopener noreferrer" onClick={event=>{event.preventDefault();void openAcademicDocument('trabalho-completo');}}>Ver</a><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/trabalho-completo/download`} target="_blank" rel="noreferrer">Baixar PDF</a></div>}
                   <label htmlFor="acervo-public-toggle" className="portal-repository-choice flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-slate-200 bg-white p-3">
                     <input
                       id="acervo-public-toggle"
@@ -1312,7 +1316,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
                     {!acervoFieldsLocked&&<><button type="button" className="portal-action" onClick={()=>document.getElementById('repository-upload-resumo-expandido')?.click()}><Upload className="h-4 w-4"/>Escolher arquivo</button><input id="repository-upload-resumo-expandido" aria-label="Enviar PDF do resumo expandido" type="file" accept="application/pdf,.pdf" className="hidden" disabled={acervoFieldsLocked} onChange={(e)=>{void handleAcervoPdfUpload('resumo-expandido',e.target.files?.[0]);e.target.value='';}}/></>}
                     <p className="portal-repository-file-status text-[11px] text-[var(--portal-brand-header)] font-semibold break-all" aria-hidden={!acervoResumoExpandido}>{acervoResumoExpandido ? <>Armazenado: {acervoResumoExpandido}</> : null}</p>
-                    {process.acervo?.resumoExpandidoFileId&&<div className="flex gap-2"><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/resumo-expandido/download?view=1`} target="_blank" rel="noreferrer">Ver</a><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/resumo-expandido/download`} target="_blank" rel="noreferrer">Baixar PDF</a></div>}
+                    {process.acervo?.resumoExpandidoFileId&&<div className="flex gap-2"><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/resumo-expandido/download?view=1`} target="_blank" rel="noopener noreferrer" onClick={event=>{event.preventDefault();void openAcademicDocument('resumo-expandido');}}>Ver</a><a className="portal-action" href={`/api/processes/${encodeURIComponent(process.id)}/files/resumo-expandido/download`} target="_blank" rel="noreferrer">Baixar PDF</a></div>}
                   <label htmlFor="acervo-expanded-public-toggle" className={`portal-repository-choice flex items-center gap-2.5 select-none rounded-lg border border-slate-200 bg-white p-3 ${acervoResumoExpandido?'cursor-pointer':'cursor-not-allowed opacity-60'}`}>
                     <input
                       id="acervo-expanded-public-toggle"
@@ -1396,18 +1400,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         </div>
       )}
 
-      {/* Document Preview & Correction Modals */}
-      <DocumentPreviewModal
-        readOnly={readOnly}
-        document={selectedPreviewDoc}
-        processProtocol={process.protocolo}
-        onClose={() => setSelectedPreviewDoc(null)}
-        onRequestCorrection={(doc) => {
-          setSelectedPreviewDoc(null);
-          setCorrectionDoc(doc);
-        }}
-      />
-
+      {/* Document correction keeps its own action; Ver opens the Drive original. */}
       <CorrectionRequestModal
         document={correctionDoc}
         processId={process.id}

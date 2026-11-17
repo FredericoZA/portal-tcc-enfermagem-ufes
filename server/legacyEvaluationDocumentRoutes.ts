@@ -10,6 +10,7 @@ interface Ports {
   record: (id: string) => LegacyAcademicRecord | undefined;
   canRead: (record: LegacyAcademicRecord, email: string) => boolean;
   read: (file: LegacyAdministrativeFile) => Promise<Buffer>;
+  links?: (file:LegacyAdministrativeFile,record:LegacyAcademicRecord,email:string)=>Promise<{view:string;download:string}|null>;
   deliver: (req: Request, res: Response, record: LegacyAcademicRecord, index: number,
     file: LegacyAdministrativeFile, bytes: Buffer) => Promise<void>;
 }
@@ -44,15 +45,18 @@ export function installLegacyEvaluationDocumentRoutes(app: Pick<Express, 'get'>,
     try {
       const file = legacyAdministrativeFiles(record)[index];
       if (!file || file.kind !== 'AVALIACAO') return res.status(404).json({ error: 'Documento não disponível.' });
-      const pdf = verifyLegacyPdf(file, await ports.read(file));
+      const direct=req.query.delivery==='drive-links';
+      const links=direct?await ports.links?.(file,record,email!):undefined;
+      const pdf=direct?undefined:verifyLegacyPdf(file, await ports.read(file));
       // Re-read identity, binding and reference after storage I/O. Revocation or
       // replacement during a download must win over the earlier permission.
       const current = resolve(req);
       const currentFile = current.record && legacyAdministrativeFiles(current.record)[index];
       if (!current.allowed || current.email !== email || !currentFile ||
           currentFile.kind !== 'AVALIACAO' || currentFile.driveFileId !== file.driveFileId ||
-          currentFile.sha256 !== file.sha256) return res.status(404).json({ error: 'Documento não disponível.' });
-      await ports.deliver(req, res, current.record!, index, currentFile, pdf);
+          currentFile.sha256 !== file.sha256 || currentFile.folderId!==file.folderId) return res.status(404).json({ error: 'Documento não disponível.' });
+      if(direct)return res.json({links:links||null});
+      await ports.deliver(req, res, current.record!, index, currentFile, pdf!);
     } catch {
       return res.status(409).json({ error: 'Não foi possível conferir e entregar o documento histórico.' });
     }

@@ -35,15 +35,20 @@ test('releitura de backup privado aplica limite antes de consumir o corpo',async
   await assert.rejects(readPrivatePortalBackup('test-token','backup-file-id-123'),/limite seguro/);
   assert.equal(cancelled,true);
 });
-test('conversões ficam dentro do Sistema e não soltas na raiz nem entre modelos ativos',async t=>{
+test('conversões usam uma raiz técnica externa sem recriar Sistema na raiz acadêmica',async t=>{
   const created:any[]=[];
+  const previous=process.env.PORTAL_DRIVE_TECHNICAL_FOLDER_ID;
+  process.env.PORTAL_DRIVE_TECHNICAL_FOLDER_ID='technical_root_123456';
+  t.after(()=>{if(previous===undefined)delete process.env.PORTAL_DRIVE_TECHNICAL_FOLDER_ID;else process.env.PORTAL_DRIVE_TECHNICAL_FOLDER_ID=previous;});
   t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
     if(String(input).includes('/permissions?'))return reply({permissions:[{type:'user',role:'owner'}]});
+    if(String(input).includes('/files/technical_root_123456?'))return reply({id:'technical_root_123456',mimeType:'application/vnd.google-apps.folder',parents:['owner_root'],capabilities:{canAddChildren:true}});
+    if(String(input).includes('/files/owner_root?'))return reply({id:'owner_root',mimeType:'application/vnd.google-apps.folder',parents:[]});
     if(init?.method==='POST'){const body=JSON.parse(String(init.body));created.push(body);return reply({id:`folder-${created.length}`,name:body.name});}
     return reply({files:[]});
   });
-  assert.equal(await ensurePortalRenderFolder('test-token',rootId),'folder-2');
-  assert.deepEqual(created.map(file=>({name:file.name,parents:file.parents})),[{name:'00_SISTEMA',parents:[rootId]},{name:'03_TEMPORARIOS_DOCUMENTAIS',parents:['folder-1']}]);
+  assert.equal(await ensurePortalRenderFolder('test-token',rootId),'folder-1');
+  assert.deepEqual(created.map(file=>({name:file.name,parents:file.parents})),[{name:'03_TEMPORARIOS_DOCUMENTAIS',parents:['technical_root_123456']}]);
 });
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -66,9 +71,8 @@ test('DOCX de referência encontra apenas a pasta privada existente dentro de 01
     if(url.pathname.endsWith(`/files/${attendanceId}`))return reply({id:attendanceId,capabilities:{canAddChildren:writable}});
     const query=url.searchParams.get('q')||'';
     assert.match(query,/trashed = false/);
-    if(query.includes("name = '01_DOCUMENTOS'")){
-      assert.ok(query.includes(`'${rootId}' in parents`));
-      return reply({files:[folder(documentsId,'01_DOCUMENTOS',rootId)]});
+    if(query.includes(`'${rootId}' in parents`)){
+      return reply({files:query.includes("name = '01_DOCUMENTOS'")?[folder(documentsId,'01_DOCUMENTOS',rootId)]:[]});
     }
     assert.ok(query.includes(`'${documentsId}' in parents`));
     if(query.includes("name = '06_COMPORVANTES_RESERVA'"))return reply({files:[folder(receiptsId,'06_COMPORVANTES_RESERVA',documentsId)]});
@@ -105,9 +109,13 @@ test('raiz existente é reutilizada e todas as novas pastas ficam dentro dela', 
   assert.equal(result.existingFolders, 1);
   assert.ok(created.length > 4);
   assert.ok(created.every(file=>file.parents?.length===1));
-  assert.deepEqual(created.filter(file=>file.parents[0]===rootId).map(file=>file.name),['01_DOCUMENTOS','02_PROCESSOS']);
+  assert.deepEqual(created.filter(file=>file.parents[0]===rootId).map(file=>file.name),['Documentos','Processos']);
   assert.equal(result.folders['documents.CONVITE.03_ASSINADOS'],undefined);
-  assert.ok(result.folders['documents.ATA.03_ASSINADOS']);
+  assert.equal(result.folders['documents.ATA.03_ASSINADOS'],undefined);
+  assert.equal(created.filter(file=>file.parents[0]===result.folders.models).length,10);
+  assert.equal(created.some(file=>/GERADOS|ASSINADOS|SUPORTE/.test(file.name)),false);
+  assert.ok(result.folders['documents.ATA.00_MODELO_ATIVO']);
+  assert.ok(result.folders['documents.ATA.01_HISTORICO_MODELOS']);
   assert.ok(created.every(file=>file.name!=='03_REPOSITORIO_PUBLICO'));
   assert.ok(created.every(file=>file.name!=='PORTAL_TCC'));
 });

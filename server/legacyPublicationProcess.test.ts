@@ -53,6 +53,32 @@ function fixture(): any {
     },
   } as any);
 }
+test('historical consent reuses the migrated folder ID instead of a stale saved context and preserves logical identity',()=>{
+  const record=fixture();
+  const saved=historicalPublicationProcess(record);
+  saved.driveFolderId='previous_folder_123456';
+  saved.driveFolderUrl='https://drive.google.com/drive/folders/previous_folder_123456';
+  record.provenance.publicationProcess=saved;
+  record.provenance.processFolderId='migrated_folder_123456';
+  const current=historicalPublicationProcess(record);
+  assert.equal(current.id,record.id);
+  assert.equal(current.protocolo,record.protocolo);
+  assert.equal(current.driveFolderId,'migrated_folder_123456');
+  assert.equal(current.driveFolderUrl,'https://drive.google.com/drive/folders/migrated_folder_123456');
+  assert.equal(current,saved,'Workflow revalidation retains the canonical object identity');
+  assert.equal(historicalPublicationProcess(record),saved,'Repeated reads do not replace the current authorization object');
+  assert.equal(saved.driveFolderId,'migrated_folder_123456');
+  assert.deepEqual(current.acervo,saved.acervo);
+});
+test('historical context retains an already registered saved folder when older provenance has no folder binding',()=>{
+  const record=fixture();
+  const saved=historicalPublicationProcess(record);
+  record.provenance.publicationProcess=saved;
+  delete record.provenance.processFolderId;
+  assert.equal(historicalPublicationProcess(record).driveFolderId,'private_folder_1234');
+  delete record.provenance.publicationProcess;
+  assert.equal(historicalPublicationProcess(record).driveFolderId,'');
+});
 test('historical editing is Master only and never fabricates ATA, declaration or a live process', () => {
   const record = fixture(),
     p = historicalPublicationProcess(record);

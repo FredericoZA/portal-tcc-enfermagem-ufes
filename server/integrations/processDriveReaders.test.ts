@@ -89,7 +89,8 @@ test('preparing a process folder never shares its private custom response descen
   t.mock.method(globalThis,'fetch',async(url,init)=>{
     if(init?.method){writes++;throw Error('no ACL writes while preparing folders');}
     const u=new URL(String(url));if(u.pathname.endsWith('/permissions'))return Response.json({permissions:[]});
-    return Response.json({files:[{id:u.searchParams.get('q')?.includes('02_PROCESSOS')?'processes_folder':'process_folder',webViewLink:'https://drive.google.com/drive/folders/process_folder'}]});
+    if(u.pathname.endsWith('/processes_folder'))return Response.json({id:'processes_folder',name:'Processos',mimeType:'application/vnd.google-apps.folder',parents:['portal_root']});
+    return Response.json({files:[{id:'process_folder',name:'TEST-1',mimeType:'application/vnd.google-apps.folder',parents:['processes_folder'],appProperties:{portalProcessId:'process-1'},properties:{portalDriveLayout:'flat-v1'},webViewLink:'https://drive.google.com/drive/folders/process_folder'}]});
   });
   await ensurePortalProcessDriveFolder({accessToken:'fixture',rootFolderId:'portal_root',protocol:'TEST-1',processId:'process-1'});
   assert.equal(writes,0);
@@ -102,7 +103,7 @@ test('custom submission PDFs remain private even if reader emails are accidental
     const u=new URL(String(url));
     if(u.pathname.endsWith('/permissions'))return Response.json({permissions:[]});
     const q=u.searchParams.get('q')||'';
-    return Response.json({files:q.includes('portalProcessId')?[{id:'custom_pdf_12345',appProperties:{sha256:'a'.repeat(64)}}]:[{id:'private_folder_12345'}]});
+    return Response.json({files:q.includes('portalProcessId')?[{id:'custom_pdf_12345',parents:['process_folder'],appProperties:{sha256:'a'.repeat(64)}}]:[{id:'private_folder_12345'}]});
   });
   await uploadProcessFormPdf({accessToken:'fixture',processFolderId:'process_folder',processId:'process-1',protocol:'TEST-1',studentNames:['Fixture'],formType:'CUSTOM_examiner',version:1,pdf:Buffer.from('%PDF-fixture'),sha256:'a'.repeat(64),readerEmails:['author@example.invalid']});
   assert.equal(writes,0);

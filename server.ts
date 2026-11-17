@@ -1,11 +1,11 @@
+import {canonicalDriveOriginalLinks} from './server/driveOriginalLinks';
 import {processDriveReaderEmails} from './server/integrations/processDriveReaders';
-import {publicDriveFailure,publicDocumentDriveFailure} from './server/publicDriveFailure';
 import {rateLimit} from 'express-rate-limit';
 import {restoreChangesPublicFiles,assertLegacyPrivateClassificationConsistency} from './server/workflow/publicationRestoreGuard';
 import {legacyEvaluationParticipantRole} from './server/legacyPrivateAccess';
 import {installLegacyEvaluationDocumentRoutes} from './server/legacyEvaluationDocumentRoutes';
 import {installLegacyEvaluationParticipantRoutes,legacyEvaluationAccessRevision} from './server/legacyEvaluationParticipantRoutes';
-import {publicInvitationFingerprint,publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
+import {publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
 import {archiveRetiredRuntimeBackups} from './server/backup/retention';
 import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
 import {loadPortalRepositorySnapshot} from './server/integrations/supabase';
@@ -200,7 +200,8 @@ import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, asse
 import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, refreshPortalSignatureState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
-import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePublicationSource, withdrawDriveFilePublicAccess, withdrawManyPublicDriveFiles, deleteAuthorizationPdfs, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
+import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, syncProcessDataMarkdown, inspectPortalDriveArtifact, preparePublicationSource, withdrawDriveFilePublicAccess, withdrawManyPublicDriveFiles, deleteAuthorizationPdfs, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
+import {buildDriveProcessDataMarkdown,buildDriveProcessFileName} from './src/utils/driveProcessLayout';
 import { renderGoogleDriveTemplateToPdf,saveReviewedAta,exportReviewedAta,discardAtaCopy,cleanupExpiredAtaPreviews } from './server/integrations/googleDocsRenderer';
 import { dispatchTrackedEmail, workflowEmailCopies } from './server/integrations/trackedGmail';
 import { createCriticalAuditJournal, visibleCriticalAudit } from './server/criticalAuditPolicy';
@@ -932,7 +933,7 @@ function publicSettingsForRequest(admin: boolean): GlobalSettings {
 }
 function preserveCurrentDriveBindings(snapshot:any,current?:ProcessData):ProcessData{
   const restored=JSON.parse(JSON.stringify(snapshot||{}));
-  restored.driveFolderId=current?.driveFolderId;restored.driveFolderUrl=current?.driveFolderUrl;restored.driveSyncedAt=current?.driveSyncedAt;
+  restored.driveFolderId=current?.driveFolderId;restored.driveFolderUrl=current?.driveFolderUrl;restored.driveSyncedAt=current?.driveSyncedAt;restored.driveDataSync=current?.driveDataSync;
   restored.defesa={...(restored.defesa||{}),invitationDriveFileId:current?.defesa?.invitationDriveFileId,locationProof:current?.defesa?.locationProof||restored.defesa?.locationProof};
   const source=current?.acervo||{};const target=restored.acervo||{};
   for(const key of ['trabalhoCompletoFileId','trabalhoCompletoFileName','trabalhoCompletoFileUrl','trabalhoCompletoSha256','trabalhoCompletoVersion','resumoExpandidoFileId','resumoExpandidoFileName','resumoExpandidoFileUrl','resumoExpandidoSha256','resumoExpandidoVersion'] as const){if((source as any)[key]!==undefined)(target as any)[key]=(source as any)[key];else delete (target as any)[key];}
@@ -1132,9 +1133,11 @@ async function uploadFormArchiveJob(job:FormArchiveJob,process:ProcessData):Prom
   try{
     const accessToken=await getGoogleWorkspaceAccessToken();
     if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Drive não configurada.');
-    if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
+    await ensureStoredProcessFolder(process,accessToken,currentSettings.driveRootFolderId);
     const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[snapshot.aluno1.nome,snapshot.aluno2?.nome].filter(Boolean) as string[],formType:job.formType,version:job.version,pdf,sha256:job.sha256,readerEmails:authorizedProcessDriveReaderEmails(process)});
-    job.status='ARCHIVED';job.driveFileId=String(uploaded.id);job.fileName=String(uploaded.name||'');job.artifactBase64='';delete job.registrationSnapshot;job.lastError=undefined;job.updatedAt=new Date().toISOString();
+    job.status='ARCHIVED';job.driveFileId=String(uploaded.id);job.fileName=String(uploaded.name||'');job.lastError=undefined;job.updatedAt=new Date().toISOString();
+    if(job.formType==='CONFIRMACAO_LOCAL'){await persistPortalStateDurably();await publishReservationArchive(process,job,accessToken,pdf);}
+    job.artifactBase64='';delete job.registrationSnapshot;
   }catch(error){job.status='FAILED';job.lastError=error instanceof Error?error.message:'Falha ao arquivar o formulário.';job.updatedAt=new Date().toISOString();}
   await persistPortalStateDurably();return job;
 }
@@ -1155,15 +1158,14 @@ async function uploadTemplatedReservationArchive(job:FormArchiveJob, process:Pro
     const {reservedFileId,candidates}=job.receiptUpload;
     const archived=await readProcessFormPdfById(accessToken,reservedFileId,receiptArchiveScope(job,candidates.map(item=>item.sha256)));
     let completed:{fileName:string;sha256:string;source:'DOCX'|'CANONICAL'};
+    let publicationPdf:Buffer;
     if(archived){
       const candidate=candidates.find(item=>item.sha256===archived.sha256);
       if(!candidate)throw new Error('Não foi possível confirmar a origem do comprovante arquivado.');
       completed={fileName:archived.fileName,sha256:archived.sha256,source:candidate.source};
+      publicationPdf=archived.pdf;
     }else{
-      if(!process.driveFolderId){
-        const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId,protocol:process.protocolo,processId:process.id});
-        process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();
-      }
+      await ensureStoredProcessFolder(process,accessToken,rootFolderId);
       const {source,pdf}=await renderReservationArchivePdf(snapshot,model,currentSettings,accessToken,rootFolderId);
       const sha256=createHash('sha256').update(pdf).digest('hex');
       if(!candidates.some(item=>item.sha256===sha256)){
@@ -1178,9 +1180,12 @@ async function uploadTemplatedReservationArchive(job:FormArchiveJob, process:Pro
       });
       if(String(uploaded.id)!==reservedFileId)throw new Error('O Drive não confirmou o identificador reservado para o comprovante.');
       completed={fileName:String(uploaded.name||''),sha256,source};
+      publicationPdf=pdf;
     }
     job.status='ARCHIVED';job.driveFileId=reservedFileId;job.fileName=completed.fileName;
     job.sha256=completed.sha256;job.receiptSource=completed.source;job.lastError=undefined;
+    await persistPortalStateDurably();
+    await publishReservationArchive(process,job,accessToken,publicationPdf);
   }catch(error){job.status='FAILED';job.lastError=error instanceof Error?error.message:'Falha ao arquivar o comprovante.';}
   job.updatedAt=new Date().toISOString();
   await persistPortalStateDurably();return job;
@@ -1230,7 +1235,7 @@ async function archiveStudioFormSubmission(process:ProcessData,form:any,submissi
   const pdf=await createBrandedTextPdf({title:`Formulário - ${String(form.title||submission.formId)}`,protocol:process.protocolo,body,footer:`Checksum ${submission.checksum}`},currentSettings);
   try{
     const accessToken=await getGoogleWorkspaceAccessToken();if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Drive não configurada.');
-    if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;}
+    await ensureStoredProcessFolder(process,accessToken,currentSettings.driveRootFolderId);
     const siblings=studioFormSubmissionsStore.filter(item=>item.processId===process.id&&item.formId===submission.formId).sort((a,b)=>a.submittedAt.localeCompare(b.submittedAt));
     const version=Math.max(1,siblings.findIndex(item=>item.id===submission.id)+1);
     const uploaded=await uploadProcessFormPdf({accessToken,processFolderId:process.driveFolderId,processId:process.id,protocol:process.protocolo,studentNames:[process.aluno1.nome,process.aluno2?.nome].filter(Boolean) as string[],formType:`CUSTOM_${submission.formId}`,version,pdf,sha256:createHash('sha256').update(pdf).digest('hex')});
@@ -1498,11 +1503,55 @@ function configuredDocumentType(template:Record<string,unknown>):'CONVITE'|'ATA'
   if(!type)throw new Error(`O modelo ${String(template.id||template.label||'')} não possui um tipo documental reconhecido.`);
   return type;
 }
+async function syncStoredProcessData(portalProcess:ProcessData,accessToken:string):Promise<void>{
+  if(!portalProcess.driveFolderId)throw Error('A pasta deste processo ainda não foi vinculada ao Google Drive.');
+  if(localReviewFilesEnabled())return;
+  const revision=portalProcess.dataRevision,folderId=portalProcess.driveFolderId;
+  const source=portalProcess.legacyRecord?legacyAcademicRecordsStore.find(record=>record.id===portalProcess.id):portalProcess;
+  if(!source)throw Error('O registro canônico do processo não foi encontrado.');
+  const markdown=buildDriveProcessDataMarkdown(source);
+  let runtimeRevision=currentPortalRuntimeRevision();
+  const canonical=()=>portalProcess.legacyRecord?legacyAcademicRecordsStore.includes(source as LegacyAcademicRecord)&&currentPublicationProcess(portalProcess):processesStore.includes(portalProcess);
+  const current=async()=>{
+    if(!canonical()||portalProcess.dataRevision!==revision||portalProcess.driveFolderId!==folderId||buildDriveProcessDataMarkdown(source)!==markdown)return false;
+    if(runtimeRevision===null)return !productionRuntime;
+    return await readPortalRuntimeRevision()===runtimeRevision&&currentPortalRuntimeRevision()===runtimeRevision&&canonical()&&portalProcess.dataRevision===revision&&portalProcess.driveFolderId===folderId&&buildDriveProcessDataMarkdown(source)===markdown;
+  };
+  if(!await current())throw Error('Os dados foram alterados antes da sincronização.');
+  const file=await syncProcessDataMarkdown({accessToken,processFolderId:folderId,processId:portalProcess.id,revision,fileId:portalProcess.driveDataSync?.fileId,
+    fileName:buildDriveProcessFileName({protocol:portalProcess.protocolo,studentNames:[portalProcess.aluno1.nome,portalProcess.aluno2?.nome].filter(Boolean) as string[],kind:'DADOS',extension:'md'}),markdown,assertCurrent:current,
+    bindFileId:async fileId=>{
+      if(!await current())throw Error('Os dados foram alterados antes de vincular o arquivo.');
+      portalProcess.driveDataSync={status:'PENDING',revision,updatedAt:new Date().toISOString(),fileId};
+      await persistPortalStateDurably();runtimeRevision=currentPortalRuntimeRevision();
+      if(!await current())throw Error('O vínculo do arquivo não pertence à revisão atual.');
+    }});
+  if(!await current())throw Error('Os dados foram alterados durante a sincronização.');
+  portalProcess.driveDataSync={status:'SYNCED',revision,updatedAt:new Date().toISOString(),fileId:file.id};
+}
+async function ensureStoredProcessFolder(portalProcess:ProcessData,accessToken:string,rootFolderId:string):Promise<string>{
+  if(portalProcess.legacyRecord&&!portalProcess.driveFolderId)throw Error('A pasta original do legado precisa ser vinculada antes desta operação.');
+  const folder=localReviewFilesEnabled()
+    ?portalProcess.driveFolderId?{id:portalProcess.driveFolderId,webViewLink:portalProcess.driveFolderUrl}:await sourceFilesFolder({accessToken,rootFolderId,protocol:portalProcess.protocolo,processId:portalProcess.id})
+    :await ensurePortalProcessDriveFolder({accessToken,rootFolderId,protocol:portalProcess.protocolo,processId:portalProcess.id,folderId:portalProcess.driveFolderId,studentNames:[portalProcess.aluno1.nome,portalProcess.aluno2?.nome].filter(Boolean) as string[],legacy:portalProcess.legacyRecord});
+  portalProcess.driveFolderId=folder.id;portalProcess.driveFolderUrl=folder.webViewLink;portalProcess.driveSyncedAt=new Date().toISOString();
+  try{await syncStoredProcessData(portalProcess,accessToken);}
+  catch{if(!currentPublicationProcess(portalProcess))throw Error('O processo mudou durante o arquivamento.');portalProcess.driveDataSync={...portalProcess.driveDataSync,status:'PENDING',revision:portalProcess.dataRevision,updatedAt:new Date().toISOString(),lastError:'O arquivo do processo foi preservado. A atualização dos dados no Drive está pendente.'};}
+  return folder.id;
+}
+/** The pending state is committed with the registration change before external I/O. */
+async function syncPersistedProcessData(portalProcess:ProcessData):Promise<void>{
+  if(!portalProcess.driveFolderId||localReviewFilesEnabled()||!processesStore.includes(portalProcess))return;
+  try{await syncStoredProcessData(portalProcess,await getGoogleWorkspaceAccessToken());}
+  catch{if(!currentPublicationProcess(portalProcess))return;portalProcess.driveDataSync={...portalProcess.driveDataSync,status:'PENDING',revision:portalProcess.dataRevision,updatedAt:new Date().toISOString(),lastError:'Os dados foram salvos no Portal. A atualização do arquivo de dados no Drive está pendente.'};}
+  try{await persistPortalStateDurably();}
+  catch{if(!currentPublicationProcess(portalProcess))return;portalProcess.driveDataSync={...portalProcess.driveDataSync,status:'PENDING',revision:portalProcess.dataRevision,updatedAt:new Date().toISOString(),lastError:'Os dados foram salvos. A confirmação da sincronização com o Drive está pendente.'};}
+}
 async function ensureWorkflowProcessFolder(portalProcess:ProcessData):Promise<{accessToken:string;folderId:string}>{
   const accessToken=await getGoogleWorkspaceAccessToken();
   if(!currentSettings.driveRootFolderId)throw new Error('Configure a pasta raiz privada do Google Drive antes de executar o fluxo.');
-  if(!portalProcess.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:portalProcess.protocolo,processId:portalProcess.id});portalProcess.driveFolderId=folder.id;portalProcess.driveFolderUrl=folder.webViewLink;portalProcess.driveSyncedAt=new Date().toISOString();}
-  return{accessToken,folderId:portalProcess.driveFolderId};
+  const folderId=await ensureStoredProcessFolder(portalProcess,accessToken,currentSettings.driveRootFolderId);
+  return{accessToken,folderId};
 }
 function assertSafeWorkflowDocumentEvent(type:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',eventCode:WorkflowEventCode):void{
   const expected:Record<typeof type,string>={CONVITE:'LOCATION_CONFIRMED',ATA:'EVALUATION_SUBMITTED',TERMO:'REPOSITORY_SUBMITTED',DECLARACAO:'PUBLICATION_CLEARED'};
@@ -1558,10 +1607,13 @@ async function executeConfiguredDocumentAction(portalProcess:ProcessData,templat
     return{externalId:jobId||(currentJob?currentJob.id:`MANUAL_SIGNATURE_SELECTION:${type}`)};
   }
   const {accessToken,folderId}=await ensureWorkflowProcessFolder(portalProcess);
+  const invitationRevision=portalProcess.dataRevision,reservationRevision=portalProcess.defesa.reservationRevision;
   const existing=await readExistingGeneratedInvitation({accessToken,rootFolderId:currentSettings.driveRootFolderId||'',processId:portalProcess.id,
     jobId:`workflow_${idempotencyKey}`,expectedFileId:portalProcess.defesa.invitationDriveFileId});
   if(existing){
     portalProcess.defesa.invitationDriveFileId=existing.id;
+    await publishIssuedAdministrativeOriginal(portalProcess,{accessToken,fileId:existing.id,sha256:existing.sha256,artifactType:'CONVITE',signatureJobId:`workflow_${idempotencyKey}`,
+      assertCurrent:()=>processesStore.includes(portalProcess)&&portalProcess.dataRevision===invitationRevision&&portalProcess.defesa.reservationRevision===reservationRevision&&portalProcess.defesa.invitationDriveFileId===existing.id&&reservationReceiptStatus(portalProcess)==='CONFIRMADO'&&currentReservationArchive(portalProcess,formArchiveJobsStore)?.status==='ARCHIVED'});
     return {externalId:existing.id};
   }
   const pdf=await renderOfficialTemplatePdf(portalProcess,'CONVITE',undefined,variables);
@@ -1570,6 +1622,9 @@ async function executeConfiguredDocumentAction(portalProcess:ProcessData,templat
   const uploaded=await uploadGeneratedPdfToDrive({rootFolderId:currentSettings.driveRootFolderId,protocol:portalProcess.protocolo,accessToken,processFolderId:folderId,processId:portalProcess.id,jobId:`workflow_${idempotencyKey}`,documentType:'CONVITE',fileName,pdf,sha256,readerEmails:authorizedProcessDriveReaderEmails(portalProcess)});
   portalProcess.defesa.invitationDriveFileId=String(uploaded.id);
   auditLogsStore.push({id:`log-${Date.now()}-workflow-invitation`,processId:portalProcess.id,actorEmail,actorRoles:[...getUserRolesForEmail(actorEmail).globalRoles,...getActiveProcessRoles(actorEmail,portalProcess.id)],action:'CONVITE_GERADO_PELO_FLUXO',entityType:'process_document',entityId:String(uploaded.id),after:{documentType:'CONVITE',sha256,fileName},timestamp:new Date().toISOString()});
+  await persistPortalStateDurably();
+  await publishIssuedAdministrativeOriginal(portalProcess,{accessToken,fileId:String(uploaded.id),sha256,artifactType:'CONVITE',signatureJobId:`workflow_${idempotencyKey}`,pdf,
+    assertCurrent:()=>processesStore.includes(portalProcess)&&portalProcess.dataRevision===invitationRevision&&portalProcess.defesa.reservationRevision===reservationRevision&&portalProcess.defesa.invitationDriveFileId===String(uploaded.id)&&reservationReceiptStatus(portalProcess)==='CONFIRMADO'&&currentReservationArchive(portalProcess,formArchiveJobsStore)?.status==='ARCHIVED'});
   return{externalId:String(uploaded.id)};
 }
 /** Portal e-mails carry authenticated process links, never document bytes. */
@@ -2063,7 +2118,7 @@ async function dispatchSignatureJobUnlocked(job:SignatureJob):Promise<SignatureJ
     const googleAccessToken=await getGoogleWorkspaceAccessToken();
     if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Google Drive não configurada.');
     dispatchStage='DRIVE_FOLDER';
-    if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken:googleAccessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
+    await ensureStoredProcessFolder(process,googleAccessToken,currentSettings.driveRootFolderId);
     dispatchStage='PDF_READ';
     let artifactPdf:Buffer;
     if(job.artifactBase64)artifactPdf=Buffer.from(job.artifactBase64,'base64');
@@ -2153,6 +2208,51 @@ async function syncAuthorizedPublication(process:ProcessData,actorEmail:string):
   auditLogsStore.push({id:`log-${Date.now()}-publish`,processId:process.id,actorEmail,actorRoles:getUserRolesForEmail(actorEmail).globalRoles,action:'PUBLICACAO_DRIVE_SINCRONIZADA',entityType:'publication',entityId:process.id,after:details,timestamp:now});
 }
 
+/** Publication is an issued-workflow action. Browser link reads never call this. */
+async function publishIssuedAdministrativeOriginal(process:ProcessData,input:{accessToken?:string;fileId:string;sha256:string;artifactType:'CONVITE'|'ATA'|'TERMO'|'DECLARACAO'|'CONFIRMACAO_LOCAL';signatureJobId?:string;formVersion?:number;pdf?:Buffer;assertCurrent:()=>boolean}):Promise<void>{
+  if(localReviewFilesEnabled()||input.fileId.startsWith('local_'))return;
+  if(!input.assertCurrent())throw Error('O documento mudou antes da publicação no Drive.');
+  const accessToken=input.accessToken||await getGoogleWorkspaceAccessToken();
+  await publicRepositoryDriveLinks({accessToken,sourceFileId:input.fileId,scope:process.id,sha256:input.sha256,artifactType:input.artifactType,
+    ...(input.signatureJobId?{signatureJobId:input.signatureJobId}:{}),...(input.formVersion===undefined?{}:{formVersion:input.formVersion}),
+    assertAuthorized:async()=>input.assertCurrent(),validatePublicContent:async()=>{
+      const pdf=input.pdf||(await downloadDrivePdf(accessToken,input.fileId,{processId:process.id,...(input.artifactType==='CONFIRMACAO_LOCAL'?{formType:input.artifactType,formVersion:input.formVersion}:{artifactType:input.artifactType}),signatureJobId:input.signatureJobId,allowPublicRead:true,expectedSha256:input.sha256})).pdf;
+      if(createHash('sha256').update(pdf).digest('hex')!==input.sha256)throw Error('O documento mudou durante a publicação.');
+      await assertPublicAcademicPdf(pdf,process,{issuedAdministrativeDocument:true});
+    }});
+  if(!input.assertCurrent())throw Error('O documento mudou durante a publicação no Drive.');
+}
+async function publishArchivedAdministrativeOriginal(process:ProcessData,job:SignatureJob):Promise<void>{
+  const fileId=job.driveSignedFileId,sha256=job.signedSha256,revision=job.sourceDataRevision;
+  if(!fileId||!sha256||!['ATA','TERMO','DECLARACAO'].includes(job.documentType))throw Error('O documento assinado não foi conferido para publicação.');
+  const current=()=>processesStore.includes(process)&&signatureJobsStore.includes(job)&&job.status==='ARCHIVED'&&job.driveSignedFileId===fileId&&job.signedSha256===sha256&&signatureDocumentRevision(process,job.documentType)===revision&&
+    (job.documentType!=='TERMO'||publicationRequested(process))&&publicAcademicDocuments(process,generateDefaultDocuments(process)).some(doc=>doc.type===job.documentType&&doc.version===job.documentVersion);
+  await publishIssuedAdministrativeOriginal(process,{fileId,sha256,artifactType:job.documentType as 'ATA'|'TERMO'|'DECLARACAO',signatureJobId:job.id,assertCurrent:current});
+}
+async function publishReservationArchive(process:ProcessData,job:FormArchiveJob,accessToken:string,pdf:Buffer):Promise<void>{
+  const fileId=job.driveFileId,sha256=job.sha256;
+  if(job.formType!=='CONFIRMACAO_LOCAL'||!fileId||!sha256)throw Error('O comprovante não foi conferido para publicação.');
+  const current=()=>processesStore.includes(process)&&formArchiveJobsStore.includes(job)&&job.status==='ARCHIVED'&&job.driveFileId===fileId&&job.sha256===sha256&&
+    reservationReceipts(process).some(receipt=>receipt.summary.revision===job.reservationRevision);
+  await publishIssuedAdministrativeOriginal(process,{accessToken,fileId,sha256,artifactType:'CONFIRMACAO_LOCAL',formVersion:job.version,pdf,assertCurrent:current});
+}
+async function publishAuthorizedAcademicOriginals(process:ProcessData):Promise<void>{
+  if(process.legacyRecord||localReviewFilesEnabled()||process.status!=='CONCLUIDO')return;
+  const authorizedKinds=['trabalho-completo','resumo-expandido'].filter(kind=>publicFileAuthorized(process,signatureJobsStore,kind));
+  if(!authorizedKinds.length)return;
+  const accessToken=await getGoogleWorkspaceAccessToken();
+  for(const kind of authorizedKinds){
+    if(!publicFileAuthorized(process,signatureJobsStore,kind))continue;
+    const full=kind==='trabalho-completo',fileId=full?process.acervo.trabalhoCompletoFileId:process.acervo.resumoExpandidoFileId;
+    const sha256=full?process.acervo.trabalhoCompletoSha256:process.acervo.resumoExpandidoSha256;
+    if(!fileId||!sha256)throw Error('O arquivo autorizado ainda não foi conferido.');
+    const current=()=>processesStore.includes(process)&&publicFileAuthorized(process,signatureJobsStore,kind)&&
+      (full?process.acervo.trabalhoCompletoFileId===fileId&&process.acervo.trabalhoCompletoSha256===sha256:process.acervo.resumoExpandidoFileId===fileId&&process.acervo.resumoExpandidoSha256===sha256);
+    await publicRepositoryDriveLinks({accessToken,sourceFileId:fileId,scope:process.id,sha256,artifactType:full?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',assertAuthorized:async()=>current()});
+    if(!current())throw Error('A autorização de publicação mudou durante a sincronização.');
+  }
+}
+
 function storeLocalGovbrPdf(pdf:Buffer):string{
   if(!localDocumentModelsEnabled())throw new Error('Armazenamento de demonstração indisponível.');
   const sha256=createHash('sha256').update(pdf).digest('hex');
@@ -2198,11 +2298,19 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
       const record=historicalRecord;
       if(!legacyPublicationScopeAllowed(record,process))throw Error('Este PDF não consta no conjunto histórico autorizado. A publicação permanece restrita.');
       const token=await getGoogleWorkspaceAccessToken();
+      const publishFullWork=change.publishFullWork,publishExpandedAbstract=change.publishExpandedAbstract;
+      const sameConsent=()=>publicationProcessById(process.id)===process&&process.acervo.publicationChange===change&&change.status==='AWAITING_SIGNATURE'&&change.signatureJobId===job.id&&
+        change.publishFullWork===publishFullWork&&change.publishExpandedAbstract===publishExpandedAbstract&&signatureJobsStore.includes(job)&&job.status==='ARCHIVED'&&legacyPublicationScopeAllowed(record,process);
       for(const [kind,id,sha] of [['TRABALHO_COMPLETO',process.acervo.trabalhoCompletoFileId,process.acervo.trabalhoCompletoSha256],['RESUMO_EXPANDIDO',process.acervo.resumoExpandidoFileId,process.acervo.resumoExpandidoSha256]]){
         if(!(kind==='TRABALHO_COMPLETO'?change.publishFullWork:change.publishExpandedAbstract))continue;
         if(!id||!sha)throw Error('Arquivo histórico não conferido.');
-        await publicRepositoryDriveLinks({accessToken:token,sourceFileId:id,scope:process.id,sha256:sha,assertAuthorized:async()=>publicationProcessById(process.id)===process&&process.acervo.publicationChange===change&&job.status==='ARCHIVED'&&legacyPublicationScopeAllowed(record,process)});
+        await publicRepositoryDriveLinks({accessToken:token,sourceFileId:id,scope:process.id,sha256:sha,preserveNamedPermissions:true,assertAuthorized:async()=>sameConsent()&&
+          (kind==='TRABALHO_COMPLETO'?change.publishFullWork&&process.acervo.trabalhoCompletoFileId===id&&process.acervo.trabalhoCompletoSha256===sha:change.publishExpandedAbstract&&process.acervo.resumoExpandidoFileId===id&&process.acervo.resumoExpandidoSha256===sha)});
       }
+      if(!job.driveSignedFileId||!job.signedSha256)throw Error('O novo termo assinado ainda não foi conferido.');
+      const termFileId=job.driveSignedFileId,termSha=job.signedSha256;
+      await publishIssuedAdministrativeOriginal(process,{accessToken:token,fileId:termFileId,sha256:termSha,artifactType:'TERMO',signatureJobId:job.id,
+        assertCurrent:()=>sameConsent()&&job.driveSignedFileId===termFileId&&job.signedSha256===termSha});
       process.acervo.publicationSyncedAt=new Date().toISOString();process.acervo.publicationState='PUBLIC';
       change.status='COMPLETED';change.completedAt=new Date().toISOString();change.lastError=undefined;change.signedTermFileId=job.driveSignedFileId;
       storeHistoricalPublicationProcess(record,process);
@@ -2214,6 +2322,7 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
       }
       job.postArchivePending=undefined;job.lastError=undefined;await persistPortalStateDurably();return;
     }
+    await publishArchivedAdministrativeOriginal(process,job);
     if(declarationReady(process,signatureJobsStore)){
       if(process.acervo?.publicationState!=='PUBLIC')await syncAuthorizedPublication(process,actorEmail);
       const change=process.acervo?.publicationChange;
@@ -2227,6 +2336,7 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
     }
     updateProcessCompletion(process.id);
     await persistPortalStateDurably();
+    await publishAuthorizedAcademicOriginals(process);
     await runEvent('SIGNATURE_COMPLETED');
     if(job.documentType==='DECLARACAO'&&process.status==='CONCLUIDO')await runEvent('PROCESS_COMPLETED');
     job.postArchivePending=undefined;
@@ -2277,7 +2387,7 @@ async function archiveSignatureJobAutomatically(job:SignatureJob):Promise<Signat
     const[asten,googleAccessToken]=await Promise.all([getPersistentAstenConnection(),getGoogleWorkspaceAccessToken()]);
     if(!asten)throw new Error('Conta Asten não conectada.');
     if(!currentSettings.driveRootFolderId)throw new Error('Pasta raiz do Google Drive não configurada.');
-    if(!process.driveFolderId){const folder=await ensurePortalProcessDriveFolder({accessToken:googleAccessToken,rootFolderId:currentSettings.driveRootFolderId,protocol:process.protocolo,processId:process.id});process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
+    await ensureStoredProcessFolder(process,googleAccessToken,currentSettings.driveRootFolderId);
     job.signedAt=job.signedAt||job.completedAt||new Date().toISOString();
     const signerEvidence=await callAsten('getSignatariosPorEnvelope',{idEnvelope:job.providerEnvelopeId},asten.token);
     const confirmedSigners=assertAstenEnvelopeSigners(signerEvidence,job.signers.map(signer=>({email:signer.email,order:signer.signingOrder})));
@@ -3129,7 +3239,7 @@ export async function createPortalApp() {
       const authorization=await exchangeGoogleAuthorizationCode(String(req.query.code||''));
       if(expected&&!googleAccountMatchesAuthorizedActor(authorization.email,expected))throw new Error(`Autorize a conta Google esperada (${expected}).`);
       await persistGoogleWorkspaceAuthorization(authorization);
-      const manifest=await bootstrapGoogleDriveStructure(authorization.accessToken,{rootFolderName:resolveInstallationProfile(currentSettings).driveRootFolderName});
+      const manifest=await bootstrapGoogleDriveStructure(authorization.accessToken,{rootFolderName:resolveInstallationProfile(currentSettings).driveRootFolderName,rootFolderId:currentSettings.driveRootFolderId});
       currentSettings={...currentSettings,driveRootFolderId:manifest.rootFolderId,updatedAt:new Date().toISOString()};
       auditLogsStore.push({id:`log-${Date.now()}`,actorEmail:authorization.email,actorRoles:getUserRolesForEmail(authorization.email).globalRoles,action:'CONEXAO_GOOGLE_WORKSPACE',entityType:'integration',entityId:'google_workspace',after:{rootFolderId:manifest.rootFolderId,modelFiles:manifest.modelFiles},timestamp:new Date().toISOString()});
       await persistPortalStateDurably();
@@ -3958,16 +4068,8 @@ export async function createPortalApp() {
     if(!selected)return res.status(404).json({error:'Comprovante não disponível.'});
     if(req.query.delivery==='drive-links'){
       res.setHeader('Cache-Control','private, no-store');
-      if(localReviewFilesEnabled())return res.json({links:null});
       const archive=formArchiveJobsStore.find(job=>job.processId===p.id&&job.formType==='CONFIRMACAO_LOCAL'&&job.reservationRevision===selected.summary.revision&&job.status==='ARCHIVED'&&job.driveFileId&&job.sha256);
-      if(!archive)return res.json({links:null});
-      try{
-        const accessToken=await getGoogleWorkspaceAccessToken();
-        const links=await publicRepositoryDriveLinks({accessToken,sourceFileId:archive.driveFileId!,scope:p.id,sha256:archive.sha256,artifactType:'CONFIRMACAO_LOCAL',formVersion:archive.version,
-          assertAuthorized:async()=>processesStore.includes(p)&&p.status!=='EM_RASCUNHO'&&formArchiveJobsStore.includes(archive)&&archive.status==='ARCHIVED',
-          validatePublicContent:async()=>{const file=await readProcessFormPdfById(accessToken,archive.driveFileId!,{processId:p.id,formType:archive.formType,formVersion:archive.version,allowedHashes:[archive.sha256]});if(!file)throw Error('Comprovante arquivado não encontrado.');await assertPublicAcademicPdf(file.pdf,p,{issuedAdministrativeDocument:true});}});
-        return res.json({links});
-      }catch(error){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}
+      return res.json({links:archive?canonicalDriveOriginalLinks(archive.driveFileId!,archive.sha256):null});
     }
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
     const suffix=receiptId?`-${selected.summary.id}`:'';
@@ -3984,15 +4086,7 @@ export async function createPortalApp() {
     if(!fileId)return res.status(404).json({error:'Documento não disponível.'});
     if(req.query.delivery==='drive-links'){
       res.setHeader('Cache-Control','private, no-store');
-      if(localReviewFilesEnabled())return res.json({links:null});
-      try{
-        const accessToken=await getGoogleWorkspaceAccessToken();
-        const sha256=doc.type==='CONVITE'?await publicInvitationFingerprint(accessToken,fileId,p.id):job?.signedSha256||'';
-        const links=await publicRepositoryDriveLinks({accessToken,sourceFileId:fileId,scope:p.id,sha256,artifactType:doc.type as 'CONVITE'|'ATA'|'TERMO'|'DECLARACAO',...(job?{signatureJobId:job.id}:{}),
-          assertAuthorized:async()=>processesStore.includes(p)&&p.status!=='EM_RASCUNHO'&&publicAcademicDocuments(p,generateDefaultDocuments(p)).some(item=>item.id===doc.id&&item.version===doc.version)&&(job?signatureJobsStore.includes(job)&&job.status==='ARCHIVED'&&job.driveSignedFileId===fileId:p.defesa.invitationDriveFileId===fileId),
-          validatePublicContent:async()=>{const file=await downloadSourceFile(accessToken,fileId,{processId:p.id,artifactType:doc.type,allowPublicRead:true,...(job?{signatureJobId:job.id,expectedSha256:job.signedSha256}:{})});if(createHash('sha256').update(file.pdf).digest('hex')!==sha256)throw Error('O documento mudou durante a conferência pública.');await assertPublicAcademicPdf(file.pdf,p,{issuedAdministrativeDocument:true});}});
-        return res.json({links});
-      }catch(error){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}
+      return res.json({links:canonicalDriveOriginalLinks(fileId,job?String(job.signedSha256||''):undefined)});
     }
     try{
       let bytes:Buffer;
@@ -4018,9 +4112,7 @@ export async function createPortalApp() {
     if(!record||!file||!legacyFileIsPublic(record,file))return res.status(404).json({error:'Arquivo não disponível para publicação.'});
     if(req.query.delivery==='drive-links'){
       res.setHeader('Cache-Control','private, no-store');
-      if(localReviewFilesEnabled())return res.json({links:null});
-      try{return res.json({links:await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:file.driveFileId,scope:record.id,sha256:file.sha256,assertAuthorized:()=>repositoryPublicationStillCurrent(res)})});}
-      catch(error){const failed=publicDriveFailure(error);return res.status(failed.status).json(failed.body);}
+      return res.json({links:canonicalDriveOriginalLinks(file.driveFileId,file.sha256)});
     }
     try{
       const pdf=await readLegacyAcademicPdf(file);
@@ -4070,17 +4162,11 @@ export async function createPortalApp() {
     const file=legacyAdministrativeFiles(record)[index];
     res.setHeader('Cache-Control','private, no-store');
     try{
-      if(req.query.delivery==='drive-links'){
-        if(localReviewFilesEnabled())return res.json({links:null});
-        const links=await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:file.driveFileId,scope:record.id,sha256:file.sha256,
-          assertAuthorized:async()=>legacyAcademicRecordsStore.includes(record)&&publicLegacyAdministrativeDocuments(record).some(doc=>doc.id===`legacy-document-${index}`)&&legacyAdministrativeFiles(record)[index]?.driveFileId===file.driveFileId&&legacyAdministrativeFiles(record)[index]?.sha256===file.sha256,
-          validatePublicContent:async()=>{await assertPublicAcademicPdf(await readLegacyAcademicPdf(file),legacyRepositoryProcess(publicLegacyAcademicView(record)),{issuedAdministrativeDocument:true});}});
-        return res.json({links});
-      }
+      if(req.query.delivery==='drive-links')return res.json({links:canonicalDriveOriginalLinks(file.driveFileId,file.sha256)});
       const bytes=await readLegacyAcademicPdf(file);
       await assertPublicAcademicPdf(bytes,legacyRepositoryProcess(publicLegacyAcademicView(record)),{issuedAdministrativeDocument:true});
       return deliverPortalDownload({res,bytes,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`public-legacy-document:${req.ip||'unknown'}:${record.id}:${index}`,cacheControl:'no-store'});
-    }catch(error){if(req.query.delivery==='drive-links'){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}return res.status(409).json({error:'Não foi possível conferir o documento histórico.'});}
+    }catch{return res.status(409).json({error:'Não foi possível conferir o documento histórico.'});}
   });
   installLegacyEvaluationDocumentRoutes(app,{
     authenticate:requireAuthenticated,
@@ -4089,6 +4175,7 @@ export async function createPortalApp() {
     record:id=>legacyAcademicRecordsStore.find(record=>record.id===id),
     canRead:(record,email)=>hasFullAdministration(email)||Boolean(legacyEvaluationRole(record,email)),
     read:readLegacyAcademicPdf,
+    links:async(file)=>canonicalDriveOriginalLinks(file.driveFileId,file.sha256),
     deliver:async(req,res,record,index,file,bytes)=>{
       await deliverPortalDownload({res,bytes,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`legacy-evaluation:${getPortalIdentity(req)!.email}:${record.id}:${index}`,cacheControl:'private, no-store, max-age=0'});
     },
@@ -4134,6 +4221,7 @@ export async function createPortalApp() {
     const file=record?.attachments[index];
     if(!record||!file)return res.status(404).json({error:'Arquivo histórico não encontrado.'});
     try{
+      if(req.query.delivery==='drive-links')return res.json({links:canonicalDriveOriginalLinks(file.driveFileId,file.sha256)});
       const pdf=await readLegacyAcademicPdf(file);
       await deliverPortalDownload({res,bytes:pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`legacy-academic-admin:${getPortalIdentity(req)!.email}:${record.id}:${index}`,cacheControl:'private, no-store, max-age=0'});
     }catch{return res.status(409).json({error:'Não foi possível conferir o arquivo histórico. O original permanece preservado para revisão.'});}
@@ -4153,6 +4241,7 @@ export async function createPortalApp() {
     try{
       const file=legacyAdministrativeFiles(record)[index];
       if(!file)return res.status(404).json({error:'Documento histórico não encontrado.'});
+      if(req.query.delivery==='drive-links')return res.json({links:canonicalDriveOriginalLinks(file.driveFileId,file.sha256)});
       const pdf=await readLegacyAcademicPdf(file);
       await deliverPortalDownload({res,bytes:pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`legacy-admin:${getPortalIdentity(req)!.email}:${record.id}:${index}`,cacheControl:'private, no-store, max-age=0'});
     }catch{return res.status(409).json({error:'Não foi possível conferir o documento histórico. O arquivo permanece preservado para revisão.'});}
@@ -4560,9 +4649,8 @@ export async function createPortalApp() {
       if(req.query.delivery==='drive-links'){
         res.setHeader('Cache-Control','private, no-store');
         const archive=formArchiveJobsStore.find(job=>job.processId===process.id&&job.formType==='CONFIRMACAO_LOCAL'&&job.reservationRevision===receipt.summary.revision&&job.status==='ARCHIVED'&&job.driveFileId&&job.sha256);
-        if(!archive)return res.json({links:null});
-        try{return res.json({links:await resolvePrivateDriveBrowserLinks({accessToken:await getGoogleWorkspaceAccessToken(),fileId:archive.driveFileId!,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType:archive.formType,formVersion:archive.version,expectedSha256:archive.sha256,allowPublicRead:true})});}
-        catch{return res.json({links:null});}
+        const proof=receipt.process.defesa.locationProof;
+        return res.json({links:archive?canonicalDriveOriginalLinks(archive.driveFileId!,archive.sha256):proof&&(proof.reservationRevision??0)===(receipt.process.defesa.reservationRevision??0)?canonicalDriveOriginalLinks(proof.driveFileId,proof.sha256):null});
       }
       const kind=receipt.summary.decision==='UNAVAILABLE'?'indisponibilidade':'reserva';
       const suffix=receiptId?`-${receipt.summary.id}`:'';
@@ -4570,7 +4658,10 @@ export async function createPortalApp() {
       return deliverPortalDownload({res,processId:process.id,bytes,fileName:`${process.protocolo}-${kind}${suffix}.pdf`,
         mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});
     }
-    if(req.query.delivery==='drive-links')return res.json({links:null});
+    if(req.query.delivery==='drive-links'){
+      const proof=process.defesa.locationProof;
+      return res.json({links:!receiptId&&proof&&(proof.reservationRevision??0)===(process.defesa.reservationRevision??0)?canonicalDriveOriginalLinks(proof.driveFileId,proof.sha256):null});
+    }
     if(receiptId)return res.status(404).json({error:'Comprovante não encontrado.'});
     if(!process.defesa.locationProof || (process.defesa.locationProof.reservationRevision??0)!==(process.defesa.reservationRevision??0))return res.status(404).json({error:'Comprovante não encontrado.'});
     try{const file=await downloadSourceFile(await sourceFilesAccessToken(),process.defesa.locationProof.driveFileId,{processId:process.id,artifactType:'COMPROVANTE_LOCAL'});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:process.defesa.locationProof.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:'Não foi possível consultar o comprovante no Drive.'});}
@@ -4808,7 +4899,7 @@ export async function createPortalApp() {
     const {globalRoles}=getUserRolesForEmail(actorEmail),isAdministrative=isFullAdministrator;
     const canCorrectBeforeInvitation=!invitationIssued&&activeRoles.some(role=>role==='STUDENT'||role==='ADVISOR');
     const allowedKeys=scheduleOnly?[]:dataReview||isAdministrative||canCorrectBeforeInvitation?['titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca',...(dataReview?['registrationAnswers']:[])]:['titulo'];
-    const forbiddenKeys=Object.keys(req.body||{}).filter(key=>['avaliacao','acervo','etapaAtual','status','driveFolderId','driveFolderUrl','driveSyncedAt'].includes(key));
+    const forbiddenKeys=Object.keys(req.body||{}).filter(key=>['avaliacao','acervo','etapaAtual','status','driveFolderId','driveFolderUrl','driveSyncedAt','driveDataSync'].includes(key));
     if(forbiddenKeys.length)return res.status(400).json({error:'Conceito e ata, entrega final, estado e vínculos do Drive só podem mudar pelas ações próprias do fluxo.',code:'PROTECTED_WORKFLOW_FIELDS'});
     const acceptedUpdates:any=Object.fromEntries(Object.entries(req.body||{}).filter(([key])=>allowedKeys.includes(key)));
     if(typeof acceptedUpdates.titulo==='string')acceptedUpdates.titulo=dataReview?normalizeReviewedTccTitle(acceptedUpdates.titulo):formatTccTitle(acceptedUpdates.titulo).replace(/\+([^+]+?)-/g,'$1');
@@ -4868,8 +4959,9 @@ export async function createPortalApp() {
     const reservationRestarted=!dataReview&&scheduleChanged&&canRestartReservation(existing)&&!signatureJobsStore.some(job=>job.processId===existing.id&&job.status!=='CANCELED'&&(job.driveUnsignedFileId||job.driveSignedFileId));
     if(reservationRestarted)updated=restartReservation(existing,updated,actorEmail,updated.updatedAt);
     const renamedFolder=updated.protocolo!==existing.protocolo&&Boolean(existing.driveFolderId);
-    if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:existing.protocolo,protocol:updated.protocolo});
+    if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:existing.protocolo,protocol:updated.protocolo,rootFolderId:currentSettings.driveRootFolderId||'',processId:existing.id,studentNames:[updated.aluno1.nome,updated.aluno2?.nome].filter(Boolean) as string[]});
     const reviewRollback=dataReview?{memberships:structuredClone(membershipsStore),access:structuredClone(authorizedStudentsStore),jobs:structuredClone(signatureJobsStore),auditLength:auditLogsStore.length}:undefined;
+    if(updated.driveFolderId&&!localReviewFilesEnabled())updated.driveDataSync={...updated.driveDataSync,status:'PENDING',revision:updated.dataRevision,updatedAt:new Date().toISOString()};
     processesStore[procIndex] = updated;
     synchronizeProcessParticipants(updated,actorEmail);
 
@@ -4898,9 +4990,10 @@ export async function createPortalApp() {
         processesStore[procIndex]=existing;
         if(reviewRollback){membershipsStore=reviewRollback.memberships;authorizedStudentsStore=reviewRollback.access;signatureJobsStore=reviewRollback.jobs;auditLogsStore.splice(reviewRollback.auditLength);}
       }
-      if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:updated.protocolo,protocol:existing.protocolo}).catch(()=>undefined);
+      if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:updated.protocolo,protocol:existing.protocolo,rootFolderId:currentSettings.driveRootFolderId||'',processId:existing.id,studentNames:[existing.aluno1.nome,existing.aluno2?.nome].filter(Boolean) as string[]}).catch(()=>undefined);
       throw error;
     }
+    await syncPersistedProcessData(updated);
     if(scheduleChanged)googleCalendarEventsStore=generateGoogleEventsFromProcesses(processesStore);
     if(reservationRestarted){
       const savedRevision=updated.dataRevision,savedReservation=updated.defesa.reservationRevision;
@@ -4916,6 +5009,16 @@ export async function createPortalApp() {
   }
 
   // DELETE /api/processes/:id (Master admin deletes a process)
+  app.post('/api/processes/:id/drive-data/retry',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),rateLimit({windowMs:60000,limit:10,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
+    const process=processesStore.find(item=>item.id===req.params.id);
+    if(!process?.driveFolderId)return res.status(404).json({error:'A pasta deste processo ainda não foi vinculada ao Google Drive.'});
+    if(localReviewFilesEnabled())return res.status(409).json({error:'A sincronização real do Drive não está habilitada nesta revisão local.'});
+    process.driveDataSync={...process.driveDataSync,status:'PENDING',revision:process.dataRevision,updatedAt:new Date().toISOString()};
+    await persistPortalStateDurably();
+    await syncPersistedProcessData(process);
+    res.status(process.driveDataSync?.status==='SYNCED'?200:202).json(process);
+  });
+
   const deletionCleanupLocks=new Set<string>();
   const protectedProcessDeletionFileIds=(processId:string)=>collectProcessDriveFileIds(
     processesStore.filter(process=>process.id!==processId),
@@ -5367,7 +5470,7 @@ export async function createPortalApp() {
         if(!file.fileName.toLowerCase().endsWith('.pdf')||!file.bytes.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Selecione um arquivo PDF válido.');
         const accessToken=await sourceFilesAccessToken();
         assertUploadCurrent();
-        if(!process.driveFolderId){const folder=await sourceFilesFolder({accessToken,rootFolderId:currentSettings.driveRootFolderId!,protocol:process.protocolo,processId:process.id});assertUploadCurrent();process.driveFolderId=folder.id;process.driveFolderUrl=folder.webViewLink;process.driveSyncedAt=new Date().toISOString();}
+        await ensureStoredProcessFolder(process,accessToken,currentSettings.driveRootFolderId!);assertUploadCurrent();
         const sha256=createHash('sha256').update(file.bytes).digest('hex');
         assertUploadCurrent();
         const previousId=artifactType==='TRABALHO_COMPLETO'?process.acervo?.trabalhoCompletoFileId:process.acervo?.resumoExpandidoFileId;
@@ -5423,9 +5526,7 @@ export async function createPortalApp() {
     const authorizedHash=isFull?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;
     if(req.query.delivery==='drive-links'){
       res.setHeader('Cache-Control','private, no-store');
-      if(localReviewFilesEnabled()&&fileId.startsWith('local_review_'))return res.json({links:null});
-      try{return res.json({links:await publicRepositoryDriveLinks({accessToken:await getGoogleWorkspaceAccessToken(),sourceFileId:fileId,scope:process.id,sha256:String(authorizedHash||''),artifactType:isFull?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO',assertAuthorized:()=>repositoryPublicationStillCurrent(res)})});}
-      catch(error){const failed=publicDriveFailure(error);return res.status(failed.status).json(failed.body);}
+      return res.json({links:canonicalDriveOriginalLinks(fileId,String(authorizedHash||''))});
     }
     const etag=publicPdfEtag(authorizedHash);
     res.setHeader('Cache-Control',PUBLIC_PDF_CACHE_CONTROL);
@@ -5440,7 +5541,22 @@ export async function createPortalApp() {
     if(!process||!(hasFullAdministration(identity.email)||canAccessProcess(identity.email,process.id))||(process.legacyRecord&&!hasFullAdministration(identity.email)))return res.status(404).json({error:'Arquivo não encontrado.'});
     const fileId=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoFileId:req.params.kind==='resumo-expandido'?process.acervo?.resumoExpandidoFileId:'';
     if(!fileId)return res.status(404).json({error:'Arquivo não encontrado.'});
-    try{const accessToken=await sourceFilesAccessToken();const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO';const expectedSha256=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;const links=fileId.startsWith('local_')?null:await resolvePrivateDriveBrowserLinks({accessToken,fileId,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType,expectedSha256,allowPublicRead:publicFileAuthorized(process,signatureJobsStore,req.params.kind)}).catch(()=>null);res.setHeader('Cache-Control','private, no-store');if(req.query.delivery==='drive-links')return res.json({links});if(links)return res.redirect(302,req.query.view==='1'?links.view:links.download);const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType,allowPublicRead:publicFileAuthorized(process,signatureJobsStore,req.params.kind),expectedSha256});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o PDF.'});}
+    const expectedSha256=req.params.kind==='trabalho-completo'?process.acervo?.trabalhoCompletoSha256:process.acervo?.resumoExpandidoSha256;
+    res.setHeader('Cache-Control','private, no-store');
+    if(req.query.delivery==='drive-links')return res.json({links:canonicalDriveOriginalLinks(fileId,String(expectedSha256||''))});
+    if(req.query.view==='1'){
+      const links=canonicalDriveOriginalLinks(fileId,String(expectedSha256||''));
+      return links?res.redirect(302,links.view):res.status(409).json({error:'O arquivo original ainda não foi vinculado no Google Drive.'});
+    }
+    try{
+      const accessToken=await sourceFilesAccessToken(),artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':'RESUMO_EXPANDIDO';
+      const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType,allowPublicRead:publicFileAuthorized(process,signatureJobsStore,req.params.kind),expectedSha256});
+      const current=publicationProcessById(String(req.params.id));
+      const currentFileId=req.params.kind==='trabalho-completo'?current?.acervo?.trabalhoCompletoFileId:current?.acervo?.resumoExpandidoFileId;
+      const currentHash=req.params.kind==='trabalho-completo'?current?.acervo?.trabalhoCompletoSha256:current?.acervo?.resumoExpandidoSha256;
+      if(!current||currentFileId!==fileId||currentHash!==expectedSha256||!(hasFullAdministration(identity.email)||canAccessProcess(identity.email,current.id)))return res.status(404).json({error:'Arquivo não encontrado.'});
+      await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});
+    }catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o PDF.'});}
   });
 
   const repositoryReopenLocks=new Set<string>();
@@ -5740,11 +5856,7 @@ export async function createPortalApp() {
     if(!fileId)return res.status(404).json({error:'Documento não encontrado.'});
     if(req.query.delivery==='drive-links'){
       res.setHeader('Cache-Control','private, no-store');
-      if(fileId.startsWith('local_'))return res.json({links:null});
-      try{
-        const links=await resolvePrivateDriveBrowserLinks({accessToken:await getGoogleWorkspaceAccessToken(),fileId,email:identity.email,readerEmails:authorizedProcessDriveReaderEmails(process),processId:process.id,artifactType:document.type,allowPublicRead:true,...(signatureJob?{signatureJobId:signatureJob.id,expectedSha256:signatureJob.signedSha256}:{})});
-        return res.json({links});
-      }catch{return res.json({links:null});} // Preserve the existing authorized path if Drive cannot confirm direct access.
+      return res.json({links:canonicalDriveOriginalLinks(fileId,signatureJob?String(signatureJob.signedSha256||''):undefined)});
     }
     if(signatureJob?.provider==='GOV_BR'&&fileId.startsWith('local_govbr_')){try{const pdf=await readGovbrPdf(signatureJob,fileId,String(signatureJob.signedSha256||''));await deliverPortalDownload({res,processId:process.id,bytes:pdf,fileName:signatureJob.govbrReview?.fileName||signatureJob.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch{return res.status(409).json({error:'PDF de demonstração indisponível.'});}return;}
     try{const accessToken=await (localReviewFilesEnabled()&&fileId.startsWith('local_review_')?sourceFilesAccessToken():getGoogleWorkspaceAccessToken());const file=await downloadSourceFile(accessToken,fileId,{processId:process.id,artifactType:document.type,allowPublicRead:true,...(signatureJob?{signatureJobId:signatureJob.id,expectedSha256:signatureJob.signedSha256}:{})});await deliverPortalDownload({res,processId:process.id,bytes:file.pdf,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:sessionUploadBinding(identity),cacheControl:'private, no-store'});}catch(error){res.status(502).json({error:error instanceof Error?error.message:'Falha ao recuperar o documento.'});}

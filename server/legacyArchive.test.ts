@@ -41,6 +41,19 @@ test('legacy import is idempotent, preserves stable identifiers and rejects coll
   assert.throws(()=>validateLegacyBatch([{...legacyFixture(),attachments:[{...legacyFixture().attachments[0],driveFileId:'../../credential'}]}]));
 });
 
+test('legacy hydration preserves physical names, source basenames, author order, IDs, hashes and consent after a Drive rename',()=>{
+  const input={...legacyFixture(),autores:['Zélia Maria Almeida','Ana Luísa Pereira']};
+  input.attachments[0]={...input.attachments[0],fileName:'06 - Trabalho completo - Ana Luísa e Zélia Maria - v01.pdf',sourceFileName:'envio_original.pdf'} as any;
+  const before=structuredClone(input);
+  const record=canonicalLegacyRecord(input as any);
+  assert.deepEqual(record.attachments,before.attachments);
+  assert.deepEqual(record.autores,before.autores);
+  assert.deepEqual(record.provenance,before.provenance);
+  assert.equal(record.id,before.id);
+  assert.deepEqual(canonicalLegacyRecord(record),record);
+  assert.deepEqual(input,before);
+});
+
 test('legacy 011 restores the two documented internal examiners at import and hydration',()=>{
   const grouped = [
     { nome: 'Carolina Maia Martins Sales - Márcia Valéria de Souza Almeida', instituicao: '' },

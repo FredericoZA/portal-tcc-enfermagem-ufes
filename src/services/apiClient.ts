@@ -9,6 +9,7 @@ import type {AstenDocumentFoldersStatus,AstenDocumentFolderType} from '../types/
 import type { PresidencyQueueItem } from '../utils/coordinatorSignatureActions';
 import { isLocalDemoFrontend } from '../utils/runtimeEnvironment';
 import {verifyPublicPdfLocally,type PublicDocumentVerification} from '../utils/publicPdfVerification';
+import type {DriveDocumentAccess} from '../utils/driveDocumentAccess';
 import {
   fileToLegacyBase64,
   mayUseLegacyDevelopmentUpload,
@@ -255,19 +256,24 @@ async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, f
 
 export const apiClient = {
   syncProcessDriveReaders,
-  getReservationReceiptDriveLinks:(processId:string,receiptId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/location-proof/download?receipt=${encodeURIComponent(receiptId)}&delivery=drive-links`),
+  getReservationReceiptDriveLinks:(processId:string,receiptId:string)=>fetchApi<DriveDocumentAccess>(`/api/processes/${encodeURIComponent(processId)}/location-proof/download?receipt=${encodeURIComponent(receiptId)}&delivery=drive-links`),
   getPublicRepositoryDriveLinks:(path:string)=>{
     const u=new URL(path,window.location.origin);
     if(u.origin!==window.location.origin||!(/^\/api\/public\/processes\/[^/]+\/files\/(trabalho-completo|resumo-expandido)\/download$/.test(u.pathname)||/^\/api\/legacy-academic-records\/[^/]+\/files\/(0|[1-9]\d?)\/download$/.test(u.pathname)))throw Error('Endereço público inválido.');
-    return fetchApi<{links:{view:string;download:string}|null}>(u.pathname+'?delivery=drive-links');
+    return fetchApi<DriveDocumentAccess>(u.pathname+'?delivery=drive-links');
   },
   getPublicDocumentDriveLinks:(path:string)=>{
     const u=new URL(path,window.location.origin);
     if(u.origin!==window.location.origin||!(/^\/api\/public\/processes\/[^/]+\/documents\/[^/]+\/download$/.test(u.pathname)||/^\/api\/public\/processes\/[^/]+\/reservation-receipt$/.test(u.pathname)||/^\/api\/public\/legacy-academic-records\/[^/]+\/documents\/(0|[1-9]\d?)\/download$/.test(u.pathname)))throw Error('Endereço de documento público inválido.');
     const receipt=u.searchParams.get('receipt');u.search='';if(receipt)u.searchParams.set('receipt',receipt);u.searchParams.set('delivery','drive-links');
-    return fetchApi<{links:{view:string;download:string}|null}>(u.pathname+u.search);
+    return fetchApi<DriveDocumentAccess>(u.pathname+u.search);
   },
-  getDocumentDriveLinks:(processId:string,documentId:string)=>fetchApi<{links:{view:string;download:string}|null}>(`/api/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(documentId)}/download?delivery=drive-links`),
+  getDocumentDriveLinks:(processId:string,documentId:string)=>fetchApi<DriveDocumentAccess>(`/api/processes/${encodeURIComponent(processId)}/documents/${encodeURIComponent(documentId)}/download?delivery=drive-links`),
+  getProcessAcademicDriveLinks:(processId:string,kind:'trabalho-completo'|'resumo-expandido')=>fetchApi<DriveDocumentAccess>(`/api/processes/${encodeURIComponent(processId)}/files/${kind}/download?delivery=drive-links`),
+  getLegacyAcademicDriveLinks:(id:string,index:number)=>fetchApi<DriveDocumentAccess>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/files/${index}/download?delivery=drive-links`),
+  getLegacyAdministrativeDriveLinks:(id:string,index:number)=>fetchApi<DriveDocumentAccess>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/documents/${index}/download?delivery=drive-links`),
+  getLegacyEvaluationDriveLinks:(id:string,index:number)=>fetchApi<DriveDocumentAccess>(`/api/legacy-academic-records/${encodeURIComponent(id)}/evaluation-documents/${index}/download?delivery=drive-links`),
+  retryProcessDriveData:(id:string)=>fetchApi<ProcessData>(`/api/processes/${encodeURIComponent(id)}/drive-data/retry`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   withdrawLegacyPublication:(id:string,reason:string)=>fetchApi(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/publication/withdraw`,{method:'POST',body:JSON.stringify({reason})}),
   importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),
   getPublicRepository: () => fetchApi<ProcessData[]>('/api/public/repository'),

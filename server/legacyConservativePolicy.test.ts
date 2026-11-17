@@ -85,10 +85,36 @@ test('archived historical term publishes an approved original, but never an orig
   p.acervo.publicationChange!.signatureJobId=job.id;r.provenance.publicationProcess=p;
   let publications=0;
   const context:any={Date,Error,signatureJobsStore:[job],processesStore:[],legacyAcademicRecordsStore:[r],signatureDocumentRevision,historicalPublicationProcess,legacyPublicationScopeAllowed,assertRenewedPublicationSigners,legacyAdministrativeFiles:(rec:any)=>rec.provenance.administrativeDocuments||[],storeHistoricalPublicationProcess,
-   getGoogleWorkspaceAccessToken:async()=> 'fixture-only',publicationProcessById:()=>p,persistPortalStateDurably:async()=>{},publicRepositoryDriveLinks:async(input:any)=>{assert.equal(await input.assertAuthorized(),true);publications++;}};
+   getGoogleWorkspaceAccessToken:async()=> 'fixture-only',publicationProcessById:()=>historicalPublicationProcess(r),persistPortalStateDurably:async()=>{},publishIssuedAdministrativeOriginal:async(_p:any,input:any)=>{assert.equal(input.artifactType,'TERMO');assert.equal(input.fileId,job.driveSignedFileId);assert.equal(input.assertCurrent(),true);publications++;},publicRepositoryDriveLinks:async(input:any)=>{assert.equal(await input.assertAuthorized(),true);publications++;}};
   runInNewContext(ts.transpileModule(source.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
   await context.finishArchivedSignature(job,'master@example.invalid');
-  assert.equal(publications,approved?1:0);assert.equal(job.postArchivePending,approved?undefined:true);
+  assert.equal(publications,approved?2:0);assert.equal(job.postArchivePending,approved?undefined:true);
   assert.equal(canonicalLegacyRecord(r).isPublic,approved);
+ }
+});
+test('historical publication revalidation rejects a replacement authorization object, changed hash and withdrawn file choice',async()=>{
+ const {readFileSync}=await import('node:fs'),{runInNewContext}=await import('node:vm'),ts=(await import('typescript')).default;
+ const {historicalPublicationProcess,storeHistoricalPublicationProcess}=await import('./legacyPublicationProcess');
+ const {beginPublicationChoice,finishPublicationRevocation,assertRenewedPublicationSigners}=await import('./workflow/publicationChoice');
+ const {signatureDocumentRevision}=await import('../src/utils/documentSignatureState');
+ const source=readFileSync('server.ts','utf8'),start=source.indexOf('async function finishArchivedSignature('),end=source.indexOf('\n}',start)+2;
+ for(const mutation of ['identity','hash','choice']){
+  const r=fixture();r.provenance.publicationOverride={status:'COMPLETED',publishFullWork:false,publishExpandedAbstract:false};
+  const p=beginPublicationChoice(historicalPublicationProcess(canonicalLegacyRecord(r)),{publishFullWork:true,publishExpandedAbstract:false},[],'master@example.invalid','renew','2026-11-16T12:00:00Z');
+  p.aluno1.email='author@example.invalid';p.orientador.email='advisor@example.invalid';finishPublicationRevocation(p,'2026-11-16T12:00:00Z');
+  const job:any={id:'term-fixture',processId:r.id,documentType:'TERMO',sourceDataRevision:p.dataRevision,status:'ARCHIVED',postArchivePending:true,driveSignedFileId:'signed_term_fixture',signedSha256:'d'.repeat(64),fileName:'Term.pdf',signers:[p.aluno1.email,p.orientador.email].map(email=>({email,status:'SIGNED'}))};
+  p.acervo.publicationChange!.signatureJobId=job.id;r.provenance.publicationProcess=p;let checks=0;
+  const context:any={Date,Error,signatureJobsStore:[job],processesStore:[],legacyAcademicRecordsStore:[r],signatureDocumentRevision,historicalPublicationProcess,legacyPublicationScopeAllowed,assertRenewedPublicationSigners,legacyAdministrativeFiles:(rec:any)=>rec.provenance.administrativeDocuments||[],storeHistoricalPublicationProcess,
+   getGoogleWorkspaceAccessToken:async()=> 'fixture-only',publicationProcessById:()=>historicalPublicationProcess(r),persistPortalStateDurably:async()=>{},
+   publishIssuedAdministrativeOriginal:async()=>assert.fail('A revoked academic publication cannot continue to publish a term'),
+   publicRepositoryDriveLinks:async(input:any)=>{
+    assert.equal(input.preserveNamedPermissions,true);assert.equal(await input.assertAuthorized(),true);checks++;
+    if(mutation==='identity')r.provenance.publicationProcess={...p};
+    else if(mutation==='hash')p.acervo.trabalhoCompletoSha256='e'.repeat(64);
+    else p.acervo.publicationChange!.publishFullWork=false;
+    assert.equal(await input.assertAuthorized(),false,mutation);throw Error('authorization changed during provider I/O');
+   }};
+  runInNewContext(ts.transpileModule(source.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
+  await context.finishArchivedSignature(job,'master@example.invalid');assert.equal(checks,1);assert.equal(job.postArchivePending,true);assert.match(job.lastError,/aguarda retomada/);
  }
 });

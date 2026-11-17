@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { normalizePersonName } from '../src/utils/personNameCase';
 import { renderTccTitle } from '../src/utils/formatters';
-import { buildProcessArchiveFileName } from './integrations/googleDriveArchive';
 import type { ProcessData } from '../src/types';
 import type { LegacyAcademicRecord, LegacyAttachment, LegacyAdministrativeFile, PublicLegacyAcademicRecord, PrivateLegacyAcademicView } from '../src/types/legacyArchive';
 
@@ -115,7 +114,10 @@ function legacy011Board(record: LegacyAcademicRecord): Pick<LegacyAcademicRecord
 /** Read compatibility for the initial private-only archive, without changing its identity. */
 export function canonicalLegacyRecord(record: LegacyAcademicRecord): LegacyAcademicRecord {
   const protocol = legacyProtocol(record.id);
-  const attachments = record.attachments.map(file => ({...file, sourceFileName:file.sourceFileName||file.fileName, fileName:buildProcessArchiveFileName({protocol,studentNames:record.autores,title:record.titulo,artifactLabel:file.kind,version:1}), sha256: file.sha256 || /SHA256:([a-f0-9]{64})/.exec(file.evidence)?.[1] || ''}));
+  // Hydration cannot rename a physical Drive file. Keep the stored display name
+  // and original source basename separate; migration updates the former only
+  // after the same Drive ID has actually been renamed.
+  const attachments = record.attachments.map(file => ({...file, sourceFileName:file.sourceFileName||file.fileName, sha256: file.sha256 || /SHA256:([a-f0-9]{64})/.exec(file.evidence)?.[1] || ''}));
   const authorizationDecision = legacyAuthorization(record.provenance);
   const authorized = authorizationDecision === 'AUTHORIZED';
   const override=record.provenance.publicationOverride as any;
