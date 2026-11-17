@@ -1,4 +1,5 @@
 import {displayParticipantInstitution} from '../utils/institutionName';
+import {academicName} from '../utils/personPresentation';
 import {matchesRepositoryQuery} from '../utils/repositoryQuery';
 import {
   REPOSITORY_DOCUMENT_COLUMNS, REPOSITORY_DOCUMENT_STATUSES,
@@ -906,8 +907,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             return name ? name : '';
           }
           case 'orientador': return proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
-          case 'membro1': return evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):formatProfessorName(evalMembers[0].nome))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
-          case 'membro2': return evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):formatProfessorName(evalMembers[1].nome))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
+          case 'membro1': return evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
+          case 'membro2': return evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
           case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
@@ -972,11 +973,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${orient.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.membro1) {
-        const ev1 = evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):formatProfessorName(evalMembers[0].nome))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
+        const ev1 = evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
         row.push(`"${ev1.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.membro2) {
-        const ev2 = evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):formatProfessorName(evalMembers[1].nome))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
+        const ev2 = evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
         row.push(`"${ev2.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.coorientador) {
@@ -1813,7 +1814,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <div className="space-y-0.5 mt-0.5">
                                             {proc.banca.filter(b => b.funcao !== 'ORIENTADOR').map((b, idx) => (
                                               <div key={idx} className="text-[11px] text-slate-800">
-                                                • {formatProfessorName(b.nome)} {calendarPopupFormat.showCommitteeInstitution !== false && (
+                                                • {proc.legacyRecord ? cleanPersonName(b.nome) : academicName(b, 'abbreviated')} {calendarPopupFormat.showCommitteeInstitution !== false && (
                                                   <span className="text-[10px] text-slate-500 font-mono">({b.instituicao || (b.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName)})</span>
                                                 )}
                                               </div>
@@ -2272,7 +2273,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {ev1 ? (
                           <div>
                             <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro1', (proc.legacyRecord?cleanPersonName(ev1.nome):formatProfessorName(ev1.nome)), defensesTextFormat, '')}
+                              {formatCellText('membro1', (proc.legacyRecord?cleanPersonName(ev1.nome):academicName(ev1,'abbreviated')), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                               {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
@@ -2291,7 +2292,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {ev2 ? (
                           <div>
                             <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro2', (proc.legacyRecord?cleanPersonName(ev2.nome):formatProfessorName(ev2.nome)), defensesTextFormat, '')}
+                              {formatCellText('membro2', (proc.legacyRecord?cleanPersonName(ev2.nome):academicName(ev2,'abbreviated')), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                               {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
@@ -2645,7 +2646,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {ev1 ? (
                             <div>
                               <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro1', (proc.legacyRecord?cleanPersonName(ev1.nome):formatProfessorName(ev1.nome)), acervoTextFormat, '')}
+                                {formatCellText('membro1', (proc.legacyRecord?cleanPersonName(ev1.nome):academicName(ev1,'abbreviated')), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                                 {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), acervoTextFormat, '')}
@@ -2664,7 +2665,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {ev2 ? (
                             <div>
                               <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro2', (proc.legacyRecord?cleanPersonName(ev2.nome):formatProfessorName(ev2.nome)), acervoTextFormat, '')}
+                                {formatCellText('membro2', (proc.legacyRecord?cleanPersonName(ev2.nome):academicName(ev2,'abbreviated')), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                                 {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}

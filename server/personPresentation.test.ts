@@ -17,6 +17,28 @@ test('academic name uses declared choices, removes duplicate prefixes and never 
  assert.equal(academicName({nome:'Maria da Silva'}),'Maria da Silva');
  assert.equal(academicName({nome:'Prof. Dr. Carlos Silva',titulacao:'Doutor'}),'Prof. Dr. Carlos Silva');
 });
+test('document variables and legacy models use civil treatment without an academic degree',()=>{
+ const p=fixture();
+ p.banca=[
+  {id:'e2',nome:'Sr. Carlos Silva',email:'carlos@example.invalid',funcao:'EXAMINER_2',tratamento:'Senhor',titulacao:'Sem titulação'},
+  {id:'e3',nome:'Prof.ª Dr.ª Luísa Costa',email:'luisa@example.invalid',funcao:'EXAMINER_3',tratamento:'Senhora',titulacao:'Sem titulação'},
+ ];
+ const vars=personPresentationVariables(p);
+ assert.equal(vars.EXAMINADOR_2_NOME_COMPLETO,'Senhor Carlos Silva');
+ assert.equal(vars.EXAMINADOR_2_NOME_ABREVIADO,'Sr. Carlos Silva');
+ assert.equal(vars.EXAMINADOR_3_NOME_ABREVIADO,'Sra. Luísa Costa');
+ assert.equal(vars.EXAMINADOR_3_NOME_SIMPLES,'Luísa Costa');
+ assert.equal(vars.EXAMINADOR_3_FUNCAO,'examinadora');
+ const source='Aos docentes convidados\nA Comissão de Trabalho de Conclusão de Curso convida os docentes abaixo relacionados a participar da banca de defesa.\nAvaliadores: Sr. Carlos Silva e Sra. Luísa Costa';
+ const invitation=adaptDocumentLanguage(source,p,'CONVITE');
+ assert.match(invitation,/^Aos membros convidados para a banca/);
+ assert.match(invitation,/convida as pessoas abaixo relacionadas a participar da banca de defesa/);
+ assert.match(invitation,/Examinador: Sr\. Carlos Silva\nExaminadora: Sra\. Luísa Costa/);
+ assert.doesNotMatch(invitation,/docentes|Prof|Dr/);
+ assert.equal(adaptDocumentLanguage(invitation,p,'CONVITE'),invitation);
+ const minutes=adaptDocumentLanguage(`Examinador ${vars.EXAMINADOR_2_NOME_COMPLETO}\nExaminador ${vars.EXAMINADOR_3_NOME_COMPLETO}`,p,'ATA');
+ assert.equal(minutes,'Examinador Sr. Carlos Silva\nExaminadora Sra. Luísa Costa');
+});
 test('four document types use explicit faculty treatment and resolved author wording',()=>{
  const p=fixture();const source='do(a)(s) graduando(a)(s) Maria da Silva. o(a) Prof(ª). Dr(ª). Prof.ª Dr.ª Maria Oliveira, Orientador(a). ao(à)(s) autor(a)(es), que expôs(expuseram). Aluno(a)s. Aprovado.';
  for(const type of ['CONVITE','ATA','TERMO','DECLARACAO']){

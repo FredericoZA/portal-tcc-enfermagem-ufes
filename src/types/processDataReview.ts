@@ -1,4 +1,5 @@
 import type { RegistrationAnswers } from './operationalConfig';
+import type { CommitteeTreatment } from '../utils/personPresentation';
 
 export interface ReviewedAuthor {
   nome: string;
@@ -12,7 +13,8 @@ export interface ReviewedFaculty {
   titulacao: string;
   instituicao: string;
 }
-export interface ReviewedExaminer extends ReviewedFaculty {
+export interface ReviewedExaminer extends Omit<ReviewedFaculty, 'tratamento'> {
+  tratamento: '' | CommitteeTreatment;
   id: string;
   funcao: 'EXAMINER_2' | 'EXAMINER_3';
   membroTipo: 'INTERNO' | 'EXTERNO';

@@ -1,5 +1,6 @@
 import type { ProcessData } from '../types';
 import { formatTccTitle } from './formatters';
+import { academicName } from './personPresentation';
 
 type WorkParticipants = Pick<ProcessData, 'titulo'|'aluno1'|'aluno2'|'orientador'|'banca'|'coorientador'|'registrationAnswers'>;
 
@@ -14,8 +15,15 @@ function value(answers: WorkParticipants['registrationAnswers'], key: string): s
   return String(answers?.[key] ?? '').trim();
 }
 
+function declaredTreatment(answers: WorkParticipants['registrationAnswers'], prefix: string, person?: PersonRecord): string {
+  return person?.tratamento ?? value(answers, prefix+'_TRATAMENTO');
+}
+
 /** O gênero é exclusivamente o informado no cadastro, nunca inferido pelo primeiro nome. */
 export function participantIsFemale(answers: WorkParticipants['registrationAnswers'], prefix: string, person?: PersonRecord): boolean {
+  const treatment = declaredTreatment(answers, prefix, person);
+  if (treatment === 'Senhora' || treatment === 'Professora') return true;
+  if (treatment === 'Senhor' || treatment === 'Professor') return false;
   const declared = [value(answers, prefix+'_TRATAMENTO'), value(answers, prefix+'_GENERO'), value(answers,prefix+'_REFERENCIA'),value(answers,prefix+'_TITULACAO'),person?.tratamento,person?.genero,person?.referencia,person?.titulacao].join(' ');
   return /(?:^|\s)(?:feminino|fem|f|aluna|autora|professora|profª|profa\.?|dra\.?|doutora)(?:\s|$)/iu.test(declared);
 }
@@ -37,9 +45,19 @@ export function participantRole(kind: 'student'|'advisor'|'examiner'|'coadvisor'
 
 function displayName(name: string, answers: WorkParticipants['registrationAnswers'], prefix: string, student: boolean, person?: PersonRecord): string {
   const clean = String(name || '').trim();
-  if (!clean || student || /^(?:prof(?:essor(?:a)?)?\.?|profª\.?|dr(?:a|ª)?\.?)(?:\s|$)/iu.test(clean)) return clean;
-  const treatment = (value(answers,prefix+'_TRATAMENTO')||person?.tratamento||'').toLocaleLowerCase('pt-BR');
-  const degree = (value(answers,prefix+'_TITULACAO')||person?.titulacao||'').toLocaleLowerCase('pt-BR');
+  if (!clean || student) return clean;
+  const selectedTreatment = declaredTreatment(answers, prefix, person);
+  const selectedDegree = person?.titulacao ?? value(answers, prefix+'_TITULACAO');
+  if (selectedTreatment === 'Senhor' || selectedTreatment === 'Senhora' || person?.tratamento === '') {
+    return academicName({
+      nome: clean,
+      tratamento: selectedTreatment,
+      titulacao: selectedDegree,
+    }, 'abbreviated');
+  }
+  if (/^(?:prof(?:essor(?:a)?)?\.?|profª\.?|dr(?:a|ª)?\.?)(?:\s|$)/iu.test(clean)) return clean;
+  const treatment = selectedTreatment.toLocaleLowerCase('pt-BR');
+  const degree = selectedDegree.toLocaleLowerCase('pt-BR');
   if (!treatment && !degree) return clean;
   const female = participantIsFemale(answers,prefix,person);
   const teacher = /prof/.test(treatment) ? (female?'Profª.':'Prof.') : '';

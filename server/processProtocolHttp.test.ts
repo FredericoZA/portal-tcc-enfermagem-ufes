@@ -240,10 +240,16 @@ test('HTTP: advisor corrects defense facts after invitation without replaying re
     assert.match(schema.headers.get('cache-control')||'',/private, no-store/);
     assert.ok((await schema.json()).operationalConfig.reservation.locations.length>0);
     const baseline=await(await f.request(`/api/processes/${process.id}`,advisor)).json() as ProcessData;
+    const board = process.banca.map(member => ({
+      ...member,
+      tratamento: member.funcao === 'EXAMINER_2' ? 'Senhora' : 'Senhor',
+      titulacao: 'Sem titulação',
+    }));
     const response=await f.request(`/api/processes/${process.id}/data-review`,advisor,'POST',reviewInput(process,{
       titulo:'Contribuições para o cuidado de Enfermagem no CAPS III',
       aluno1:{...process.aluno1,nome:'Autora com Nome Corrigido'},
       authorOrder:'ALUNO_2_FIRST',
+      banca: board,
       defesa:{date:'2020-11-06',time:'23:47',locationChoice:'__OUTRO_LOCAL__',customLocation:'Sala de Defesa Corrigida'},
       registrationAnswers:{AREA_TEMATICA:'Saúde mental'},
     }));
@@ -261,6 +267,14 @@ test('HTTP: advisor corrects defense facts after invitation without replaying re
     assert.equal(updated.registrationAnswers?.TEMA_PRINCIPAL,process.registrationAnswers!.TEMA_PRINCIPAL);
     assert.equal(updated.registrationAnswers?.TITULO,updated.titulo);
     assert.equal(updated.registrationAnswers?.ALUNO_1_NOME,updated.aluno1.nome);
+    assert.deepEqual(updated.banca.map(({ tratamento, titulacao }) => [tratamento, titulacao]), [
+      ['Senhora', 'Sem titulação'],
+      ['Senhor', 'Sem titulação'],
+    ]);
+    assert.equal(updated.registrationAnswers?.EXAMINADOR_2_TRATAMENTO,'Senhora');
+    assert.equal(updated.registrationAnswers?.EXAMINADOR_2_TITULACAO,'Sem titulação');
+    assert.equal(updated.registrationAnswers?.EXAMINADOR_3_TRATAMENTO,'Senhor');
+    assert.equal(updated.registrationAnswers?.EXAMINADOR_3_TITULACAO,'Sem titulação');
     assert.equal(updated.registrationAnswers?.AUTORIA_ORDEM,'Segundo autor, depois primeiro autor');
     assert.equal(updated.registrationAnswers?.DEFESA_DATA_HORA,'2020-11-06T23:47');
     assert.equal(updated.registrationAnswers?.DEFESA_LOCAL,'__OUTRO_LOCAL__');
@@ -278,7 +292,9 @@ test('HTTP: advisor corrects defense facts after invitation without replaying re
     assert.ok(!JSON.stringify(audit).includes('departmentResponse'));
     assert.ok(audit.after.fields.includes('defesa'));
     await f.restart();
-    assert.equal((await(await f.request(`/api/processes/${process.id}`,advisor)).json()).dataRevision,updated.dataRevision);
+    const reloaded=await(await f.request(`/api/processes/${process.id}`,advisor)).json() as ProcessData;
+    assert.equal(reloaded.dataRevision,updated.dataRevision);
+    assert.deepEqual(reloaded.banca,updated.banca);
   }finally{await f.close();}
 });
 

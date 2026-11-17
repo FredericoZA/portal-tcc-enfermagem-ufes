@@ -5,7 +5,7 @@ import {CUSTOM_DEFENSE_LOCATION} from './reservationLocation';
 import {ACADEMIC_PERIOD_FIELD, ACADEMIC_PERIOD_LABEL, academicPeriodHelpText, academicPeriodOptions} from './academicPeriod';
 import {normalizePersonName} from './personNameCase';
 import {AUTHOR_REFERENCE_OPTIONS,authorReferenceOptions,withAuthorReference} from './registrationIdentity';
-import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,ACADEMIC_DEGREES,isPresentationField} from './personPresentation';
+import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,COMMITTEE_TREATMENTS,ACADEMIC_DEGREES,isPresentationField} from './personPresentation';
 import { formatTimeExtenso, formatDateExtensoWithWeekday, formatWeekdayPt, renderTccTitle, normalizeEmail } from './formatters';
 import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
 import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isOtherDefenseLocation, renderCustomLocationName } from './customDefenseLocation';
@@ -146,10 +146,23 @@ const q = (
 
 const when = (fieldKey: string) => ({ fieldKey, operator: 'EQUALS' as const, value: 'Sim' });
 
-const personPresentationQuestions=(prefix:string,section:string,student=false,visibleWhen?:RegistrationQuestion['visibleWhen']):RegistrationQuestion[]=>[
- {...q(`${prefix}_TRATAMENTO`,student?'Forma de referência':'Tratamento docente',section,'select',visibleWhen),required:!prefix.startsWith('EXAMINADOR_'),options:[...(student?STUDENT_TREATMENTS:FACULTY_TREATMENTS)],helpText:student?'Escolha como a pessoa deve ser referida nos documentos.':'Escolha o tratamento que deve acompanhar o nome nos documentos.'},
- ...(!student?[{...q(`${prefix}_TITULACAO`,'Titulação',section,'select',visibleWhen),options:[...ACADEMIC_DEGREES]}]:[])
-];
+const examinerTreatmentField = /^EXAMINADOR_[23]_TRATAMENTO$/;
+
+const personPresentationQuestions = (prefix: string, section: string, student = false, visibleWhen?: RegistrationQuestion['visibleWhen']): RegistrationQuestion[] => {
+  const treatmentKey = `${prefix}_TRATAMENTO`;
+  const examiner = examinerTreatmentField.test(treatmentKey);
+  const treatmentLabel = student ? 'Forma de referência' : examiner ? 'Tratamento' : 'Tratamento docente';
+  const options = student ? STUDENT_TREATMENTS : examiner ? COMMITTEE_TREATMENTS : FACULTY_TREATMENTS;
+  return [
+    {
+      ...q(treatmentKey, treatmentLabel, section, 'select', visibleWhen),
+      required: !examiner,
+      options: [...options],
+      helpText: student ? 'Escolha como a pessoa deve ser referida nos documentos.' : 'Escolha o tratamento que deve acompanhar o nome nos documentos.'
+    },
+    ...(!student ? [{ ...q(`${prefix}_TITULACAO`, 'Titulação', section, 'select', visibleWhen), options: [...ACADEMIC_DEGREES] }] : [])
+  ];
+};
 
 export const REGISTRATION_QUESTIONS: RegistrationQuestion[] = [
   {...q('ALUNO_1_NOME', 'Nome completo do Aluno 1', 'Aluno', 'text', undefined, FULL_NAME_VALIDATION),helpText:'Informe o nome que deve aparecer nos documentos, incluindo o nome social quando utilizado. Este nome aparecerá primeiro. Cadastre os autores na ordem em que devem ser apresentados.'},
@@ -224,8 +237,10 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
     if (!fieldKey || seen.has(fieldKey) || ['CAMPO_06', 'BANCA_EMAILS'].includes(fieldKey)) continue;
     seen.add(fieldKey);
     const core = REGISTRATION_QUESTIONS.find(f => f.fieldKey === fieldKey);
+    const examinerTreatment = examinerTreatmentField.test(fieldKey);
+    const oldExaminerLabel = examinerTreatment && /\bdocente\b/i.test(custom.label || '');
     result.push(core
-      ? { ...core, ...custom, fieldKey, label:/_MATRICULA$|_SIAPE$/.test(fieldKey)?core.label:custom.label||core.label, fieldType: core.fieldType, options:isPresentationField(fieldKey)?core.options:custom.options, required: /^EXAMINADOR_[23]_TRATAMENTO$/.test(fieldKey)?false:core.required || custom.required, visibleWhen: core.visibleWhen, validation: core.validation || custom.validation, helpText: fieldKey==='ALUNO_1_EMAIL'?core.helpText:/_NOME$/.test(fieldKey)?(core.helpText&&custom.helpText?.includes(core.helpText)?custom.helpText:[core.helpText,custom.helpText].filter(Boolean).filter((text,index,list)=>list.indexOf(text)===index).join(' ')):custom.helpText || core.helpText }
+      ? { ...core, ...custom, fieldKey, label:oldExaminerLabel||/_MATRICULA$|_SIAPE$/.test(fieldKey)?core.label:custom.label||core.label, fieldType: core.fieldType, options:isPresentationField(fieldKey)?core.options:custom.options, required: examinerTreatment?false:core.required || custom.required, visibleWhen: core.visibleWhen, validation: examinerTreatment?core.validation:core.validation || custom.validation, helpText: fieldKey==='ALUNO_1_EMAIL'?core.helpText:/_NOME$/.test(fieldKey)?(core.helpText&&custom.helpText?.includes(core.helpText)?custom.helpText:[core.helpText,custom.helpText].filter(Boolean).filter((text,index,list)=>list.indexOf(text)===index).join(' ')):custom.helpText || core.helpText }
       : { ...custom, fieldKey, section: custom.section || 'Trabalho' });
   }
 
@@ -257,6 +272,7 @@ export function registrationQuestions(studio?: Partial<IntegrationStudioSettings
     if(field.fieldKey===ACADEMIC_PERIOD_FIELD)return {...field,label:ACADEMIC_PERIOD_LABEL,helpText:academicPeriodHelpText(),required:false,fieldType:'select',options:academicPeriodOptions(answers?.[ACADEMIC_PERIOD_FIELD])};
     if (field.fieldKey==='DEFESA_LOCAL') return { ...field, fieldType:'select', options:[...config.reservation.locations.filter(Boolean),CUSTOM_DEFENSE_LOCATION] };
     if(field.fieldKey==='DEFESA_LOCAL_PERSONALIZADO')return {...field,validation:{maxLength:250},helpText:REGISTRATION_QUESTIONS.find(q=>q.fieldKey===field.fieldKey)?.helpText};
+    if (/^EXAMINADOR_[23]_/.test(field.fieldKey) && isPresentationField(field.fieldKey)) return field;
     const options = config.catalogs.filter(e => e.kind === field.fieldKey && catalogIsValid(e)).map(e => e.label);
     return options.length ? { ...field, fieldType: 'select', options } : field;
   });

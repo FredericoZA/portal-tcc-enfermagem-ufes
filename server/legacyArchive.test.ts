@@ -152,3 +152,19 @@ test('public historical document policy excludes evaluation instruments and keep
  (record.provenance.administrativeDocuments as any[]).push({driveFileId:record.attachments[0].driveFileId,folderId:'private_folder_123456',fileName:'misclassified.pdf',sha256:record.attachments[0].sha256,kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'});
  const documents=publicLegacyAdministrativeDocuments(record);assert.deepEqual(documents.map(d=>d.type),kinds.slice(1,4));assert.doesNotMatch(JSON.stringify(documents),/private_admin|private_folder|AVALIACAO/);
 });
+
+test('signed consolidation preserves issued routes and exposes each current document once', async () => {
+  const { legacyAdministrativeRoutes, publicLegacyAdministrativeDocuments } = await import('./legacyArchive');
+  const record = canonicalLegacyRecord(legacyFixture() as any);
+  const file = { kind: 'ATA', folderId: 'private_folder_123456', fileName: 'ata.pdf', sha256: 'c'.repeat(64), visibility: 'PRIVATE_ADMINISTRATIVE_DOCUMENT' };
+  const signed = 'signed_file_123456', evaluation = 'evaluation_file_123456', next = 'new_file_123456';
+  record.provenance.administrativeDocuments = [
+    { ...file, driveFileId: evaluation, kind: 'AVALIACAO' },
+    { ...file, driveFileId: signed },
+    { ...file, driveFileId: next, kind: 'TERMO' },
+  ];
+  record.provenance.administrativeRouteFileIds = [signed, evaluation, signed];
+  const routes = legacyAdministrativeRoutes(record);
+  assert.deepEqual(routes.map(r => r.aliases), [[1], [0, 2], [3]]);
+  assert.deepEqual(publicLegacyAdministrativeDocuments(record).map(d => d.id), ['legacy-document-0', 'legacy-document-3']);
+});

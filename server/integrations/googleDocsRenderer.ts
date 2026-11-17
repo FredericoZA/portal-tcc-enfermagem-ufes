@@ -282,7 +282,7 @@ export function buildOfficialInvitationParagraphStyles(document: unknown): Array
       let alignment:'JUSTIFIED'|'END'|'START'|''='';
       let indentStart:number|undefined;
       const range={startIndex:node.startIndex,endIndex:node.endIndex,...(tabId?{tabId}:{})};
-      if(/^(?:Aos docentes convidados|A Comissão de Trabalho de Conclusão de Curso|Agradecemos a (?:participação|atenção ao convite)|(?:Título|Alun[oa] autor(?:a)?|Orientador(?:a)?(?: e Presidente)?|Examinador(?:a)?|Coorientador(?:a)?|Data|Horário|Local)\s*:)/iu.test(text)
+      if(/^(?:Aos (?:docentes convidados|membros convidados para a banca)|A Comissão de Trabalho de Conclusão de Curso|Agradecemos a (?:participação|atenção ao convite)|(?:Título|Alun[oa] autor(?:a)?|Orientador(?:a)?(?: e Presidente)?|Examinador(?:a)?|Coorientador(?:a)?|Data|Horário|Local)\s*:)/iu.test(text)
         && !/^A?\s*Comissão de Trabalho de Conclusão de Curso$/iu.test(text)){
         requests.push({updateTextStyle:{range,textStyle:{bold:false},fields:'bold'}});
       }

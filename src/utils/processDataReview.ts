@@ -37,12 +37,15 @@ const author = (person: ProcessData['aluno1']): ReviewedAuthor => ({
   email: person.email,
   tratamento: person.tratamento || 'Aluno',
 });
-const faculty = (person: ProcessData['orientador'] | ProcessData['banca'][number],examiner=false): ReviewedFaculty => ({
+const academicFields = (person: ProcessData['orientador'] | ProcessData['banca'][number]) => ({
   nome: person.nome,
   email: person.email,
-  tratamento: person.tratamento || (examiner?'':'Professor'),
   titulacao: person.titulacao || '',
   instituicao: person.instituicao || '',
+});
+const faculty = (person: ProcessData['orientador']): ReviewedFaculty => ({
+  ...academicFields(person),
+  tratamento: person.tratamento || 'Professor',
 });
 
 /** Structural answers have their own validated controls; never expose workflow controls as metadata. */
@@ -87,7 +90,8 @@ export function processDataReviewValues(
           p.funcao === 'EXAMINER_2' || p.funcao === 'EXAMINER_3',
       )
       .map((p) => ({
-        ...faculty(p,true),
+        ...academicFields(p),
+        tratamento: p.tratamento || '',
         id: p.id,
         funcao: p.funcao,
         membroTipo: p.membroTipo || 'EXTERNO',

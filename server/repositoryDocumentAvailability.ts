@@ -2,7 +2,7 @@ import type { ProcessData, ProcessDocument, ProcessRole, SignatureJob } from '..
 import type { LegacyAcademicRecord } from '../src/types/legacyArchive';
 import type { RepositoryDocumentAvailability } from '../src/utils/repositoryDocuments';
 import { canonicalDriveOriginalLinks } from './driveOriginalLinks';
-import { legacyAdministrativeFiles, legacyFileIsPublic, publicLegacyAdministrativeDocuments } from './legacyArchive';
+import { legacyAdministrativeRoutes, legacyFileIsPublic, publicLegacyAdministrativeDocuments } from './legacyArchive';
 import { publicAcademicDocuments } from './publicAcademicDocuments';
 import { reservationReceipts } from './reservationReceipts';
 import { publicFileAuthorized } from './workflow/publicationAccess';
@@ -129,7 +129,7 @@ export function legacyRepositoryDocuments(record:LegacyAcademicRecord,master:boo
   }
   result.docReserva = false;
   try {
-    const administrativeFiles = legacyAdministrativeFiles(record);
+    const administrativeFiles = legacyAdministrativeRoutes(record);
     const publicFiles = publicLegacyAdministrativeDocuments(record);
     for (const kind of ['ATA','TERMO','DECLARACAO','CONVITE','AVALIACAO'] as const) {
       const key = legacyKinds[kind];
@@ -137,7 +137,7 @@ export function legacyRepositoryDocuments(record:LegacyAcademicRecord,master:boo
       if (published) {
         result[key] = published.url;
       } else if (master || (kind === 'AVALIACAO' && verifiedEvaluationReader)) {
-        const index = administrativeFiles.findIndex(file => file.kind === kind);
+        const index = administrativeFiles.find(entry => entry.file.kind === kind)?.index ?? -1;
         result[key] = index < 0 ? false : kind === 'AVALIACAO'
           ? `${legacyBase}/evaluation-documents/${index}/download`
           : `${adminBase}/documents/${index}/download`;

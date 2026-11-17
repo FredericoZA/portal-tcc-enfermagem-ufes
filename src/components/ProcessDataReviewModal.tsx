@@ -19,7 +19,12 @@ import {
   processDataReviewHasChanges,
   isProcessReviewMetadataField,
 } from '../utils/processDataReview';
-import { ACADEMIC_DEGREES } from '../utils/personPresentation';
+import {
+  ACADEMIC_DEGREES,
+  COMMITTEE_TREATMENTS,
+  FACULTY_TREATMENTS,
+  STUDENT_TREATMENTS,
+} from '../utils/personPresentation';
 import {
   OTHER_DEFENSE_LOCATION,
   isOtherDefenseLocation,
@@ -173,6 +178,10 @@ export function ProcessDataReviewModal({
     faculty = false,
     lockEmail = false,
   ) {
+    const isExaminer = faculty && values.banca.some(member => member.id === key);
+    const treatments = !faculty ? STUDENT_TREATMENTS : isExaminer ? COMMITTEE_TREATMENTS : FACULTY_TREATMENTS;
+    const treatmentLabel = isExaminer ? 'Tratamento' : faculty ? 'Tratamento docente' : 'Forma de referência';
+
     return (
       <div className="grid gap-4 sm:grid-cols-2">
         <label>
@@ -220,7 +229,7 @@ export function ProcessDataReviewModal({
         </label>
         <label>
           <span className="mb-1 block text-sm font-semibold">
-            {faculty ? 'Tratamento docente' : 'Forma de referência'} {values.banca.some(member=>member.id===key)?'':'*'}
+            {treatmentLabel}{isExaminer ? '' : ' *'}
           </span>
           <select
             className="portal-input"
@@ -229,8 +238,8 @@ export function ProcessDataReviewModal({
               onChange({ ...person, tratamento: e.target.value })
             }
           >
-            {faculty&&values.banca.some(member=>member.id===key)&&<option value="">Sem tratamento docente</option>}
-            {(faculty ? ['Professor', 'Professora'] : ['Aluno', 'Aluna']).map(
+            {isExaminer && <option value="">Sem tratamento</option>}
+            {treatments.map(
               (option) => (
                 <option key={option}>{option}</option>
               ),

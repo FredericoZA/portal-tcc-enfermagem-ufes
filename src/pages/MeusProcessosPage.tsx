@@ -1,4 +1,5 @@
 import {displayParticipantInstitution} from '../utils/institutionName';
+import {academicName} from '../utils/personPresentation';
 import {matchesDefenseDateRange} from '../utils/repositoryQuery';
 import React, { useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../components/PortalLiveSync';
@@ -369,8 +370,8 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
             case 'aluno2': return `"${cleanPersonName(p.aluno2?.nome || '').replace(/"/g, '""')}"`;
             case 'orientador': return `"${formatProfessorName(p.orientador?.nome || '').replace(/"/g, '""')}"`;
-            case 'membro1': return `"${(ev1?.nome ? formatProfessorName(ev1.nome) : 'A definir').replace(/"/g, '""')}"`;
-            case 'membro2': return `"${(ev2?.nome ? formatProfessorName(ev2.nome) : 'A definir').replace(/"/g, '""')}"`;
+            case 'membro1': return `"${(ev1?.nome ? academicName(ev1, 'abbreviated') : 'A definir').replace(/"/g, '""')}"`;
+            case 'membro2': return `"${(ev2?.nome ? academicName(ev2, 'abbreviated') : 'A definir').replace(/"/g, '""')}"`;
             case 'coorientador': return `"${(p.coorientador?.nome ? formatProfessorName(p.coorientador.nome) : 'Nenhum').replace(/"/g, '""')}"`;
             case 'resumo': return `"${(p.acervo?.resumoSintese || '').replace(/"/g, '""')}"`;
             case 'palavrasChave': return `"${(p.acervo?.palavrasChave?.join('; ') || '').replace(/"/g, '""')}"`;
@@ -538,7 +539,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {ev1 ? (
                 <div>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('membro1', formatProfessorName(ev1.nome), meusProcessosTextFormat, '')}
+                    {formatCellText('membro1', academicName(ev1, 'abbreviated'), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono mt-0.5 leading-tight break-words">
                     {cleanInst(ev1.instituicao || installationProfile.defaultInstitutionName)}
@@ -557,7 +558,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {ev2 ? (
                 <div>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('membro2', formatProfessorName(ev2.nome), meusProcessosTextFormat, '')}
+                    {formatCellText('membro2', academicName(ev2, 'abbreviated'), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono mt-0.5 leading-tight break-words">
                     {cleanInst(ev2.instituicao || 'Instituição Externa')}

@@ -1,6 +1,6 @@
 import type { Express, Request, RequestHandler, Response } from 'express';
 import type { LegacyAcademicRecord, LegacyAdministrativeFile } from '../src/types/legacyArchive';
-import { legacyAdministrativeFiles } from './legacyArchive';
+import { legacyAdministrativeRoutes } from './legacyArchive';
 import { verifyLegacyPdf } from './legacyArchiveFiles';
 
 interface Ports {
@@ -29,7 +29,7 @@ export function installLegacyEvaluationDocumentRoutes(app: Pick<Express, 'get'>,
     if (!email) return res.status(401).json({ error: 'Entre no Portal para continuar.' });
     if (!record || !allowed) return res.status(404).json({ error: 'Documentos não disponíveis.' });
     try {
-      return res.json(legacyAdministrativeFiles(record).flatMap((file, index) =>
+      return res.json(legacyAdministrativeRoutes(record).flatMap(({file, index}) =>
         file.kind === 'AVALIACAO' ? [{ index, kind: file.kind, fileName: file.fileName,
           downloadUrl: `/api/legacy-academic-records/${encodeURIComponent(record.id)}/evaluation-documents/${index}/download` }] : []));
     } catch {
@@ -43,7 +43,7 @@ export function installLegacyEvaluationDocumentRoutes(app: Pick<Express, 'get'>,
     const index = /^(0|[1-9]\d?)$/.test(String(req.params.index)) ? Number(req.params.index) : -1;
     if (!record || !allowed || index < 0) return res.status(404).json({ error: 'Documento não disponível.' });
     try {
-      const file = legacyAdministrativeFiles(record)[index];
+      const file = legacyAdministrativeRoutes(record).find(entry => entry.aliases.includes(index))?.file;
       if (!file || file.kind !== 'AVALIACAO') return res.status(404).json({ error: 'Documento não disponível.' });
       const direct=req.query.delivery==='drive-links';
       const links=direct?await ports.links?.(file,record,email!):undefined;
@@ -51,7 +51,7 @@ export function installLegacyEvaluationDocumentRoutes(app: Pick<Express, 'get'>,
       // Re-read identity, binding and reference after storage I/O. Revocation or
       // replacement during a download must win over the earlier permission.
       const current = resolve(req);
-      const currentFile = current.record && legacyAdministrativeFiles(current.record)[index];
+      const currentFile = current.record && legacyAdministrativeRoutes(current.record).find(entry => entry.aliases.includes(index))?.file;
       if (!current.allowed || current.email !== email || !currentFile ||
           currentFile.kind !== 'AVALIACAO' || currentFile.driveFileId !== file.driveFileId ||
           currentFile.sha256 !== file.sha256 || currentFile.folderId!==file.folderId) return res.status(404).json({ error: 'Documento não disponível.' });
