@@ -46,6 +46,18 @@ export function mergeTablePreferences(base: TablePreference, personal: TablePref
   }
   return merged;
 }
+export function normalizeTableColumnOrder(
+  savedOrder: readonly string[],
+  defaultOrder: readonly string[],
+  fixedColumnKey?: string,
+): string[] {
+  const availableColumns = new Set(defaultOrder);
+  const order = [...new Set([...savedOrder, ...defaultOrder])].filter(key => availableColumns.has(key));
+  if (fixedColumnKey && availableColumns.has(fixedColumnKey)) {
+    return [fixedColumnKey, ...order.filter(key => key !== fixedColumnKey)];
+  }
+  return order;
+}
 export function readStoredTablePreference(key: string, email = '', personal = true): TablePreference {
   if (typeof localStorage === 'undefined') return {};
   const read = (storageKey: string) => { try { const raw = localStorage.getItem(storageKey); return raw ? sanitizeTablePreference(JSON.parse(raw)) : {}; } catch { return {}; } };

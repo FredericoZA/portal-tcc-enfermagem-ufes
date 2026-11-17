@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sanitizeTablePreference,readStoredTablePreference,tablePreferenceKey,validTableKey,mergeTablePreferences} from '../src/utils/tablePreferences';
+import {sanitizeTablePreference,readStoredTablePreference,tablePreferenceKey,validTableKey,mergeTablePreferences,normalizeTableColumnOrder} from '../src/utils/tablePreferences';
+import {REPOSITORY_DOCUMENT_COLUMNS} from '../src/utils/repositoryDocuments';
 test('table preference accepts bounded presentation and discards data, identity and executable styles',()=>{
  const value=sanitizeTablePreference(JSON.parse('{"columnOrder":["titulo","titulo","__proto__"],"visibleColumns":{"titulo":true,"constructor":false},"customLabels":{"titulo":"Trabalho"},"resizedWidths":{"titulo":280,"email":999999},"pageSize":50,"wrapMode":"nowrap","updatedBy":"private@example.invalid","textFormat":{"background":"url(https://bad.invalid)"},"masterEmail":"attacker@example.invalid"}'));
  assert.deepEqual(value,{columnOrder:['titulo'],visibleColumns:{titulo:true},customLabels:{titulo:'Trabalho'},resizedWidths:{titulo:280},pageSize:50,recordsLimit:'all',wrapMode:'nowrap'});
@@ -31,4 +32,25 @@ test('restore waits for pending writes and a failed save cannot block later writ
 
 test('partial personal columns inherit the rest of the Master layout',()=>{
  assert.deepEqual(mergeTablePreferences({visibleColumns:{titulo:false,email:false}},{visibleColumns:{email:true}}).visibleColumns,{titulo:false,email:true});
+});
+
+test('older published and personal layouts gain repository document columns',()=>{
+  const documentKeys = REPOSITORY_DOCUMENT_COLUMNS.map(column => column.key);
+  const currentOrder = ['protocolo', 'titulo', 'aluno1', ...documentKeys];
+  const published = sanitizeTablePreference({
+    columnOrder: ['aluno1', 'protocolo', 'titulo'],
+    visibleColumns: { titulo: false },
+  });
+  const personal = mergeTablePreferences(published, sanitizeTablePreference({
+    columnOrder: ['titulo', 'protocolo', 'aluno1'],
+    visibleColumns: { aluno1: false },
+  }));
+
+  assert.deepEqual(normalizeTableColumnOrder(published.columnOrder!, currentOrder, 'protocolo'),
+    ['protocolo', 'aluno1', 'titulo', ...documentKeys]);
+  assert.deepEqual(normalizeTableColumnOrder(personal.columnOrder!, currentOrder, 'protocolo'),
+    currentOrder);
+  assert.deepEqual(personal.visibleColumns, { titulo: false, aluno1: false });
+  assert.deepEqual(normalizeTableColumnOrder(['titulo'], ['titulo', 'data'], 'protocolo'),
+    ['titulo', 'data']);
 });
