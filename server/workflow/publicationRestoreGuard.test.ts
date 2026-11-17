@@ -25,6 +25,15 @@ test('current withdrawn publications retain status and source references for Dri
  assert.equal(restoreChangesPublicFiles(before,{...before,processes:[{...p,acervo:{...p.acervo,publicFullWorkFileId:undefined}}]}),true);
 });
 
+test('completed historical withdrawal remains recorded even when no file could become public immediately',()=>{
+ const record=privateHistoricalFixture();
+ record.provenance.publicationWithdrawal={withdrawnAt:'2026-11-16T12:00:00Z',reason:'Solicitação do autor',drivePending:false};
+ const before={processes:[],jobs:[],legacy:[record]},changed=structuredClone(record);
+ delete changed.provenance.publicationWithdrawal;
+ assert.equal(restoreChangesPublicFiles(before,{...before,legacy:[changed]}),true);
+ assert.equal(restoreChangesPublicFiles(before,structuredClone(before)),false);
+});
+
 function administrativeFixture(kind='AVALIACAO',driveFileId='private_evaluation_original_123'){
  return {kind,driveFileId,folderId:'historical_private_folder',fileName:'original.pdf',sha256:'b'.repeat(64),visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'};
 }

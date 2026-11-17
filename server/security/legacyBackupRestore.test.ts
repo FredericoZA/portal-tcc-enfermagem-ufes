@@ -13,7 +13,17 @@ import type {LegacyAcademicRecord} from '../../src/types/legacyArchive';
 
 test('HTTP backup round trip preserves historical consent, Drive references and completed operations', {timeout:45000}, async()=>{
   const directory=await mkdtemp(path.join(tmpdir(),'portal-backup-roundtrip-'));
-  await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings:structuredClone(INITIAL_SETTINGS),processes:[],legacyAcademicRecords:[],memberships:[]}));
+  const record=(index:number,consent:string)=>canonicalLegacyRecord({
+    id:`legado-${String(index).padStart(4,'0')}`,protocolo:`${String(index).padStart(3,'0')} - Legado`,sourceFingerprint:String(index).repeat(64),
+    titulo:'Trabalho histórico demonstrativo',autores:['Autora demonstrativa'],orientador:'Docente demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],
+    resumo:'Resumo demonstrativo',palavrasChave:['Enfermagem'],dataDefesa:'2023-06-01',horaDefesa:'14:00:00',localDefesa:'Auditório',
+    isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'UNSPECIFIED',
+    attachments:[{driveFileId:`private_academic_file_${index}`,fileName:'trabalho.pdf',kind:'TRABALHO_COMPLETO',evidence:'Referência demonstrativa conferida',sha256:'a'.repeat(64)}],
+    provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64)}]},originalConsent:[consent],administrativeDocuments:[{driveFileId:`private_admin_file_${index}`,folderId:'private_folder_demo',fileName:'ata.pdf',kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT',sha256:'b'.repeat(64)}]}
+  } as LegacyAcademicRecord);
+  const records=[record(1,'Não'),record(2,'Sim')];
+  // Only the already public original is present before the backup is restored.
+  await writeFile(path.join(directory,'portal-state.json'),JSON.stringify({settings:structuredClone(INITIAL_SETTINGS),processes:[],legacyAcademicRecords:[records[1]],memberships:[]}));
   const reservation=createServer();
   await new Promise<void>(resolve=>reservation.listen(0,'127.0.0.1',resolve));
   const port=(reservation.address() as import('node:net').AddressInfo).port;
@@ -44,15 +54,6 @@ test('HTTP backup round trip preserves historical consent, Drive references and 
     assert.equal((await request('/api/admin/backup',undefined,'student@example.invalid')).status,403);
     const processFixture=structuredClone(DEMO_PROCESSES[0]);
     processFixture.id='backup-demo-process';processFixture.protocolo='TCC-2099-0001';
-    const record=(index:number,consent:string)=>canonicalLegacyRecord({
-      id:`legado-${String(index).padStart(4,'0')}`,protocolo:`${String(index).padStart(3,'0')} - Legado`,sourceFingerprint:String(index).repeat(64),
-      titulo:'Trabalho histórico demonstrativo',autores:['Autora demonstrativa'],orientador:'Docente demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],
-      resumo:'Resumo demonstrativo',palavrasChave:['Enfermagem'],dataDefesa:'2023-06-01',horaDefesa:'14:00:00',localDefesa:'Auditório',
-      isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'UNSPECIFIED',
-      attachments:[{driveFileId:`private_academic_file_${index}`,fileName:'trabalho.pdf',kind:'TRABALHO_COMPLETO',evidence:'Referência demonstrativa conferida',sha256:'a'.repeat(64)}],
-      provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64)}]},originalConsent:[consent],administrativeDocuments:[{driveFileId:`private_admin_file_${index}`,folderId:'private_folder_demo',fileName:'ata.pdf',kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT',sha256:'b'.repeat(64)}]}
-    } as LegacyAcademicRecord);
-    const records=[record(1,'Não'),record(2,'Sim')];
     const completedAt='2026-10-15T18:00:00.000Z';
     const payload={schemaVersion:5,settings:structuredClone(INITIAL_SETTINGS),processes:[processFixture],legacyAcademicRecords:records,
       operationalMetadata:{signatureJobs:[{id:'signed-demo',processId:processFixture.id,status:'SIGNED',providerEnvelopeId:'demo-envelope'}],
@@ -60,9 +61,10 @@ test('HTTP backup round trip preserves historical consent, Drive references and 
         astenWebhookEvents:[{id:'event-demo',status:'SIGNED',processedAt:completedAt,safePayload:{}},{id:'old-event-demo',status:'SENT',safePayload:{processedAt:completedAt}}]}};
     assert.equal((await request('/api/admin/restore-full-backup',payload,'')).status,401);
     assert.equal((await request('/api/admin/restore-full-backup',payload,'student@example.invalid')).status,403);
+    assert.equal((await request('/api/admin/restore-full-backup',{...payload,legacyAcademicRecords:[...records,record(3,'Sim')]})).status,409,'backup cannot introduce another public academic original');
     const preview=await request('/api/admin/restore-full-backup',payload);
     assert.equal(preview.status,200);assert.equal(preview.body.requiresConfirmation,true);assert.equal(preview.body.summary.legacyCount,2);
-    assert.equal((await request('/api/public/repository',undefined,'')).body.length,0,'preview does not mutate the archive');
+    assert.deepEqual((await request('/api/public/repository',undefined,'')).body.map((entry:{protocolo:string})=>entry.protocolo),[records[1].protocolo],'preview and rejected expansion preserve the seeded archive');
     const restored=await request('/api/admin/restore-full-backup',{...payload,confirmHash:preview.body.confirmHash});
     assert.equal(restored.status,200);assert.equal(restored.body.legacyCount,2);
     const exported=await request('/api/admin/backup');

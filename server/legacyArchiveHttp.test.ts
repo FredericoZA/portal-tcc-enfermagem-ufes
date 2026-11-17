@@ -31,7 +31,6 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     current(4,{status:'EM_RASCUNHO',etapaAtual:'CADASTRO',defesa:confirmedDefense}),
   ];
   const memberships=[{id:'repository-test-membership',processId:processes[0].id,email:participant,roles:['STUDENT'],active:true,createdAt:processes[0].createdAt,updatedAt:processes[0].updatedAt}];
-  await writeFile(path.join(dir,'portal-state.json'),JSON.stringify({settings:{...INITIAL_SETTINGS,masterEmail:master,ownerEmail:master},processes,memberships,signatureJobs:[],emailDeliveries:[],workflowRuns:[]}));
   const pdf=Buffer.concat([Buffer.from('%PDF-1.4\nlegacy test\n'),Buffer.alloc(5*1024*1024,0x20),Buffer.from('\n%%EOF')]);
   await mkdir(path.join(dir,'legacy-import','drive-pdfs'),{recursive:true});
   await writeFile(path.join(dir,'legacy-import','drive-pdfs','tcc.pdf'),pdf);
@@ -41,21 +40,25 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
   const publicAta=Buffer.from(await issued.save());await writeFile(path.join(dir,'legacy-import','drive-pdfs','ata.pdf'),publicAta);
   const issuedDocument={...privateDocument,driveFileId:'issued_admin_123456',fileName:'ata.pdf',sourceFileName:'ata.pdf',kind:'ATA',sha256:createHash('sha256').update(publicAta).digest('hex')};
   const importedRecord={...record,attachments:[{...record.attachments[0],sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{...record.provenance,administrativeDocuments:[privateDocument,issuedDocument]}};
+  // Publication is seeded as an existing source boundary; importing a new
+  // public record must not be used to arrange the download/withdrawal tests.
+  const authorized=canonicalLegacyRecord({...record,id:'legado-0002',sourceFingerprint:'c'.repeat(64),attachments:[{...record.attachments[0],driveFileId:'public_file_123456',kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{originalConsent:['Sim'],publicationImportBaseline:{publicFiles:[{kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}]}}} as any);
+  await writeFile(path.join(dir,'portal-state.json'),JSON.stringify({settings:{...INITIAL_SETTINGS,masterEmail:master,ownerEmail:master},processes,memberships,legacyAcademicRecords:[authorized],signatureJobs:[],emailDeliveries:[],workflowRuns:[]}));
   const port=43000+Math.floor(Math.random()*1000),base=`http://127.0.0.1:${port}`;
   const child=spawn(process.execPath,['--import','tsx','server.ts'],{cwd:process.cwd(),env:{...process.env,NODE_ENV:'development',PORT:String(port),PORTAL_DATA_DIR:dir,PORTAL_ALLOW_INSECURE_DEMO_AUTH:'true',PORTAL_PERSISTENCE_PROVIDER:'local_file',PORTAL_ALLOW_LOCAL_SECRET_STORE:'true',PORTAL_ALLOW_LOCAL_OTP_STORE:'true',PORTAL_SESSION_SECRET:'test-legacy-session-secret-123456789',PORTAL_OTP_PEPPER:'test-legacy-otp-pepper-123456789',SUPABASE_URL:'',SUPABASE_SERVICE_ROLE_KEY:'',SUPABASE_SECRET_KEY:'',VERCEL:'',PORTAL_TEST_DOCUMENT_RENDERER:'true',PORTAL_LOCAL_REVIEW_DATA:'true',ASTEN_INTEGRATION_ENABLED:'false'},stdio:'ignore'});
   const request=async(url:string,email='',body?:unknown)=>{const res=await fetch(base+url,{method:body===undefined?'GET':'POST',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});return{status:res.status,body:await res.json()};};
   try{
     const until=Date.now()+25000;
     while(true){try{if((await fetch(base+'/api/health')).ok)break;}catch{}if(Date.now()>until||child.exitCode!==null)throw new Error('Servidor não iniciou');await new Promise(r=>setTimeout(r,200));}
-    const route='/api/admin/legacy-academic-records/import',payload={expectedRevision:legacyCatalogRevision([]),records:[importedRecord]};
+    const route='/api/admin/legacy-academic-records/import',payload={expectedRevision:legacyCatalogRevision([authorized]),records:[importedRecord]};
     assert.equal((await request(route,'',payload)).status,401);
     assert.equal((await request(route,'student@example.invalid',payload)).status,403);
     assert.equal((await request('/api/admin/legacy-academic-records')).status,401);
     assert.equal((await request(route,master,{...payload,expectedRevision:'stale'})).status,409);
     assert.equal((await request(route,master,payload)).body.imported,1);
     assert.equal((await request('/api/legacy-academic-records/legado-0001/files/0/download?delivery=drive-links')).status,404);
-    const publicRows=await request('/api/legacy-academic-records');assert.equal(publicRows.body.length,1);assert.ok(!JSON.stringify(publicRows.body).includes('private_file_123456'));assert.equal(publicRows.body[0].resumo,record.resumo);assert.deepEqual(publicRows.body[0].publicFiles,[]);
-    const privateRows=await request('/api/admin/legacy-academic-records',master);assert.equal(privateRows.body.records[0].attachments[0].driveFileId,'private_file_123456');
+    const publicRows=await request('/api/legacy-academic-records');assert.equal(publicRows.body.length,2);assert.ok(!JSON.stringify(publicRows.body).includes('private_file_123456'));const privatePublicRow=publicRows.body.find((row:any)=>row.id===record.id);assert.equal(privatePublicRow.resumo,record.resumo);assert.deepEqual(privatePublicRow.publicFiles,[]);
+    const privateRows=await request('/api/admin/legacy-academic-records',master);assert.equal(privateRows.body.records.find((row:any)=>row.id===record.id).attachments[0].driveFileId,'private_file_123456');
     assert.equal((await request(route,master,{...payload,expectedRevision:privateRows.body.revision})).body.imported,0);
     const repository=await request('/api/public/repository');
     const legacyRow=repository.body.find((row:ProcessData)=>row.protocolo==='001 - Legado');
@@ -68,7 +71,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
       const privateValues=/participant-repository|private-(?:advisor|panel|staff|enrollment|active-drive)|private_file_123456/;
       assert.equal(repository.status,200);
       assert.deepEqual(repository.body.map((row:ProcessData)=>[row.protocolo,row.etapaAtual]),[
-        ['TCC - 00001','CONFIRMACAO_LOCAL'],['TCC - 00002','DEFESA'],['TCC - 00003','CONCLUIDO'],['001 - Legado','CONCLUIDO'],
+        ['TCC - 00001','CONFIRMACAO_LOCAL'],['TCC - 00002','DEFESA'],['TCC - 00003','CONCLUIDO'],['002 - Legado','CONCLUIDO'],['001 - Legado','CONCLUIDO'],
       ]);
       assert.doesNotMatch(JSON.stringify(repository.body),privateValues);
       assert.doesNotMatch(JSON.stringify(repository.body),/repository-private-id/);
@@ -89,7 +92,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
       assert.doesNotMatch(ics,/TCC - 00004/,'O calendário público não exporta rascunhos');
       const indicators=await request('/api/public/indicators');
       assert.equal(indicators.status,200);
-      assert.equal(indicators.body.totals.registered,4);
+      assert.equal(indicators.body.totals.registered,5);
       assert.doesNotMatch(JSON.stringify(indicators.body),privateValues);
     });
     const detail=await request('/api/public/processes/legado-0001');
@@ -139,8 +142,10 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
 
     const deniedDownload=await request('/api/legacy-academic-records/legado-0001/files/0/download');
     assert.equal(deniedDownload.status,404);
-    const authorized=canonicalLegacyRecord({...record,id:'legado-0002',sourceFingerprint:'c'.repeat(64),attachments:[{...record.attachments[0],kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{originalConsent:['Sim'],publicationImportBaseline:{publicFiles:[{kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}]}}} as any);
-    assert.equal((await request(route,master,{expectedRevision:privateRows.body.revision,records:[authorized]})).body.imported,1);
+    const newPublic=canonicalLegacyRecord({...authorized,id:'legado-0003',sourceFingerprint:'d'.repeat(64)});
+    const rejectedImport=await request(route,master,{expectedRevision:privateRows.body.revision,records:[newPublic]});
+    assert.equal(rejectedImport.status,400,'new public academic records cannot expand the historical ceiling');
+    assert.equal((await request('/api/admin/legacy-academic-records',master)).body.revision,privateRows.body.revision,'rejected import does not mutate the archive');
     const download=await fetch(base+'/api/legacy-academic-records/legado-0002/files/0/download');
     assert.equal(download.status,200);assert.equal(download.headers.get('content-type'),'application/pdf');
     assert.equal(download.headers.get('transfer-encoding'),'chunked');

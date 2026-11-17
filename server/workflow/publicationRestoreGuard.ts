@@ -88,10 +88,11 @@ export function restoreChangesPublicFiles(before:{processes:ProcessData[];legacy
  }
  const legacyKeys=(r:LegacyAcademicRecord|undefined)=>r?r.attachments.filter(f=>legacyFileIsPublic(r,f)).map(f=>`${f.kind}:${f.driveFileId}:${f.sha256}`).sort():[];
  for(const r of before.legacy){
-  const restored=after.legacy.find(n=>n.id===r.id),withdrawal=r.provenance.publicationWithdrawal as {drivePending?:boolean}|undefined;
+  const restored=after.legacy.find(n=>n.id===r.id),withdrawal=r.provenance.publicationWithdrawal as {withdrawnAt?:string;drivePending?:boolean}|undefined;
   if(!isDeepStrictEqual(legacySourceBoundary(r),legacySourceBoundary(restored)))return true;
   if(!isDeepStrictEqual(publicLegacyAdministrativeKeys(r),publicLegacyAdministrativeKeys(restored)))return true;
   if(!isDeepStrictEqual(legacyEvaluationAccessBoundary(r),legacyEvaluationAccessBoundary(restored)))return true;
+  if(withdrawal?.withdrawnAt&&(!restored||!isDeepStrictEqual(withdrawal,restored.provenance.publicationWithdrawal)))return true;
   if(r.provenance.publicationOverride&&(!restored||!isDeepStrictEqual(r.provenance.publicationProcess,restored.provenance.publicationProcess)||!isDeepStrictEqual(r.provenance.publicationOverride,restored.provenance.publicationOverride)))return true;
   if(withdrawal?.drivePending){
    const references=(value:LegacyAcademicRecord)=>value.attachments.map(f=>`${f.kind}:${f.driveFileId}:${f.sha256}`).sort();
