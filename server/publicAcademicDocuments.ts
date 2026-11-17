@@ -74,7 +74,13 @@ export async function assertPublicAcademicPdf(bytes:Buffer,processData:ProcessDa
   let text='',extracted='';for(let i=1;i<=pdf.numPages;i++){
    const page=await pdf.getPage(i);
    const content=(await page.getTextContent()).items.map((item:any)=>item.str||'').join(' ');
-   extracted+=content;text+=content+' '+JSON.stringify(await page.getAnnotations());
+   // PDF.js adds `password: false` to signature widgets. This typed flag is
+   // not a credential; retain every string, nested value and other annotation.
+   const annotations=(await page.getAnnotations()).map((annotation:any)=>{
+    if(annotation.fieldType!=='Sig'||annotation.password!==false)return annotation;
+    const {password,...evidence}=annotation;return evidence;
+   });
+   extracted+=content;text+=content+' '+JSON.stringify(annotations);
    // The text layer cannot attest that a scanned image contains no private data.
    const operations=await page.getOperatorList();
    if(!options.issuedAdministrativeDocument&&operations.fnArray.some((operator:number)=>imageOperators.has(operator)))throw new Error('Documento contém imagem sem conferência pública.');

@@ -11,6 +11,15 @@ async function pdf(text:string,subject='',link=''){
  if(link)page.node.set(PDFName.of('Annots'),document.context.obj([document.context.obj({Type:'Annot',Subtype:'Link',Rect:[0,0,50,20],A:{S:'URI',URI:PDFString.of(link)}})]));
  return Buffer.from(await document.save());
 }
+async function signatureWidgetPdf(text='Ata oficial da defesa. Autores e banca.',subject='',annotationText=''){
+ const document=await PDFDocument.load(await pdf(text,subject));const page=document.getPage(0);
+ const widget=document.context.obj({Type:'Annot',Subtype:'Widget',FT:'Sig',T:PDFString.of('signature_fixture'),Rect:[30,30,180,65],P:page.ref,F:4,
+  ...(annotationText?{Contents:PDFString.of(annotationText)}:{})});
+ const reference=document.context.register(widget);
+ page.node.set(PDFName.of('Annots'),document.context.obj([reference]));
+ document.catalog.set(PDFName.of('AcroForm'),document.context.obj({Fields:[reference]}));
+ return Buffer.from(await document.save());
+}
 test('documento público sem dados restritos preserva os bytes originais',async()=>{
  const bytes=await pdf('Ata da defesa. Banca examinadora e autores. Reserva confirmada.');const before=Buffer.from(bytes);await assertPublicAcademicPdf(bytes,structuredClone(DEMO_PROCESSES[0]));assert.deepEqual(bytes,before);
 });
@@ -80,4 +89,26 @@ test('issued administrative public originals retain their content but still refu
  const bytes=await pdf('Ata oficial da defesa. Assinante: pessoa@example.invalid. CPF: 000.000.000-00.');const before=Buffer.from(bytes);
  await assertPublicAcademicPdf(bytes,process,{issuedAdministrativeDocument:true});assert.deepEqual(bytes,before);
  await assert.rejects(assertPublicAcademicPdf(await pdf('Ata oficial da defesa. senha=segredo_fixture'),process,{issuedAdministrativeDocument:true}),/credencial/);
+});
+test('signature-widget password flag is not a credential and preserves the original PDF',async()=>{
+ const bytes=await signatureWidgetPdf(),before=Buffer.from(bytes);
+ const {getDocument}=await import('pdfjs-dist/legacy/build/pdf.mjs');
+ const task=getDocument({data:new Uint8Array(bytes),verbosity:0});
+ try{
+  const document=await task.promise,annotations=await(await document.getPage(1)).getAnnotations();
+  assert.ok(annotations.some((annotation:any)=>annotation.fieldType==='Sig'&&annotation.password===false),'fixture must reproduce the PDF.js structural flag');
+ }finally{await task.destroy();}
+ await assertPublicAcademicPdf(bytes,structuredClone(DEMO_PROCESSES[0]),{issuedAdministrativeDocument:true});
+ assert.deepEqual(bytes,before);
+});
+test('signature widgets do not hide credential text, strings, metadata or personal URLs',async()=>{
+ const process=structuredClone(DEMO_PROCESSES[0]),options={issuedAdministrativeDocument:true};
+ for(const bytes of [
+  await signatureWidgetPdf('Ata oficial da defesa. senha=false'),
+  await signatureWidgetPdf('Ata oficial da defesa.','{"password":"fixture_sensitive"}'),
+  await signatureWidgetPdf('Ata oficial da defesa.','{"password":false}'),
+  await signatureWidgetPdf('Ata oficial da defesa.','','{"password":"fixture_sensitive"}'),
+  await signatureWidgetPdf('Ata oficial da defesa.','','https://provider.example.invalid/signature/personal-fixture-123'),
+  await signatureWidgetPdf('Ata oficial da defesa.','','https://provider.example.invalid/link?access_token=fixture_sensitive'),
+ ])await assert.rejects(assertPublicAcademicPdf(bytes,process,options),/credencial/);
 });
