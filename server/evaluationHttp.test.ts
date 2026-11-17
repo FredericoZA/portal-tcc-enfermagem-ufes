@@ -77,12 +77,13 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     const scriptPolicy = frontend.headers.get('content-security-policy')?.split('; ').find(rule => rule.startsWith('script-src '));
     const nonce = scriptPolicy?.match(/^script-src 'self' 'nonce-([^']+)'$/)?.[1];
     assert.ok(nonce, 'A política de scripts do cliente de desenvolvimento exige mesma origem ou nonce.');
-    const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
-    const entry = scripts.map(script => script[1].match(/\bsrc="(\/assets\/index(?:-[a-f0-9]+)?\.js)"/i)?.[1]).find(Boolean);
+    // A fixture contém só tags de script geradas pelo compilador, com atributos simples.
+    const scripts = html.split('<').map(fragment => fragment.split('>', 1)[0])
+      .filter(opening => opening.split(/[\s/]/, 1)[0].toLowerCase() === 'script');
+    const entry = scripts.map(script => script.match(/\ssrc=(["'])(\/assets\/index(?:-[a-f0-9]+)?\.js)\1/i)?.[2]).find(Boolean);
     assert.ok(entry, 'A página deve carregar o cliente de desenvolvimento pela própria origem.');
-    for (const [, attributes, body] of scripts) {
-      if (!attributes.includes('src=') && !body.trim()) continue;
-      assert.ok(attributes.includes(`nonce="${nonce}"`));
+    for (const script of scripts) {
+      assert.equal(script.match(/\snonce=(["'])([^"']+)\1/i)?.[2], nonce);
     }
     const bundledClient = await fetch(base + entry);
     assert.equal(bundledClient.status, 200);
