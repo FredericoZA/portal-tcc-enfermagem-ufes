@@ -388,11 +388,34 @@ try {
           }
         }
         if (tab === 'biblioteca') {
-          const repoHeaderLine = await page.evaluate(() => {
-            const header = document.querySelector('#biblioteca-tccs-section > div > div:first-child > div:last-child');
-            return header ? parseFloat(getComputedStyle(header).borderTopWidth || '0') : 0;
+          const repository = page.locator('#biblioteca-tccs-section');
+          const jump = repository.getByRole('button', { name: 'Documentos', exact: true });
+          await jump.waitFor({ state: 'visible' });
+          await jump.click();
+          const repositoryLayout = await repository.evaluate(section => {
+            const toolbar = section.querySelector('.portal-sheet-toolbar');
+            const scrollHost = section.querySelector('[data-portal-scroll-host="true"]');
+            const headers = scrollHost.querySelectorAll('th[data-portal-managed-column="true"]');
+            const first = headers[0];
+            const pinned = first.parentElement.firstElementChild;
+            const filter = first.querySelector('.portal-core-column-menu');
+            const start = first.getBoundingClientRect().left;
+            const inView = start >= pinned.getBoundingClientRect().right - 2
+              && filter?.getBoundingClientRect().right <= scrollHost.getBoundingClientRect().left + scrollHost.clientWidth;
+            const filterFocused = filter === document.activeElement;
+            scrollHost.scrollLeft = 0;
+            document.activeElement?.blur();
+            return {
+              line: toolbar ? parseFloat(getComputedStyle(toolbar).borderTopWidth || '0') : 0,
+              documentColumns: headers.length,
+              inView,
+              filterFocused,
+            };
           });
-          if (repoHeaderLine > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repoHeaderLine}px).`);
+          if (repositoryLayout.line > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repositoryLayout.line}px).`);
+          if (repositoryLayout.documentColumns !== 8 || !repositoryLayout.inView || !repositoryLayout.filterFocused) {
+            report.errors.push(`master-repositorio-${width}: atalho não levou às colunas de documentos (${JSON.stringify(repositoryLayout)}).`);
+          }
         }
         if (tab === 'tutorial') {
           const screenTitle = page.locator('#portal-tutorial-page .portal-guide-screen-title');

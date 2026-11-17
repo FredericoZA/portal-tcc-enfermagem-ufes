@@ -347,9 +347,16 @@
 }
 
 /* Controle por coluna: exatamente 15 × 15, sempre no canto superior direito. */
-.portal-core-header-cell {
+.portal-core-header-cell,
+[data-portal-sheet="repository"] th.portal-core-header-cell[data-portal-managed-column="true"] {
   position: relative;
   padding-right: calc(var(--portal-cell-padding-x) + var(--portal-sheet-column-control-size) + 4px);
+}
+
+@media (max-width: 400px) {
+  [data-portal-sheet="repository"] th[data-portal-managed-column="true"] > div {
+    max-width: 95px;
+  }
 }
 
 .portal-core-column-menu {

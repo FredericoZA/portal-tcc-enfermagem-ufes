@@ -243,6 +243,17 @@ button[aria-label^="Configurar exibição"],
   box-shadow: none;
 }
 
+.portal-toolbar-icon-button.portal-repository-documents-jump {
+  width: auto;
+  padding-inline: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+[data-portal-sheet="repository"]:not(:has(th[data-portal-managed-column="true"])) .portal-repository-documents-jump {
+  display: none;
+}
+
 /* Tons semânticos aplicados por variável, sem duplicar HEX nos componentes. */
 .portal-semantic-tone {
   background: var(--portal-tone-bg);

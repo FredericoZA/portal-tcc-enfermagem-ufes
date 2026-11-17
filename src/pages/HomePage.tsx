@@ -744,6 +744,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [selectedLibSelection, setSelectedLibDoc] = useState<ProcessData | null>(null);
   const selectedLibDoc = selectedLibSelection ? repositoryProcesses.find(process => process.id === selectedLibSelection.id || process.protocolo === selectedLibSelection.protocolo) || null : null;
   const repositorySection = useRef<HTMLElement>(null);
+  const showRepositoryDocuments = () => {
+    const scrollHost = repositorySection.current?.querySelector<HTMLElement>('[data-portal-scroll-host="true"]');
+    const documentHeader = scrollHost?.querySelector<HTMLTableCellElement>('th[data-portal-managed-column="true"]');
+    if (!scrollHost || !documentHeader) return;
+
+    const pinnedHeader = documentHeader.parentElement?.firstElementChild;
+    const left = pinnedHeader === documentHeader ? 0 :
+      scrollHost.scrollLeft + documentHeader.getBoundingClientRect().left
+      - scrollHost.getBoundingClientRect().left - scrollHost.clientLeft
+      - (pinnedHeader?.getBoundingClientRect().width ?? 0);
+    scrollHost.scrollLeft = Math.max(0, left);
+    documentHeader.querySelector<HTMLButtonElement>('.portal-core-column-menu')?.focus({ preventScroll: true });
+  };
   const [documentFilters,setDocumentFilters] = useState<Partial<Record<RepositoryDocumentKey,string[]>>>({});
   const [documentSort,setDocumentSort] = useState<{column:RepositoryDocumentKey; direction:'asc'|'desc'}>();
   useEffect(() => {
@@ -2416,6 +2429,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           placeholder="Buscar no acervo..."
                           textFormat={acervoTextFormat}
                         />
+                        <button
+                          type="button"
+                          className="portal-toolbar-icon-button portal-repository-documents-jump"
+                          onClick={showRepositoryDocuments}
+                        >
+                          Documentos
+                        </button>
                         <HeaderSettingsPopover
                           recordsLimit={libRecordsLimit}
                           setRecordsLimit={setLibRecordsLimit}
