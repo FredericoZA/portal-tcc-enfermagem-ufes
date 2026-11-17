@@ -45,7 +45,7 @@ import {historicalPublicationProcess,storeHistoricalPublicationProcess} from './
 import {installPublicationChoiceRoutes} from './server/publicationChoiceRoutes';
 import {destroyPreviousPublicationTerms} from './server/publicationTermRemoval';
 import {assertRenewedPublicationSigners,beginPublicationChoice,finishPublicationRevocation} from './server/workflow/publicationChoice';
-import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyPublicationScopeAllowed, legacyAdministrativeFiles, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
+import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyPublicationScopeAllowed, legacyAdministrativeFiles, legacyAdministrativeRoutes, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
 import {EVALUATION_OUTCOMES,evaluationQuestions,isConceptRegistrationReleased} from './src/utils/evaluationForm';
 import {renderInstitutionName} from './src/utils/institutionName';
@@ -4186,8 +4186,9 @@ export async function createPortalApp() {
   app.get('/api/public/legacy-academic-records/:id/documents/:index/download',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);
     const index=/^(0|[1-9]\d?)$/.test(req.params.index)?Number(req.params.index):-1;
-    if(!record||index<0||!publicLegacyAdministrativeDocuments(record).some(doc=>doc.id===`legacy-document-${index}`))return res.status(404).json({error:'Documento histórico não disponível.'});
-    const file=legacyAdministrativeFiles(record)[index];
+    const route = record && legacyAdministrativeRoutes(record).find(entry => entry.aliases.includes(index));
+    if(!record||!route||!publicLegacyAdministrativeDocuments(record).some(doc=>doc.id===`legacy-document-${route.index}`))return res.status(404).json({error:'Documento histórico não disponível.'});
+    const file=route.file;
     res.setHeader('Cache-Control','private, no-store');
     try{
       if(req.query.delivery==='drive-links')return res.json({links:canonicalDriveOriginalLinks(file.driveFileId,file.sha256)});
@@ -4258,7 +4259,7 @@ export async function createPortalApp() {
     res.setHeader('Cache-Control','private, no-store');
     const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);
     if(!record)return res.status(404).json({error:'Trabalho histórico não encontrado.'});
-    try{return res.json(legacyAdministrativeFiles(record).map((file,index)=>({index,kind:file.kind,fileName:file.fileName,downloadUrl:`/api/admin/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`})));
+    try{return res.json(legacyAdministrativeRoutes(record).map(({file,index})=>({index,kind:file.kind,fileName:file.fileName,downloadUrl:`/api/admin/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`})));
     }catch{return res.status(409).json({error:'A documentação histórica precisa de conferência.'});}
   });
   app.get('/api/admin/legacy-academic-records/:id/documents/:index/download',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
@@ -4267,7 +4268,7 @@ export async function createPortalApp() {
     const index=/^(0|[1-9]\d?)$/.test(req.params.index)?Number(req.params.index):-1;
     if(!record||index<0)return res.status(404).json({error:'Documento histórico não encontrado.'});
     try{
-      const file=legacyAdministrativeFiles(record)[index];
+      const file=legacyAdministrativeRoutes(record).find(entry => entry.aliases.includes(index))?.file;
       if(!file)return res.status(404).json({error:'Documento histórico não encontrado.'});
       if(req.query.delivery==='drive-links')return res.json({links:canonicalDriveOriginalLinks(file.driveFileId,file.sha256)});
       const pdf=await readLegacyAcademicPdf(file);

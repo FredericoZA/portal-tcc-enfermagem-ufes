@@ -24,12 +24,29 @@ export function legacyAdministrativeFiles(record: Pick<LegacyAcademicRecord,'pro
     return {driveFileId,folderId,sha256,fileName,...(sourceFileName?{sourceFileName}:{}),kind:file.kind,visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'};
   });
 }
+/** Keep already issued numeric links bound to their original after archive consolidation. */
+export function legacyAdministrativeRoutes(record: Pick<LegacyAcademicRecord, 'provenance'>) {
+  const files = legacyAdministrativeFiles(record);
+  const slots = record.provenance.administrativeRouteFileIds;
+  if (slots === undefined) return files.map((file, index) => ({ file, index, aliases: [index] }));
+  if (!Array.isArray(slots) || slots.length > 100 || slots.some(id => typeof id !== 'string' || !/^[\w-]{10,150}$/.test(id))) {
+    throw new Error('Índices históricos inválidos.');
+  }
+  let next = slots.length;
+  return files.map(file => {
+    const aliases = slots.flatMap((id, i) => id === file.driveFileId ? [i] : []);
+    if (!aliases.length) aliases.push(next++);
+    if (aliases[0] >= 100) throw new Error('Limite de documentos históricos excedido.');
+    return { file, index: aliases[0], aliases };
+  });
+}
+
 /** Public catalog carries only issued document kinds and Portal routes, never Drive references. */
 export function publicLegacyAdministrativeDocuments(record:LegacyAcademicRecord){
   const labels:Record<string,string>={ATA:'Ata',TERMO:'Termo de autorização',DECLARACAO:'Declaração'};
   const baseline=record.provenance.publicationImportBaseline as {privateFileIds?:string[]}|undefined;
   const academicIds=new Set([...record.attachments.map(file=>file.driveFileId),...legacyAdministrativeFiles(record).filter(f=>f.kind==='AVALIACAO').map(f=>f.driveFileId),...(baseline?.privateFileIds||[])]);
-  return legacyAdministrativeFiles(record).flatMap((file,index)=>labels[file.kind]&&!academicIds.has(file.driveFileId)&&!(file.kind==='TERMO'&&record.provenance.publicationOverride&&!((record.provenance.publicationOverride as any).currentTermFileId===file.driveFileId&&(record.provenance.publicationOverride as any).status==='COMPLETED'))?[{id:`legacy-document-${index}`,type:file.kind,title:labels[file.kind],status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`}]:[]);
+  return legacyAdministrativeRoutes(record).flatMap(({file,index})=>labels[file.kind]&&!academicIds.has(file.driveFileId)&&!(file.kind==='TERMO'&&record.provenance.publicationOverride&&!((record.provenance.publicationOverride as any).currentTermFileId===file.driveFileId&&(record.provenance.publicationOverride as any).status==='COMPLETED'))?[{id:`legacy-document-${index}`,type:file.kind,title:labels[file.kind],status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`}]:[]);
 }
 export function legacyProtocol(id: string): string {
   if (!/^legado-\d{4}$/.test(id) || Number(id.slice(7)) < 1 || Number(id.slice(7)) > 999) throw new Error('Identificador legado inválido.');

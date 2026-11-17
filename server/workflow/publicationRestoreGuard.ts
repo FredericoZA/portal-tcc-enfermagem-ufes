@@ -1,5 +1,5 @@
 import {isDeepStrictEqual} from 'node:util';
-import type {ProcessData,SignatureJob} from '../../src/types';import type {LegacyAcademicRecord} from '../../src/types/legacyArchive';import {publicFileAuthorized} from './publicationAccess';import {legacyAdministrativeFiles,legacyFileIsPublic,publicLegacyAdministrativeDocuments} from '../legacyArchive';
+import type {ProcessData,SignatureJob} from '../../src/types';import type {LegacyAcademicRecord} from '../../src/types/legacyArchive';import {publicFileAuthorized} from './publicationAccess';import {legacyAdministrativeRoutes,legacyAdministrativeFiles,legacyFileIsPublic,publicLegacyAdministrativeDocuments} from '../legacyArchive';
 import {normalizeEmail} from '../../src/utils/formatters';
 
 const uniqueSorted=(values:string[])=>[...new Set(values)].sort();
@@ -20,7 +20,7 @@ function legacySourceBoundary(record:LegacyAcademicRecord|undefined){
 function publicLegacyAdministrativeKeys(record:LegacyAcademicRecord|undefined){
  if(!record)return [];
  const publicIds=new Set(publicLegacyAdministrativeDocuments(record).map(document=>document.id));
- return legacyAdministrativeFiles(record).flatMap((file,index)=>publicIds.has(`legacy-document-${index}`)?[`${file.kind}:${file.driveFileId}:${file.sha256}`]:[]).sort();
+ return legacyAdministrativeRoutes(record).flatMap(({file,index})=>publicIds.has(`legacy-document-${index}`)?[`${file.kind}:${file.driveFileId}:${file.sha256}`]:[]).sort();
 }
 function legacyEvaluationAccessBoundary(record:LegacyAcademicRecord|undefined){
  const value=record?.provenance.verifiedPublicationParticipants;
@@ -64,7 +64,7 @@ export function assertLegacyPrivateClassificationConsistency(records:LegacyAcade
  }
  for(const record of records){
   const publicIds=new Set(publicLegacyAdministrativeDocuments(record).map(document=>document.id));
-  const published=[...record.attachments.filter(file=>legacyFileIsPublic(record,file)),...legacyAdministrativeFiles(record).filter((_file,index)=>publicIds.has(`legacy-document-${index}`))];
+  const published=[...record.attachments.filter(file=>legacyFileIsPublic(record,file)),...legacyAdministrativeRoutes(record).filter(({index})=>publicIds.has(`legacy-document-${index}`)).map(entry=>entry.file)];
   if(published.some(file=>privateIds.has(file.driveFileId)))throw Error('Um arquivo classificado como privado não pode ser publicado no acervo legado.');
  }
  const priorIds=new Set(priorRecords.map(record=>record.id));
