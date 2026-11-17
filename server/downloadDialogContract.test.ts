@@ -9,7 +9,7 @@ test('download do Repositório usa o diálogo canônico do Portal', () => {
   const dialogs = read('src/components/PortalDialogs.tsx');
   const service = read('src/services/portalDialogs.ts');
 
-  assert.match(home, /import \{ portalConfirm \} from '\.\.\/services\/portalDialogs'/);
+  assert.match(home, /import \{[^}]*\bportalConfirm\b[^}]*\} from '\.\.\/services\/portalDialogs'/);
   assert.match(home, /handleRepositoryDownloadRequest/);
   assert.match(home, /portalConfirm\([\s\S]*title: 'Baixar dados'[\s\S]*confirmLabel: 'Baixar CSV'/);
   assert.doesNotMatch(home, /showDownloadConfirm|Confirmar Download dos Dados|Deseja baixar a planilha com todos os dados do Repositório de TCCs/);
