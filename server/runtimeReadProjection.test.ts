@@ -12,6 +12,9 @@ test('public repository and legacy references retain the historical catalog', ()
     '/public/processes/legacy-108',
     '/legacy-academic-records',
     '/legacy-academic-records/legacy-108/files/0/download',
+    '/legacy-academic-records/legado-0001/evaluation-documents',
+    '/legacy-academic-records/legado-0001/evaluation-documents/1/download',
+    '/admin/legacy-academic-records/legado-0001/evaluation-participants',
     '/public/indicators',
   ]) {
     assert.equal(runtimeReadProjection('GET', path), 'LITE', path);

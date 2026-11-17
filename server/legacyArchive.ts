@@ -57,10 +57,26 @@ export function legacyFileIsPublic(record: LegacyAcademicRecord, file: LegacyAtt
 /** Only the previously supplied historical kind/hash may be public. Consent
  * renewals and newly imported PDFs cannot expand this source boundary. */
 export function legacyHistoricalFileApproved(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
-  const baseline = record.provenance.publicationImportBaseline as {publicFiles?: Array<{kind:string;sha256:string}>;privateFileIds?:string[]} | undefined;
+  const baseline = record.provenance.publicationImportBaseline as {policy?:string;cutoffDate?:string;publicFiles?: Array<{kind:string;sha256:string;sourceUrl?:string;sourceRowFingerprint?:string;sourceFileName?:string;sourceRecordId?:string;sourcePageRecordId?:string}>;privateFileIds?:string[]} | undefined;
   return Boolean(/^[a-f0-9]{64}$/.test(file.sha256) && baseline && Array.isArray(baseline.publicFiles) &&
     !baseline.privateFileIds?.includes(file.driveFileId) &&
-    baseline.publicFiles.some(f => f.kind === file.kind && f.sha256 === file.sha256));
+    baseline.publicFiles.some(f => {
+      if(f.kind!==file.kind||f.sha256!==file.sha256)return false;
+      if(baseline.policy!=='BODY_ROW_LINK_AND_VERIFIED_KIND_HASH_REQUIRED')return true;
+      if(f.sourceRecordId!==record.id||!/^legado-\d{4}$/.test(f.sourcePageRecordId||'')||!f.sourceUrl||!f.sourceFileName||
+        !/^[a-f0-9]{64}$/.test(f.sourceRowFingerprint||'')||
+        !/^\d{4}-\d{2}-\d{2}$/.test(baseline.cutoffDate||'')||record.dataDefesa>baseline.cutoffDate!)return false;
+      try{
+        const url=new URL(f.sourceUrl);
+        if(url.protocol!=='https:'||url.username||url.password||url.port||
+          decodeURIComponent(url.pathname.split('/').at(-1)||'')!==f.sourceFileName)return false;
+      }catch{return false;}
+      const rows=record.provenance.pageRecords;
+      // Source page ordinals and consolidated catalog IDs are independent.
+      // Keep the captured row identity and URL intact, including its fragment.
+      return Array.isArray(rows)&&rows.some(row=>row?.legacyId===f.sourcePageRecordId&&
+        row.sourceFingerprint===f.sourceRowFingerprint&&Array.isArray(row.sourceLinks)&&row.sourceLinks.includes(f.sourceUrl));
+    }));
 }
 export function legacyPublicationScopeAllowed(record: LegacyAcademicRecord, process: ProcessData): boolean {
   const request=process.acervo.publicationChange;

@@ -94,7 +94,9 @@ export function runtimeReadProjection(
     /^\/public\/processes\/[^/?#]+$/.test(requestPath) ||
     /^\/legacy-academic-records\/[^/?#]+\/files\/(?:0|[1-9]\d?)\/download$/.test(
       requestPath,
-    )
+    ) ||
+    /^\/legacy-academic-records\/[^/?#]+\/evaluation-documents(?:\/(?:0|[1-9]\d?)\/download)?$/.test(requestPath) ||
+    /^\/admin\/legacy-academic-records\/[^/?#]+\/evaluation-participants$/.test(requestPath)
   )
     return 'LITE';
   return 'FULL';

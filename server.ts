@@ -1,7 +1,10 @@
 import {processDriveReaderEmails} from './server/integrations/processDriveReaders';
 import {publicDriveFailure,publicDocumentDriveFailure} from './server/publicDriveFailure';
 import {rateLimit} from 'express-rate-limit';
-import {restoreChangesPublicFiles} from './server/workflow/publicationRestoreGuard';
+import {restoreChangesPublicFiles,assertLegacyPrivateClassificationConsistency} from './server/workflow/publicationRestoreGuard';
+import {legacyEvaluationParticipantRole} from './server/legacyPrivateAccess';
+import {installLegacyEvaluationDocumentRoutes} from './server/legacyEvaluationDocumentRoutes';
+import {installLegacyEvaluationParticipantRoutes,legacyEvaluationAccessRevision} from './server/legacyEvaluationParticipantRoutes';
 import {publicInvitationFingerprint,publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
 import {archiveRetiredRuntimeBackups} from './server/backup/retention';
 import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
@@ -946,6 +949,13 @@ function canAccessProcess(email:string,id:string):boolean{
 }
 function authorizedProcessDriveReaderEmails(process:ProcessData):string[]{return processDriveReaderEmails(process,email=>canAccessProcess(email,process.id));}
 function hasFullAdministration(email:string):boolean{return getUserRolesForEmail(email).globalRoles.includes('MASTER_ADMIN');}
+function legacyEvaluationRole(record:LegacyAcademicRecord,email:string){
+  return legacyEvaluationParticipantRole(record,email,{
+    isTrustedVerifier:hasFullAdministration,
+    isAccessRevoked:(address,id)=>removedAccessProcessKeys.has(accessProcessKey(address,id))||
+      authorizedStudentsStore.some(entry=>normalizeEmail(entry.email)===address&&entry.active===false),
+  });
+}
 function isInPresidencyDeclarationQueue(process:ProcessData):boolean{
   if(process.status==='EM_RASCUNHO')return false;
   if(process.status==='CONCLUIDO')return true;
@@ -999,7 +1009,8 @@ function canRequestPortalAccess(email:string):boolean{
   if(!normalized)return false;
   if(getUserRolesForEmail(normalized).globalRoles.length>0)return true;
   if(administrationTransfersStore.some(transfer=>transfer.status==='PENDING_TARGET_ACCEPTANCE'&&new Date(transfer.expiresAt).getTime()>Date.now()&&transfer.targetEmail===normalized&&hasFullAdministration(transfer.requestedBy)))return true;
-  return authorizedStudentsStore.some(entry=>entry.active&&normalizeEmail(entry.email)===normalized);
+  return authorizedStudentsStore.some(entry=>entry.active&&normalizeEmail(entry.email)===normalized)||
+    legacyAcademicRecordsStore.some(record=>Boolean(legacyEvaluationRole(record,normalized)));
 }
 function canRegisterProcess(email:string):boolean{
   if(hasFullAdministration(email))return true;
@@ -3914,7 +3925,7 @@ export async function createPortalApp() {
 
   app.get('/api/public/processes/:id',(req,res)=>{
     const legacy=legacyAcademicRecordsStore.find(r=>r.id===req.params.id||r.protocolo===req.params.id);
-    if(legacy){res.setHeader('Cache-Control','private, no-store');return res.json({...legacyRepositoryProcess(publicLegacyAcademicView(legacy)),canAccessPrivate:false,documents:publicLegacyAdministrativeDocuments(legacy)});}
+    if(legacy){const identity=getPortalIdentity(req);res.setHeader('Cache-Control','private, no-store');return res.json({...legacyRepositoryProcess(publicLegacyAcademicView(legacy)),canAccessPrivate:false,canAccessLegacyEvaluation:Boolean(identity&&legacyEvaluationRole(legacy,identity.email)),documents:publicLegacyAdministrativeDocuments(legacy)});}
     const p=findProcessByReference(req.params.id);
     const identity=getPortalIdentity(req),canAccessPrivate=Boolean(p&&identity&&canAccessProcess(identity.email,p.id));
     if(!p||(p.status==='EM_RASCUNHO'&&!canAccessPrivate))return res.status(404).json({error:'TCC não disponível para consulta pública.'});
@@ -4070,6 +4081,45 @@ export async function createPortalApp() {
       return deliverPortalDownload({res,bytes,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`public-legacy-document:${req.ip||'unknown'}:${record.id}:${index}`,cacheControl:'no-store'});
     }catch(error){if(req.query.delivery==='drive-links'){const failed=publicDocumentDriveFailure(error);return res.status(failed.status).json(failed.body);}return res.status(409).json({error:'Não foi possível conferir o documento histórico.'});}
   });
+  installLegacyEvaluationDocumentRoutes(app,{
+    authenticate:requireAuthenticated,
+    limit:rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-8',legacyHeaders:false}),
+    email:req=>getPortalIdentity(req)?.email,
+    record:id=>legacyAcademicRecordsStore.find(record=>record.id===id),
+    canRead:(record,email)=>hasFullAdministration(email)||Boolean(legacyEvaluationRole(record,email)),
+    read:readLegacyAcademicPdf,
+    deliver:async(req,res,record,index,file,bytes)=>{
+      await deliverPortalDownload({res,bytes,fileName:file.fileName,mimeType:'application/pdf',requesterBinding:`legacy-evaluation:${getPortalIdentity(req)!.email}:${record.id}:${index}`,cacheControl:'private, no-store, max-age=0'});
+    },
+  });
+  const legacyEvaluationAccessWrites=new Set<string>();
+  installLegacyEvaluationParticipantRoutes(app,{
+    authenticate:requireAuthenticated,
+    limit:rateLimit({windowMs:60000,limit:30,standardHeaders:'draft-8',legacyHeaders:false}),
+    email:req=>getPortalIdentity(req)?.email,
+    master:hasFullAdministration,
+    record:id=>legacyAcademicRecordsStore.find(record=>record.id===id),
+    commit:async(id,expectedRevision,next,audit)=>{
+      const index=legacyAcademicRecordsStore.findIndex(record=>record.id===id),current=legacyAcademicRecordsStore[index];
+      if(!current||legacyEvaluationAccessWrites.has(id)||legacyEvaluationAccessRevision(current)!==expectedRevision)
+        throw Object.assign(Error('Os acessos históricos mudaram.'),{code:'LEGACY_EVALUATION_ACCESS_CONFLICT'});
+      // Update only the binding; a simultaneous archive/publication change must
+      // never be replaced by the record copied when the editor was opened.
+      const updated:LegacyAcademicRecord={...current,provenance:{...current.provenance,
+        evaluationAccessRevision:next.provenance.evaluationAccessRevision,
+        evaluationAccessLastChange:next.provenance.evaluationAccessLastChange,
+      }};
+      if(next.provenance.verifiedPublicationParticipants!==undefined)updated.provenance.verifiedPublicationParticipants=next.provenance.verifiedPublicationParticipants;
+      else delete updated.provenance.verifiedPublicationParticipants;
+      legacyEvaluationAccessWrites.add(id);legacyAcademicRecordsStore[index]=updated;auditLogsStore.push(audit);
+      try{await persistPortalStateDurably();}
+      catch(error){
+        const currentIndex=legacyAcademicRecordsStore.findIndex(record=>record.id===id);
+        if(legacyAcademicRecordsStore[currentIndex]===updated)legacyAcademicRecordsStore[currentIndex]=current;
+        auditLogsStore=auditLogsStore.filter(entry=>entry.id!==audit.id);throw error;
+      }finally{legacyEvaluationAccessWrites.delete(id);}
+    },
+  });
   app.get('/api/admin/legacy-academic-records/:id/academic',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
     const record=legacyAcademicRecordsStore.find(r=>r.id===req.params.id);
@@ -4109,7 +4159,7 @@ export async function createPortalApp() {
   app.post('/api/admin/legacy-academic-records/import',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),async(req,res)=>{
     if(req.body?.expectedRevision!==legacyCatalogRevision(legacyAcademicRecordsStore))return res.status(409).json({error:'O acervo histórico mudou. Recarregue antes de importar.',code:'STALE_LEGACY_REVISION'});
     let records:LegacyAcademicRecord[];
-    try{records=mergeLegacyBatch(legacyAcademicRecordsStore,validateLegacyBatch(req.body?.records));}
+    try{records=mergeLegacyBatch(legacyAcademicRecordsStore,validateLegacyBatch(req.body?.records));assertLegacyPrivateClassificationConsistency(records,legacyAcademicRecordsStore);}
     catch(error){return res.status(400).json({error:error instanceof Error?error.message:'Lote histórico inválido.'});}
     const previous=legacyAcademicRecordsStore;
     legacyAcademicRecordsStore=records;
