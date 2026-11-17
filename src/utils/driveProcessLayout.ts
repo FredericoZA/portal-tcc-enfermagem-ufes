@@ -29,12 +29,14 @@ const FILE_LABELS:Record<string,string>={
   CONFIRMACAO_LOCAL:'01 - Comprovante de reserva',COMPROVANTE_LOCAL:'01 - Comprovante de reserva',
   CONVITE:'02 - Carta-convite',ATA:'03 - Ata de defesa',TERMO:'04 - Termo de autorização',
   DECLARACAO:'05 - Declaração de participação',TRABALHO_COMPLETO:'06 - TCC',RESUMO_EXPANDIDO:'07 - Resumo expandido',
-  AVALIACAO_LEGADO:'08 - Avaliação do legado',
+  AVALIACAO_LEGADO:'08 - Avaliação do legado',ASTEN_COMPROVANTE:'00 - Comprovante de assinatura',
   CADASTRO_INICIAL:'00 - Registro de cadastro inicial',AVALIACAO:'00 - Registro de avaliação',DADOS_FINAIS:'00 - Registro de entrega final'
 };
 
 export function buildDriveProcessFileName(input:{protocol?:string;studentNames?:readonly string[];kind:string;version?:number;lifecycle?:'GERADO'|'ASSINADO';extension?:string}):string {
-  const kind=input.kind.replace(/^FORMULARIO_/,''),label=FILE_LABELS[kind]||`00 - Registro ${clean(kind).replace(/_/g,' ')||'complementar'}`;
+  const kind=input.kind.replace(/^FORMULARIO_/,'');
+  const complementaryLabel=clean(kind.replace(/_/g,' ')).toLocaleLowerCase('pt-BR');
+  const label=FILE_LABELS[kind]||`00 - Registro ${complementaryLabel||'complementar'}`;
   const identity=[clean(input.protocol),driveProcessAuthorLabel(input.studentNames||[])].filter(Boolean).join(' - ');
   const version=input.version===undefined?'':` - v${String(Math.max(1,Math.floor(input.version)||1)).padStart(3,'0')}`;
   const lifecycle=input.lifecycle?` - ${input.lifecycle==='ASSINADO'?'Assinado':'Gerado'}`:'';
