@@ -50,6 +50,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
   const child = spawn(process.execPath, ['--import', 'tsx', 'server.ts'], {
     cwd: fileURLToPath(new URL('..', import.meta.url)),
     env: { ...process.env, NODE_ENV: 'development', PORT: String(port), PORTAL_DATA_DIR: directory,
+      DISABLE_HMR: 'false', PORTAL_SERVE_COMPILED_CLIENT: 'false',
       PORTAL_SESSION_SECRET: 'test-session-secret-0123456789-abcdef', PORTAL_OTP_PEPPER: 'test-otp-pepper-0123456789-abcdef',
       PORTAL_ALLOW_INSECURE_DEMO_AUTH: 'true', PORTAL_ALLOW_LOCAL_OTP_STORE: 'true', PORTAL_ALLOW_LOCAL_SECRET_STORE: 'true',
       PORTAL_TEST_DOCUMENT_RENDERER:'true', PORTAL_OTP_DELIVERY_MODE: 'log', ASTEN_INTEGRATION_ENABLED: 'false', ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true', PORTAL_PERSISTENCE_PROVIDER: 'local_file',
@@ -71,12 +72,21 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
     }
     const route = `/api/processes/${p.id}/evaluation`;
     const frontend = await fetch(base + '/');
+    assert.equal(frontend.status, 200);
     const html = await frontend.text();
-    const nonce = frontend.headers.get('content-security-policy')?.match(/'nonce-([^']+)'/)?.[1];
-    assert.ok(nonce, 'Vite deve autorizar seu preâmbulo React por nonce');
-    const inlineScripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].filter(match => match[2].trim());
-    assert.ok(inlineScripts.some(match => match[2].includes('/@react-refresh')));
-    for (const script of inlineScripts) assert.ok(script[1].includes(`nonce="${nonce}"`));
+    const scriptPolicy = frontend.headers.get('content-security-policy')?.split('; ').find(rule => rule.startsWith('script-src '));
+    const nonce = scriptPolicy?.match(/^script-src 'self' 'nonce-([^']+)'$/)?.[1];
+    assert.ok(nonce, 'A política de scripts do cliente de desenvolvimento exige mesma origem ou nonce.');
+    const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)];
+    const entry = scripts.map(script => script[1].match(/\bsrc="(\/assets\/index(?:-[a-f0-9]+)?\.js)"/i)?.[1]).find(Boolean);
+    assert.ok(entry, 'A página deve carregar o cliente de desenvolvimento pela própria origem.');
+    for (const [, attributes, body] of scripts) {
+      if (!attributes.includes('src=') && !body.trim()) continue;
+      assert.ok(attributes.includes(`nonce="${nonce}"`));
+    }
+    const bundledClient = await fetch(base + entry);
+    assert.equal(bundledClient.status, 200);
+    assert.match(await bundledClient.text(), /rsbuild-hmr/, 'A compilação de desenvolvimento deve oferecer atualização automática.');
     const master = 'master@portal.local';
     const forms = await request(`/api/processes/${p.id}/forms`, master);
     assert.equal(forms.status, 200);
