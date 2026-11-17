@@ -16,6 +16,7 @@ interface Ports {
   master?: (email: string) => boolean;
   access: (email: string, p: ProcessData) => boolean;
   replace: (p: ProcessData) => void;
+  validateChoice?: (p: ProcessData) => void;
   jobs: () => SignatureJob[];
   audit: (log: AuditLog) => void;
   persist: () => Promise<void>;
@@ -137,6 +138,7 @@ export function installPublicationChoiceRoutes(app: Pick<Express, 'get' | 'post'
               `publication-${randomUUID()}`,
               new Date().toISOString(),
             );
+            ports.validateChoice?.(p);
           } catch (error) {
             return res
               .status(400)
@@ -186,7 +188,9 @@ export function installPublicationChoiceRoutes(app: Pick<Express, 'get' | 'post'
             request.lastError = undefined;
           } catch (error) {
             request.lastError =
-              (error as { code?: string })?.code === 'PUBLICATION_CONTACTS_UNVERIFIED'
+              (error as { code?: string })?.code === 'LEGACY_PUBLICATION_SCOPE_RESTRICTED'
+                ? 'Este PDF não consta no conjunto histórico autorizado. A publicação permanece privada.'
+                : (error as { code?: string })?.code === 'PUBLICATION_CONTACTS_UNVERIFIED'
                 ? 'A publicação permanece restrita. O Master precisa confirmar os contatos de todos os autores e do orientador antes da assinatura do novo termo.'
                 : 'A escolha foi registrada. A assinatura do novo termo ou a sincronização no Drive aguarda conclusão.';
           }

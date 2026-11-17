@@ -23,6 +23,6 @@ export async function readLegacyAcademicPdf(file: VerifiedLegacyFile & {kind?:st
     const directory = path.join(process.env.PORTAL_DATA_DIR || path.join(process.cwd(),'.portal-data'),'legacy-import','drive-pdfs');
     return verifyLegacyPdf(file, await readFile(path.join(directory,sourceName)));
   }
-  const stored = await downloadDrivePdf(await getGoogleWorkspaceAccessToken(),file.driveFileId,undefined,['TRABALHO_COMPLETO','RESUMO_EXPANDIDO','CONVITE','ATA','TERMO','DECLARACAO'].includes(file.kind||'')?file.sha256:undefined);
+  const stored = await downloadDrivePdf(await getGoogleWorkspaceAccessToken(),file.driveFileId,undefined,['TRABALHO_COMPLETO','RESUMO_EXPANDIDO','ATA','TERMO','DECLARACAO'].includes(file.kind||'')?file.sha256:undefined);
   return verifyLegacyPdf(file,stored.pdf);
 }

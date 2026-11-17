@@ -18,12 +18,12 @@ test('historical documents omit the nonexistent reservation receipt and invitati
   assert.match(html,/>Ata</);
  }
 });
-test('historical invitation is shown only when an available historical file exists',()=>{
- const html=render([invitation()]);
- assert.match(html,/Carta-Convite da Banca/);assert.match(html,/5 documento\(s\)/);
+test('visitor cannot open invitations or evaluation instruments supplied as public documents',()=>{
+ const html=render([invitation(),invitation({type:'AVALIACAO' as any,title:'Instrumento de avaliação'})]);
+ assert.doesNotMatch(html,/Carta-Convite da Banca/);assert.match(html,/4 documento\(s\)/);
+ const instrument=html.match(/<article[\s\S]*?<\/article>/g)!.find(card=>card.includes('>Instrumento de avaliação<'))!;
+ assert.match(instrument,/Acesso restrito/);assert.equal((instrument.match(/<button[^>]*disabled/g)||[]).length,2);
  assert.doesNotMatch(html,/Comprovante de reserva/);
- for(const missing of [invitation({driveDownloadUrl:undefined}),invitation({status:'NAO_DISPONIVEL'})])
-  assert.doesNotMatch(render([missing]),/Carta-Convite da Banca/);
 });
 test('current-process reservation card remains available to the normal document panel',()=>{
  const html=renderToStaticMarkup(React.createElement(ReservationReceiptCard,{protocol:'TCC - 99999',currentStatus:'CONFIRMADO'}));

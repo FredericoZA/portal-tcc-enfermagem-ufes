@@ -37,6 +37,7 @@ function fixture(): any {
       },
     ],
     provenance: {
+      publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64)}]},
       originalConsent: ['Sim'],
       processFolderId: 'private_folder_1234',
       administrativeDocuments: [

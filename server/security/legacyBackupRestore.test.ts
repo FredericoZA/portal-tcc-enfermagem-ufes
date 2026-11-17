@@ -50,7 +50,7 @@ test('HTTP backup round trip preserves historical consent, Drive references and 
       resumo:'Resumo demonstrativo',palavrasChave:['Enfermagem'],dataDefesa:'2023-06-01',horaDefesa:'14:00:00',localDefesa:'Auditório',
       isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'UNSPECIFIED',
       attachments:[{driveFileId:`private_academic_file_${index}`,fileName:'trabalho.pdf',kind:'TRABALHO_COMPLETO',evidence:'Referência demonstrativa conferida',sha256:'a'.repeat(64)}],
-      provenance:{originalConsent:[consent],administrativeDocuments:[{driveFileId:`private_admin_file_${index}`,folderId:'private_folder_demo',fileName:'ata.pdf',kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT',sha256:'b'.repeat(64)}]}
+      provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64)}]},originalConsent:[consent],administrativeDocuments:[{driveFileId:`private_admin_file_${index}`,folderId:'private_folder_demo',fileName:'ata.pdf',kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT',sha256:'b'.repeat(64)}]}
     } as LegacyAcademicRecord);
     const records=[record(1,'Não'),record(2,'Sim')];
     const completedAt='2026-10-15T18:00:00.000Z';

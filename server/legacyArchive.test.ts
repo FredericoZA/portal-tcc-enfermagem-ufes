@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {validateLegacyBatch,mergeLegacyBatch,legacyCatalogRevision,publicLegacyAcademicView,privateLegacyAcademicView,canonicalLegacyRecord,legacyFileIsPublic} from './legacyArchive';
 
 export const legacyFixture = () => ({
-  id:'legado-0001',protocolo:'Legado 001',sourceFingerprint:'a'.repeat(64),titulo:'Trabalho histórico',autores:['Autora demonstrativa'],orientador:'Professor demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Resumo de origem',palavrasChave:['Enfermagem'],dataDefesa:'2023-06-01',horaDefesa:'14:00:00',localDefesa:'Auditório',isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'DENIED',attachments:[{driveFileId:'private_file_123456',fileName:'arquivo.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Título e autoria conferidos'}],provenance:{originalConsent:['Não'],sourceUrl:'https://example.invalid/source'}
+  id:'legado-0001',protocolo:'Legado 001',sourceFingerprint:'a'.repeat(64),titulo:'Trabalho histórico',autores:['Autora demonstrativa'],orientador:'Professor demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Resumo de origem',palavrasChave:['Enfermagem'],dataDefesa:'2023-06-01',horaDefesa:'14:00:00',localDefesa:'Auditório',isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'DENIED',attachments:[{driveFileId:'private_file_123456',fileName:'arquivo.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Título e autoria conferidos'}],provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64)}]},originalConsent:['Não'],sourceUrl:'https://example.invalid/source'}
 });
 test('legacy import denies publication without consent, and strips workflow injection',()=>{
   const [r]=validateLegacyBatch([{...legacyFixture(),status:'CONCLUIDO',createdByEmail:'secret@example.invalid',signatureJobs:[{provider:'ASTEN'}]}]);
@@ -76,12 +76,12 @@ test('legacy 011 restores the two documented internal examiners at import and hy
 
 test('legacy consent authorizes only available files and supports missing full TCC',()=>{
   const fixture = legacyFixture();
-  const authorized = canonicalLegacyRecord({...fixture,provenance:{originalConsent:['Sim']}} as any);
+  const authorized = canonicalLegacyRecord({...fixture,provenance:{...fixture.provenance,originalConsent:['Sim']}} as any);
   assert.equal(validateLegacyBatch([authorized])[0].publishFullWork,true);
   const publicView=publicLegacyAcademicView(authorized);
   assert.equal(publicView.publicFiles.length,1);
   assert.ok(!JSON.stringify(publicView).includes('private_file_123456'));
-  const summaryOnly=canonicalLegacyRecord({...authorized,attachments:[{...authorized.attachments[0],kind:'RESUMO_EXPANDIDO'}]});
+  const summaryOnly=canonicalLegacyRecord({...authorized,provenance:{...authorized.provenance,publicationImportBaseline:{publicFiles:[{kind:'RESUMO_EXPANDIDO',sha256:'b'.repeat(64)}]}},attachments:[{...authorized.attachments[0],kind:'RESUMO_EXPANDIDO'}]});
   assert.equal(validateLegacyBatch([summaryOnly])[0].publishFullWork,false);
   assert.equal(summaryOnly.publishExpandedAbstract,true);
   const missing=canonicalLegacyRecord({...authorized,attachments:[]});
@@ -128,7 +128,7 @@ test('administrative legacy references fail closed and stay outside public proje
 });
 
 test('historical withdrawal overrides publication without rewriting original consent evidence',()=>{
- const original=canonicalLegacyRecord({...legacyFixture(),provenance:{originalConsent:['Sim']}} as any);
+ const original=canonicalLegacyRecord({...legacyFixture(),provenance:{...legacyFixture().provenance,originalConsent:['Sim']}} as any);
  const withdrawn=canonicalLegacyRecord({...original,provenance:{...original.provenance,publicationWithdrawal:{withdrawnAt:'2026-11-15T00:00:00Z',drivePending:true}}});
  assert.deepEqual(withdrawn.provenance.originalConsent,['Sim']);assert.equal(withdrawn.publishFullWork,false);assert.deepEqual(publicLegacyAcademicView(withdrawn).publicFiles,[]);assert.equal(privateLegacyAcademicView(withdrawn).publicationWithdrawal?.drivePending,true);
 });
@@ -137,5 +137,5 @@ test('public historical document policy excludes evaluation instruments and keep
  const {publicLegacyAdministrativeDocuments}=await import('./legacyArchive');const record=canonicalLegacyRecord(legacyFixture() as any);
  const kinds=['CONVITE','ATA','TERMO','DECLARACAO','AVALIACAO'];record.provenance.administrativeDocuments=kinds.map((kind,i)=>({driveFileId:'private_admin_file_'+i,folderId:'private_folder_123456',fileName:kind+'.pdf',sha256:'a'.repeat(64),kind,visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'}));
  (record.provenance.administrativeDocuments as any[]).push({driveFileId:record.attachments[0].driveFileId,folderId:'private_folder_123456',fileName:'misclassified.pdf',sha256:record.attachments[0].sha256,kind:'ATA',visibility:'PRIVATE_ADMINISTRATIVE_DOCUMENT'});
- const documents=publicLegacyAdministrativeDocuments(record);assert.deepEqual(documents.map(d=>d.type),kinds.slice(0,4));assert.doesNotMatch(JSON.stringify(documents),/private_admin|private_folder|AVALIACAO/);
+ const documents=publicLegacyAdministrativeDocuments(record);assert.deepEqual(documents.map(d=>d.type),kinds.slice(1,4));assert.doesNotMatch(JSON.stringify(documents),/private_admin|private_folder|AVALIACAO/);
 });

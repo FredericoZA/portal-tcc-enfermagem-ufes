@@ -40,7 +40,7 @@ import {historicalPublicationProcess,storeHistoricalPublicationProcess} from './
 import {installPublicationChoiceRoutes} from './server/publicationChoiceRoutes';
 import {destroyPreviousPublicationTerms} from './server/publicationTermRemoval';
 import {assertRenewedPublicationSigners,beginPublicationChoice,finishPublicationRevocation} from './server/workflow/publicationChoice';
-import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyAdministrativeFiles, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
+import { validateLegacyBatch, mergeLegacyBatch, legacyCatalogRevision, publicLegacyAcademicView, privateLegacyAcademicView, canonicalLegacyRecord, legacyFileIsPublic, legacyPublicationScopeAllowed, legacyAdministrativeFiles, publicLegacyAdministrativeDocuments } from './server/legacyArchive';
 import type { LegacyAcademicRecord } from './src/types/legacyArchive';
 import {EVALUATION_OUTCOMES,evaluationQuestions,isConceptRegistrationReleased} from './src/utils/evaluationForm';
 import {renderInstitutionName} from './src/utils/institutionName';
@@ -2186,11 +2186,12 @@ async function finishArchivedSignature(job:SignatureJob,actorEmail:string):Promi
       const change=process.acervo.publicationChange;
       if(job.documentType!=='TERMO'||change?.signatureJobId!==job.id||change.status!=='AWAITING_SIGNATURE')throw Error('Termo histórico desatualizado.');
       const record=historicalRecord;
+      if(!legacyPublicationScopeAllowed(record,process))throw Error('Este PDF não consta no conjunto histórico autorizado. A publicação permanece restrita.');
       const token=await getGoogleWorkspaceAccessToken();
       for(const [kind,id,sha] of [['TRABALHO_COMPLETO',process.acervo.trabalhoCompletoFileId,process.acervo.trabalhoCompletoSha256],['RESUMO_EXPANDIDO',process.acervo.resumoExpandidoFileId,process.acervo.resumoExpandidoSha256]]){
         if(!(kind==='TRABALHO_COMPLETO'?change.publishFullWork:change.publishExpandedAbstract))continue;
         if(!id||!sha)throw Error('Arquivo histórico não conferido.');
-        await publicRepositoryDriveLinks({accessToken:token,sourceFileId:id,scope:process.id,sha256:sha,assertAuthorized:async()=>publicationProcessById(process.id)===process&&process.acervo.publicationChange===change&&job.status==='ARCHIVED'});
+        await publicRepositoryDriveLinks({accessToken:token,sourceFileId:id,scope:process.id,sha256:sha,assertAuthorized:async()=>publicationProcessById(process.id)===process&&process.acervo.publicationChange===change&&job.status==='ARCHIVED'&&legacyPublicationScopeAllowed(record,process)});
       }
       process.acervo.publicationSyncedAt=new Date().toISOString();process.acervo.publicationState='PUBLIC';
       change.status='COMPLETED';change.completedAt=new Date().toISOString();change.lastError=undefined;change.signedTermFileId=job.driveSignedFileId;
@@ -2542,7 +2543,13 @@ export async function createPortalApp() {
     jobs:()=>signatureJobsStore,audit:log=>{auditLogsStore.push(log);},persist:persistPortalStateDurably,
     revoke:async ids=>{await withdrawManyPublicDriveFiles(await getGoogleWorkspaceAccessToken(),ids);},
     destroyPreviousTerms,
+    validateChoice:p=>{
+      const record=legacyAcademicRecordsStore.find(r=>r.id===p.id);
+      if(record&&!legacyPublicationScopeAllowed(record,p))throw Error('Este PDF não consta no conjunto histórico autorizado. Mantenha-o privado.');
+    },
     term:async(p,email)=>{
+      const historical=legacyAcademicRecordsStore.find(r=>r.id===p.id);
+      if(historical&&!legacyPublicationScopeAllowed(historical,p))throw Object.assign(Error('Este PDF não consta no conjunto histórico autorizado.'),{code:'LEGACY_PUBLICATION_SCOPE_RESTRICTED'});
       const request=p.acervo!.publicationChange!;
       let job=request.signatureJobId?signatureJobsStore.find(j=>j.id===request.signatureJobId):undefined;
       if(!job&&p.legacyRecord){const r=legacyAcademicRecordsStore.find(r=>r.id===p.id)!;const contacts=r.provenance.verifiedPublicationParticipants as any;if(!contacts?.verifiedBy||r.autores.length>2||contacts.authors?.length!==r.autores.length||!contacts.advisor?.email||contacts.authors.some((a:any)=>!a.email))throw Object.assign(Error('Contatos históricos não confirmados.'),{code:'PUBLICATION_CONTACTS_UNVERIFIED'});}
