@@ -139,7 +139,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
 
     const deniedDownload=await request('/api/legacy-academic-records/legado-0001/files/0/download');
     assert.equal(deniedDownload.status,404);
-    const authorized=canonicalLegacyRecord({...record,id:'legado-0002',sourceFingerprint:'c'.repeat(64),attachments:[{...record.attachments[0],kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{originalConsent:['Sim']}} as any);
+    const authorized=canonicalLegacyRecord({...record,id:'legado-0002',sourceFingerprint:'c'.repeat(64),attachments:[{...record.attachments[0],kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}],provenance:{originalConsent:['Sim'],publicationImportBaseline:{publicFiles:[{kind:'RESUMO_EXPANDIDO',sha256:createHash('sha256').update(pdf).digest('hex')}]}}} as any);
     assert.equal((await request(route,master,{expectedRevision:privateRows.body.revision,records:[authorized]})).body.imported,1);
     const download=await fetch(base+'/api/legacy-academic-records/legado-0002/files/0/download');
     assert.equal(download.status,200);assert.equal(download.headers.get('content-type'),'application/pdf');

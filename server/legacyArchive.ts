@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { normalizePersonName } from '../src/utils/personNameCase';
 import { renderTccTitle } from '../src/utils/formatters';
 import { buildProcessArchiveFileName } from './integrations/googleDriveArchive';
+import type { ProcessData } from '../src/types';
 import type { LegacyAcademicRecord, LegacyAttachment, LegacyAdministrativeFile, PublicLegacyAcademicRecord, PrivateLegacyAcademicView } from '../src/types/legacyArchive';
 
 const bounded = (value: unknown, max = 1000): string => {
@@ -26,8 +27,9 @@ export function legacyAdministrativeFiles(record: Pick<LegacyAcademicRecord,'pro
 }
 /** Public catalog carries only issued document kinds and Portal routes, never Drive references. */
 export function publicLegacyAdministrativeDocuments(record:LegacyAcademicRecord){
-  const labels:Record<string,string>={CONVITE:'Carta convite',ATA:'Ata',TERMO:'Termo de autorização',DECLARACAO:'Declaração'};
-  const academicIds=new Set(record.attachments.map(file=>file.driveFileId));
+  const labels:Record<string,string>={ATA:'Ata',TERMO:'Termo de autorização',DECLARACAO:'Declaração'};
+  const baseline=record.provenance.publicationImportBaseline as {privateFileIds?:string[]}|undefined;
+  const academicIds=new Set([...record.attachments.map(file=>file.driveFileId),...legacyAdministrativeFiles(record).filter(f=>f.kind==='AVALIACAO').map(f=>f.driveFileId),...(baseline?.privateFileIds||[])]);
   return legacyAdministrativeFiles(record).flatMap((file,index)=>labels[file.kind]&&!academicIds.has(file.driveFileId)&&!(file.kind==='TERMO'&&record.provenance.publicationOverride&&!((record.provenance.publicationOverride as any).currentTermFileId===file.driveFileId&&(record.provenance.publicationOverride as any).status==='COMPLETED'))?[{id:`legacy-document-${index}`,type:file.kind,title:labels[file.kind],status:'DISPONIVEL',version:1,url:`/api/public/legacy-academic-records/${encodeURIComponent(record.id)}/documents/${index}/download`}]:[]);
 }
 export function legacyProtocol(id: string): string {
@@ -49,14 +51,30 @@ export function legacyAuthorization(provenance: Record<string, unknown>): Legacy
 }
 export function legacyFileIsPublic(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
   return legacyAuthorization(record.provenance) === 'AUTHORIZED' &&
-    legacyImportAllowsPublication(record, file) &&
+    legacyHistoricalFileApproved(record, file) &&
     (file.kind === 'TRABALHO_COMPLETO' ? record.publishFullWork : file.kind === 'RESUMO_EXPANDIDO' && record.publishExpandedAbstract) && /^[a-f0-9]{64}$/.test(file.sha256 || '');
 }
-function legacyImportAllowsPublication(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
-  if (record.provenance.publicationOverride) return true;
-  const baseline = record.provenance.publicationImportBaseline as {publicFiles?: Array<{kind:string;sha256:string}>} | undefined;
-  return !baseline || (Array.isArray(baseline.publicFiles) && baseline.publicFiles.some(f => f.kind === file.kind && f.sha256 === file.sha256));
+/** Only the previously supplied historical kind/hash may be public. Consent
+ * renewals and newly imported PDFs cannot expand this source boundary. */
+export function legacyHistoricalFileApproved(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
+  const baseline = record.provenance.publicationImportBaseline as {publicFiles?: Array<{kind:string;sha256:string}>;privateFileIds?:string[]} | undefined;
+  return Boolean(baseline && Array.isArray(baseline.publicFiles) &&
+    !baseline.privateFileIds?.includes(file.driveFileId) &&
+    baseline.publicFiles.some(f => f.kind === file.kind && f.sha256 === file.sha256));
 }
+export function legacyPublicationScopeAllowed(record: LegacyAcademicRecord, process: ProcessData): boolean {
+  const request=process.acervo.publicationChange;
+  for (const [kind,wanted,id,sha] of [
+    ['TRABALHO_COMPLETO',request?.publishFullWork??process.acervo.publishFullWork,process.acervo.trabalhoCompletoFileId,process.acervo.trabalhoCompletoSha256],
+    ['RESUMO_EXPANDIDO',request?.publishExpandedAbstract??process.acervo.publishExpandedAbstract,process.acervo.resumoExpandidoFileId,process.acervo.resumoExpandidoSha256],
+  ]) {
+    if (!wanted) continue;
+    const file=record.attachments.find(f=>f.kind===kind&&f.driveFileId===id&&f.sha256===sha);
+    if (!file || !legacyHistoricalFileApproved(record,file)) return false;
+  }
+  return true;
+}
+
 const legacy011BoardSource = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQucIwgv0TbpZzsFIqGvaCh7meVsKRZtF8o17sBNh604utu_cY3m4syMp7jao69-LNIBaxZzS8IcriE/pubhtml';
 
 function legacy011Board(record: LegacyAcademicRecord): Pick<LegacyAcademicRecord, 'examinadores' | 'provenance'> {
@@ -85,8 +103,8 @@ export function canonicalLegacyRecord(record: LegacyAcademicRecord): LegacyAcade
   const authorizationDecision = legacyAuthorization(record.provenance);
   const authorized = authorizationDecision === 'AUTHORIZED';
   const override=record.provenance.publicationOverride as any;
-  const publishFullWork = authorized && (!override||override.publishFullWork===true) && attachments.some(f => f.kind === 'TRABALHO_COMPLETO' && /^[a-f0-9]{64}$/.test(f.sha256) && legacyImportAllowsPublication(record,f));
-  const publishExpandedAbstract = authorized && (!override||override.publishExpandedAbstract===true) && attachments.some(f => f.kind === 'RESUMO_EXPANDIDO' && /^[a-f0-9]{64}$/.test(f.sha256) && legacyImportAllowsPublication(record,f));
+  const publishFullWork = authorized && (!override||override.publishFullWork===true) && attachments.some(f => f.kind === 'TRABALHO_COMPLETO' && /^[a-f0-9]{64}$/.test(f.sha256) && legacyHistoricalFileApproved(record,f));
+  const publishExpandedAbstract = authorized && (!override||override.publishExpandedAbstract===true) && attachments.some(f => f.kind === 'RESUMO_EXPANDIDO' && /^[a-f0-9]{64}$/.test(f.sha256) && legacyHistoricalFileApproved(record,f));
   const isPublic = publishFullWork || publishExpandedAbstract;
   const { examinadores, provenance } = legacy011Board(record);
   return {...record, titulo: renderTccTitle(record.titulo), autores: record.autores.map(normalizePersonName), orientador: normalizePersonName(record.orientador), coorientador: normalizePersonName(record.coorientador), examinadores: examinadores.map(p=>({...p,nome:normalizePersonName(p.nome)})), provenance, protocolo: protocol, attachments, authorizationDecision,

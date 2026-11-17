@@ -11,7 +11,7 @@ import { destroyPreviousPublicationTerms } from './publicationTermRemoval';
 import { signatureDocumentRevision } from '../src/utils/documentSignatureState';
 
 test('administrative withdrawal cancels renewed historical consent and destroys its term, including retries',async()=>{
- const record:any=canonicalLegacyRecord({id:'legado-0999',titulo:'Fixture',autores:['Author'],orientador:'Advisor',coorientador:'',examinadores:[],palavrasChave:[],attachments:[{kind:'TRABALHO_COMPLETO',driveFileId:'original-private-fixture',sha256:'a'.repeat(64),fileName:'Fixture.pdf'}],provenance:{originalConsent:['Sim']}} as any);
+ const record:any=canonicalLegacyRecord({id:'legado-0999',titulo:'Fixture',autores:['Author'],orientador:'Advisor',coorientador:'',examinadores:[],palavrasChave:[],attachments:[{kind:'TRABALHO_COMPLETO',driveFileId:'original-private-fixture',sha256:'a'.repeat(64),fileName:'Fixture.pdf'}],provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'a'.repeat(64)}]},originalConsent:['Sim']}} as any);
  const p=historicalPublicationProcess(record);
  p.acervo.publicationChange={id:'signed-renewal',requestedAt:'2026-11-15',requestedBy:'master@example.invalid',revision:1,status:'COMPLETED',publishFullWork:true,publishExpandedAbstract:false,previousTermJobIds:[],revokeFileIds:[],signatureJobId:'new-term',signedTermFileId:'new-term-pdf'};
  p.acervo.publicationSyncedAt='2026-11-15T12:00:00Z';

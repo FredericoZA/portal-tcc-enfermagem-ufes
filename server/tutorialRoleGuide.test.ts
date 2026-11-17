@@ -110,8 +110,8 @@ test('legados são históricos no mesmo repositório, com privacidade preservada
   const text = content('visitante');
   assert.match(text, /001 - Legado/);
   assert.match(text, /mesmas abas/);
-  assert.match(text, /declaração históricos identificados ficam públicos/);
-  assert.match(text, /instrumento de avaliação continua restrito/);
-  assert.match(text, /autorização confirmada/);
+  assert.match(text, /Apenas ata, termo de autorização quando houver e declaração identificados com segurança/);
+  assert.match(text, /Instrumento de avaliação e convite permanecem privados/);
+  assert.match(text, /conjunto anteriormente fornecido para publicação/);
   assert.match(text, /não inicia outro cadastro, defesa ou assinatura/);
 });

@@ -14,7 +14,7 @@ test('HTTP: indicadores públicos incluem legados sem dados individuais; rota ad
   id:`legado-000${index+1}`,protocolo:`00${index+1} - Legado`,sourceFingerprint:String(index+1).repeat(64),
   titulo:'Título privado de teste',autores:['Pessoa demonstrativa'],orientador:'Docente demonstrativo',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Resumo privado de teste',palavrasChave:[],
   dataDefesa:'2023-06-01',horaDefesa:'',localDefesa:'Local individual',isPublic:false,publishFullWork:false,publishExpandedAbstract:false,publicationState:'NOT_REQUESTED',authorizationDecision:'UNSPECIFIED',
-  attachments:[{driveFileId:'private_file_123456',fileName:'documento-privado.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Conferido'}],provenance:{originalConsent:[index<3?'Sim':'Não']},
+  attachments:[{driveFileId:'private_file_123456',fileName:'documento-privado.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Conferido'}],provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64)}]},originalConsent:[index<3?'Sim':'Não']},
  }));
  await writeFile(path.join(dir,'portal-state.json'),JSON.stringify({settings:INITIAL_SETTINGS,processes:[processRecord],legacyAcademicRecords,signatureJobs:[]}));
  const port=47000+Math.floor(Math.random()*900),base=`http://127.0.0.1:${port}`;

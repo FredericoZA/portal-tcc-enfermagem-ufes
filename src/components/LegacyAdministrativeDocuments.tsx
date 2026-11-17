@@ -59,7 +59,6 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
     finally{setDownloading(null);}
   }
   const visibleGroups=groups.filter(group=>group.kind!=='CONVITE'||
-    publicDocuments.some(doc=>doc.type==='CONVITE'&&doc.driveDownloadUrl&&['ASSINADO','DISPONIVEL'].includes(doc.status))||
     canAccessOriginals&&files.some(file=>file.kind==='CONVITE'));
   return <>
     <ProcessDocumentsPanel count={visibleGroups.length} notices={<>
@@ -67,7 +66,7 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
       {error&&<p role="alert" className="portal-instruction p-3 text-xs">{error}</p>}
     </>}>
       {visibleGroups.map(group=>{
-        const published=publicDocuments.filter(doc=>doc.type===group.kind&&doc.driveDownloadUrl&&['ASSINADO','DISPONIVEL'].includes(doc.status)).map(doc=>({kind:group.kind,index:Number(doc.id.replace('legacy-document-','')),fileName:doc.title||group.label,downloadUrl:doc.driveDownloadUrl!}));
+        const published=publicDocuments.filter(doc=>['ATA','TERMO','DECLARACAO'].includes(group.kind)&&doc.type===group.kind&&doc.driveDownloadUrl&&['ASSINADO','DISPONIVEL'].includes(doc.status)).map(doc=>({kind:group.kind,index:Number(doc.id.replace('legacy-document-','')),fileName:doc.title||group.label,downloadUrl:doc.driveDownloadUrl!}));
         const documents=published.length?published:canAccessOriginals?files.filter(file=>file.kind===group.kind):[];
         const restricted=group.kind==='AVALIACAO'&&!canAccessOriginals;
         const pending=loading&&canAccessOriginals&&!published.length;
