@@ -82,8 +82,10 @@ export async function assertPublicAcademicPdf(bytes:Buffer,processData:ProcessDa
    });
    extracted+=content;text+=content+' '+JSON.stringify(annotations);
    // The text layer cannot attest that a scanned image contains no private data.
-   const operations=await page.getOperatorList();
-   if(!options.issuedAdministrativeDocument&&operations.fnArray.some((operator:number)=>imageOperators.has(operator)))throw new Error('Documento contém imagem sem conferência pública.');
+   if(!options.issuedAdministrativeDocument){
+    const operations=await page.getOperatorList();
+    if(operations.fnArray.some((operator:number)=>imageOperators.has(operator)))throw new Error('Documento contém imagem sem conferência pública.');
+   }
   }
   const metadata=await pdf.getMetadata();text+=' '+JSON.stringify(metadata.info||{})+' '+JSON.stringify(metadata.metadata?.getAll?.()||{});
   if(!options.issuedAdministrativeDocument&&extracted.trim().length<20)throw new Error('Não foi possível conferir o conteúdo do documento.');

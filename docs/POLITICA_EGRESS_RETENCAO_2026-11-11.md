@@ -33,7 +33,19 @@ A migração `20261117030854_conditional_signature_and_repository_reads.sql` foi
 
 Essas medidas são tamanhos lógicos de JSON, sem cabeçalhos ou compressão do transporte; não são bytes faturados, medição de latência ou previsão mensal. A instalação das funções no banco e a utilização pelo aplicativo publicado exigem verificações distintas. A redução efetiva depende das rotas utilizadas, das alterações ocorridas e da quantidade de instâncias iniciadas.
 
-A franquia e o consumo atuais do projeto e da organização aguardam conferência no painel autenticado. Capturas de 11/11 e 15/11 são evidências históricas de seus próprios períodos; não comprovam saldo ou restrições atuais. Ao medir, registrar projeto, período, serviço e variação diária, sem tratar um valor acumulado como taxa de consumo.
+Os painéis autenticados foram conferidos em 17/11/2026. No Supabase, a organização TCC Enfermagem UFES, plano Free, tinha somente o projeto `portal-tcc-enfermagem-ufes`; o filtro do projeto confirmou os mesmos totais da organização. No ciclo de 11/11 a 11/12, a leitura das 11h20 de Brasília mostrou:
+
+| Indicador do Supabase | Uso no painel | Franquia | Saldo aproximado |
+| --- | ---: | ---: | ---: |
+| Egress | 0,522 GB | 5 GB | 4,478 GB |
+| Log Query | 17,327 GB | 100 GB | 82,673 GB |
+| Database Size | 0,062 GB | 0,5 GB | 0,438 GB |
+
+Egress e Log Query mostravam excedente zero; o painel informa atraso de atualização de até uma hora. O aviso de carência encerrada em 12/11 não comprova excesso atual: a [política de uso justo](https://supabase.com/docs/guides/platform/billing-faq#fair-use-policy) explica que o aviso pode permanecer após um excesso anterior, sem conceder nova carência se houver outro excesso em uma cota efetivamente aplicada. A regra própria de Log Query ainda informa cronograma de aplicação a anunciar e ausência de cobrança direta.
+
+Na Vercel, plano Hobby, a janela selecionada foi **últimos 30 dias, 18/10 a 17/11**, para todos os projetos da equipe TCC - Enfermagem. O painel mostrou 1,53/100 GB de Fast Data Transfer, 575,08 MB/10 GB de Fast Origin Transfer, 30.778/1.000.000 invocações, 38,5/360 GB-h de memória e cerca de 1h50/4h de CPU ativa (46%). O detalhamento atribuiu 98,2% da CPU ao Portal e 1,8% a uma homologação já excluída. Na comparação de sete dias, 10/11 a 17/11, o Portal usou 11m10s de CPU. A janela recente não substitui o saldo de 30 dias, e o Hobby não tem renovação em dia fixo de um ciclo de faturamento. Referências: [Hobby](https://vercel.com/docs/plans/hobby) e [uso de Functions](https://vercel.com/docs/functions/usage-and-pricing).
+
+Esses valores são fotografias dos períodos indicados. Ao medir novamente, registrar projeto, período, serviço e variação diária, sem tratar acumulados como taxas ou atribuir toda a variação às otimizações. Folga em bytes e CPU não garante capacidade para um pico futuro nem comprova integrações externas.
 
 ## Log Query
 
