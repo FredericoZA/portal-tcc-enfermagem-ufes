@@ -58,7 +58,7 @@ export function legacyFileIsPublic(record: LegacyAcademicRecord, file: LegacyAtt
  * renewals and newly imported PDFs cannot expand this source boundary. */
 export function legacyHistoricalFileApproved(record: LegacyAcademicRecord, file: LegacyAttachment): boolean {
   const baseline = record.provenance.publicationImportBaseline as {publicFiles?: Array<{kind:string;sha256:string}>;privateFileIds?:string[]} | undefined;
-  return Boolean(baseline && Array.isArray(baseline.publicFiles) &&
+  return Boolean(/^[a-f0-9]{64}$/.test(file.sha256) && baseline && Array.isArray(baseline.publicFiles) &&
     !baseline.privateFileIds?.includes(file.driveFileId) &&
     baseline.publicFiles.some(f => f.kind === file.kind && f.sha256 === file.sha256));
 }
