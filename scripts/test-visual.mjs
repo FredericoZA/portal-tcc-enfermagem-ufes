@@ -398,10 +398,11 @@ try {
             const headers = scrollHost.querySelectorAll('th[data-portal-managed-column="true"]');
             const first = headers[0];
             const pinned = first.parentElement.firstElementChild;
+            const filter = first.querySelector('.portal-core-column-menu');
             const start = first.getBoundingClientRect().left;
             const inView = start >= pinned.getBoundingClientRect().right - 2
-              && start < scrollHost.getBoundingClientRect().right;
-            const filterFocused = first.contains(document.activeElement);
+              && filter?.getBoundingClientRect().right <= scrollHost.getBoundingClientRect().left + scrollHost.clientWidth;
+            const filterFocused = filter === document.activeElement;
             scrollHost.scrollLeft = 0;
             document.activeElement?.blur();
             return {
