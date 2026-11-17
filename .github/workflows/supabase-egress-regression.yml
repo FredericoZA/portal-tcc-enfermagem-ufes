@@ -6,6 +6,11 @@ on:
   pull_request:
     paths:
       - "server/integrations/supabase.ts"
+      - "server/integrations/conditionalStatusRepository.test.ts"
+      - "server/runtimeReadProjection.ts"
+      - "server/runtimeReadProjection.test.ts"
+      - "server/resourceUsage.ts"
+      - "server/resourceUsage.test.ts"
       - "tests/egress/supabaseLiteRuntime.test.ts"
       - "server.ts"
       - "server/integrations/supabaseLeanRuntime.test.ts"
@@ -14,6 +19,7 @@ on:
       - "supabase/maintenance/20261111_compact_settings_audit.sql"
       - "supabase/migrations/20261111171000_runtime_lean_v1.sql"
       - "supabase/migrations/20261111113000_runtime_lite_snapshot.sql"
+      - "supabase/migrations/20261117030854_conditional_signature_and_repository_reads.sql"
 permissions:
   contents: read
 jobs:
@@ -40,6 +46,9 @@ jobs:
             server/integrations/supabaseAuditDelta.test.ts \
             server/integrations/supabaseColdSnapshotRecovery.test.ts \
             server/integrations/supabaseLeanRuntime.test.ts \
+            server/integrations/conditionalStatusRepository.test.ts \
+            server/runtimeReadProjection.test.ts \
+            server/resourceUsage.test.ts \
             server/integrations/settingsAuditCompactionDatabase.test.ts \
             server/workflow/pruneFinalizedEvaluationDrafts.test.ts \
             server/runtimeRequestLifecycleHttp.test.ts

@@ -42,6 +42,9 @@ test('every mutation and unreviewed endpoint still requires canonical hydration'
     for (const path of [
       '/public/repository',
       '/processes/proc-1',
+      '/processes/proc-1/signatures',
+      '/coordinator/signature-queue',
+      '/signatures/jobs',
         '/public/processes/proc-1/files/trabalho-completo/download',
     ]) {
       assert.equal(
@@ -56,7 +59,7 @@ test('every mutation and unreviewed endpoint still requires canonical hydration'
     '/audit-logs/export',
     '/processes/proc-1/audit-logs',
     '/processes/proc-1/export',
-    '/processes/proc-1/signatures',
+    '/processes/proc-1/signatures/extra',
     '/integrations/asten/webhook',
     '/public/processes/proc-1/files/unknown/download',
     '/public/processes/proc-1/documents/doc-ata/download/extra',
@@ -66,4 +69,11 @@ test('every mutation and unreviewed endpoint still requires canonical hydration'
   ]) {
     assert.equal(runtimeReadProjection('GET', path), 'FULL', path);
   }
+});
+
+test('signature status reads use the reviewed signature projection only',()=>{
+  for(const path of ['/processes/proc-1/signatures','/coordinator/signature-queue','/president/signature-queue','/signatures/jobs'])
+    assert.equal(runtimeReadProjection('GET',path),'SIGNATURES',path);
+  for(const path of ['/processes/proc-1/detail','/processes/proc-1/signatures/extra','/signatures/jobs/export'])
+    assert.equal(runtimeReadProjection('GET',path),'FULL',path);
 });
