@@ -162,7 +162,6 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import JSZip from 'jszip';
 import * as QRCode from 'qrcode';
-import { createServer as createViteServer } from 'vite';
 import {
   INITIAL_SETTINGS,
   DEMO_PROCESSES,
@@ -198,7 +197,7 @@ import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngi
 import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
-import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
+import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, refreshPortalSignatureState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
 import { createProfessionalPdf } from './server/documents/simplePdf';
 import { extractAstenSignedPdf } from './server/integrations/asten';
 import { buildProcessArchiveFileName, renamePortalProcessFolder, readExistingGeneratedInvitation, downloadDrivePdf, ensurePortalProcessDriveFolder, inspectPortalDriveArtifact, preparePublicationSource, withdrawDriveFilePublicAccess, withdrawManyPublicDriveFiles, deleteAuthorizationPdfs, uploadGeneratedPdfToDrive, uploadProcessFormPdf, uploadSignedPdfToDrive, reserveProcessFormPdfId, readProcessFormPdfById, type ProcessFormArchiveType } from './server/integrations/googleDriveArchive';
@@ -680,9 +679,9 @@ async function persistPortalStateDurably():Promise<void>{
 function applyPersistedState(state: PersistedPortalState) {
   if(Array.isArray(state.auditLogs))canonicalAuditHistoryHydrated=true;
   if (Array.isArray(state.legacyAcademicRecords)) legacyAcademicRecordsStore=state.legacyAcademicRecords.map(canonicalLegacyRecord);
-  registrationDraftsStore=pruneDrafts(state.registrationDrafts||{});
-  evaluationDraftsStore=new Map(Object.entries(state.evaluationDrafts||{}));
-  reminderRecordsStore=state.reminders||[];
+  if(state.registrationDrafts)registrationDraftsStore=pruneDrafts(state.registrationDrafts);
+  if(state.evaluationDrafts)evaluationDraftsStore=new Map(Object.entries(state.evaluationDrafts));
+  if(state.reminders)reminderRecordsStore=state.reminders;
   if(state.processDeletionTasks)processDeletionTasksStore=state.processDeletionTasks;
   if (state.settings) { currentSettings = { ...INITIAL_SETTINGS, ...state.settings };if(currentSettings.integrationStudio)currentSettings.integrationStudio=consolidateProcessForms(currentSettings.integrationStudio); delete (currentSettings as any).recoverySecretKey;delete (currentSettings as any).courseCoordinatorEmail;delete (currentSettings as any).courseCoordinatorName;for(const model of Object.values(currentSettings.documentModels||{}))if(model)model.templateContentText=''; }
   if (state.processes) { processesStore = hydrateProcesses(state.processes); reconcileRecordedReservationStatuses(); }
@@ -694,7 +693,7 @@ function applyPersistedState(state: PersistedPortalState) {
   if (state.astenCallbackFingerprints) astenCallbackFingerprints = new Set(state.astenCallbackFingerprints);
   if (state.revokedSessionIds) revokedSessionIdsStore = new Set(state.revokedSessionIds);
   if (state.authorizedStudents) authorizedStudentsStore = hydrateAuthorizedStudents(state.authorizedStudents);
-  removedAccessProcessKeys=new Set(state.removedAccessProcessKeys||[]);
+  if(state.removedAccessProcessKeys)removedAccessProcessKeys=new Set(state.removedAccessProcessKeys);
   if (state.formArchiveJobs) formArchiveJobsStore = state.formArchiveJobs;
   if (state.emailDeliveries) emailDeliveriesStore = state.emailDeliveries;
   if (state.workflowRuns) workflowRunsStore = state.workflowRuns;
@@ -2471,7 +2470,9 @@ export async function createPortalApp() {
       const finishHydration=registrationTiming?.measure('hydrate');
       let remote:PersistedPortalState|null;
       const readProjection=liteRuntimeReadsEnabled?(canReadPagedAudit(req.method,req.path,req.query)?'LEAN':runtimeReadProjection(req.method,req.path)):'FULL';
-      try{remote=readProjection==='LEAN'
+      try{remote=readProjection==='SIGNATURES'
+        ?await refreshPortalSignatureState<PersistedPortalState>()
+        :readProjection==='LEAN'
         ?await refreshPortalRuntimeLeanState<PersistedPortalState>()
         :readProjection==='LITE'
           ?await refreshPortalRuntimeLiteState<PersistedPortalState>()
@@ -7120,6 +7121,7 @@ ${auditChanges(log)}`).join('\n\n');
 
   // Vite middleware for dev or Static serve for production
   if (!serveCompiledClient) {
+    const {createServer:createViteServer}=await import('vite');
     const vite = await createViteServer({
       html: { cspNonce: developmentNonce },
       server: { middlewareMode: true },

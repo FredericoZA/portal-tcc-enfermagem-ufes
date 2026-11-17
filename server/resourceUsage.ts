@@ -4,7 +4,7 @@ const startedAt=new Date().toISOString();
 function category(url:string){
  let path:string;try{path=new URL(url,'https://metrics.invalid').pathname;}catch{return 'other';}
  if(path.endsWith('/portal_runtime_state'))return 'runtime-state';
- if(path.endsWith('/portal_read_runtime_projection_v1'))return 'conditional-read';
+ if(['/portal_read_runtime_projection_v1','/portal_read_signature_projection_v1','/portal_read_repository_projection_v1'].some(endpoint=>path.endsWith(endpoint)))return 'conditional-read';
  if(path.endsWith('/portal_read_critical_audit_page_v1'))return 'audit-page';
  if(path.includes('/rpc/portal_read_runtime'))return 'runtime-read';
  return 'other';

@@ -477,10 +477,11 @@ export async function refreshPortalRuntimeState<T extends object>(): Promise<T |
  * Omissão de RPC só ocorre durante implantação gradual; 401/403/5xx não
  * autorizam usar estado antigo ou dispensar verificações de acesso.
  */
-type RuntimeReadProjection = 'LITE'|'LEAN';
+type RuntimeReadProjection = 'LITE'|'LEAN'|'SIGNATURES';
 type CachedRuntimeReadProjection = {endpoint:string;revision:number;payload:object;fingerprint?:string};
 let cachedLiteSnapshot: CachedRuntimeReadProjection|undefined;
-let conditionalProjectionBackoff: {endpoint:string;retryAfter:number}|undefined;
+const conditionalProjectionBackoff=new Map<RuntimeReadProjection,{endpoint:string;retryAfter:number}>();
+const signatureProjectionKeys=['settings','processes','memberships','authorizedStudents','removedAccessProcessKeys','revokedSessionIds','signatureJobs'];
 
 /** A revision can change because of an audit event without changing anything
  * this GET needs. The DB confirms the current projection hash in one MVCC read
@@ -492,19 +493,20 @@ async function readConditionalRuntimeProjection(
   kind:RuntimeReadProjection,cached:CachedRuntimeReadProjection|undefined,
 ):Promise<{available:false}|{available:true;snapshot:CachedRuntimeReadProjection|null}>{
   const endpoint=stateEndpoint();
+  const backoff=conditionalProjectionBackoff.get(kind);
   if(process.env.PORTAL_RUNTIME_CONDITIONAL_READS==='false'
-    ||(conditionalProjectionBackoff?.endpoint===endpoint&&conditionalProjectionBackoff.retryAfter>Date.now()))return{available:false};
+    ||(backoff?.endpoint===endpoint&&backoff.retryAfter>Date.now()))return{available:false};
   const known=cached?.endpoint===endpoint?cached:undefined;
   const response=await readSupabase(
-    `${supabaseUrl()}/rest/v1/rpc/portal_read_runtime_projection_v1`,20_000,
-    JSON.stringify({projection_kind:kind,known_fingerprint:known?.fingerprint??null}),true,
+    `${supabaseUrl()}/rest/v1/rpc/${kind==='SIGNATURES'?'portal_read_signature_projection_v1':'portal_read_runtime_projection_v1'}`,20_000,
+    JSON.stringify({...(kind==='SIGNATURES'?{}:{projection_kind:kind}),known_fingerprint:known?.fingerprint??null}),true,
   );
   if(response.status===404){
     const detail=await response.clone().json().catch(()=>null);
     if(detail?.code==='PGRST202'){
       // An additive rollout may deploy the code before the migration. Do not
       // repeat a missing RPC on every GET; the installed readers remain valid.
-      conditionalProjectionBackoff={endpoint,retryAfter:Date.now()+60_000};
+      conditionalProjectionBackoff.set(kind,{endpoint,retryAfter:Date.now()+60_000});
       return{available:false};
     }
   }
@@ -526,7 +528,11 @@ async function readConditionalRuntimeProjection(
     return{available:true,snapshot:{...known,revision}};
   }
   if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.hasOwn(payload,'auditLogs')
-    ||(kind==='LEAN'&&Object.hasOwn(payload,'legacyAcademicRecords'))){
+    ||(kind!=='LITE'&&Object.hasOwn(payload,'legacyAcademicRecords'))
+    ||(kind==='SIGNATURES'&&(Object.keys(payload).some(key=>!signatureProjectionKeys.includes(key))
+      ||signatureProjectionKeys.some(key=>key==='settings'
+        ?!payload[key]||typeof payload[key]!=='object'||Array.isArray(payload[key])
+        :!Array.isArray(payload[key]))))){
     throw new Error('A projeção condicional retornou dados inválidos.');
   }
   return{available:true,snapshot:{endpoint,revision,payload,fingerprint}};
@@ -625,6 +631,23 @@ export async function refreshPortalRuntimeLeanState<T extends object>():Promise<
     if(revision===cached.revision)return confirmedRuntimeRead(structuredClone(cached.payload) as T,revision);
   }
   return loadPortalRuntimeLeanState<T>();
+}
+
+let cachedSignatureSnapshot:CachedRuntimeReadProjection|undefined;
+/** Read-only signature status and current ACLs. Recovery tasks still acquire
+ * the runtime lease and hydrate FULL before any workflow/provider operation. */
+export async function refreshPortalSignatureState<T extends object>():Promise<T|null>{
+  if(!getSupabaseRuntimeStatus().durablePersistenceReady)return null;
+  const cached=cachedSignatureSnapshot;
+  if(cached?.endpoint===stateEndpoint()){
+    const revision=await readPortalRuntimeRevision();
+    if(revision===null)throw new Error('O estado persistido não foi encontrado.');
+    if(revision===cached.revision)return confirmedRuntimeRead(structuredClone(cached.payload) as T,revision);
+  }
+  const conditional=await readConditionalRuntimeProjection('SIGNATURES',cached);
+  if(!conditional.available)return loadPortalRuntimeLeanState<T>();
+  cachedSignatureSnapshot=conditional.snapshot??undefined;
+  return conditional.snapshot?confirmedRuntimeRead(structuredClone(conditional.snapshot.payload) as T,conditional.snapshot.revision):null;
 }
 
 /** A historical settings snapshot is recoverable only on a private, authorized
@@ -982,7 +1005,28 @@ export async function readCriticalAuditPage(input:{revision:number;processId?:st
 }
 
 /** Read-only catalog projection; never install this as a write baseline. */
+let cachedRepositorySnapshot:CachedRuntimeReadProjection|undefined;
+let repositoryProjectionBackoff:{endpoint:string;retryAfter:number}|undefined;
 export async function loadPortalRepositorySnapshot(){
+ const endpoint=stateEndpoint(),known=cachedRepositorySnapshot?.endpoint===endpoint?cachedRepositorySnapshot:undefined;
+ const useConditional=process.env.PORTAL_RUNTIME_CONDITIONAL_READS!=='false'&&
+   !(repositoryProjectionBackoff?.endpoint===endpoint&&repositoryProjectionBackoff.retryAfter>Date.now());
+ if(useConditional){
+  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_repository_projection_v1`,20_000,
+   JSON.stringify({known_fingerprint:known?.fingerprint??null}),true);
+  const missing=response.status===404&&(await response.clone().json().catch(()=>null))?.code==='PGRST202';
+  if(!missing){
+   if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+   const rows=await response.json();const row=Array.isArray(rows)&&rows.length===1?rows[0]:null;
+   if(!row||!Number.isSafeInteger(row.revision)||row.revision<1||typeof row.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(row.fingerprint))throw Error('Catálogo condicional inválido.');
+   const payload=row.payload===null&&known?.fingerprint===row.fingerprint?known.payload:row.payload;
+   if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).some(key=>!['processes','legacyAcademicRecords'].includes(key))
+    ||!Array.isArray(payload.processes)||!Array.isArray(payload.legacyAcademicRecords))throw Error('Catálogo condicional não confirmado.');
+   cachedRepositorySnapshot={endpoint,revision:row.revision,fingerprint:row.fingerprint,payload};
+   return {...structuredClone(payload),revision:row.revision};
+  }
+  repositoryProjectionBackoff={endpoint,retryAfter:Date.now()+60_000};
+ }
  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_repository_v1`,20_000,'{}');
  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
  const rows=await response.json();const row=rows?.[0];

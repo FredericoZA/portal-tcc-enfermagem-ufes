@@ -2,9 +2,17 @@
  * Only audited, read-only GET routes may omit audit history from hydration.
  * LEAN retains processes, settings, memberships, signature jobs and document
  * revisions; LITE additionally retains the historical academic catalog.
+ * SIGNATURES retains only current processes/jobs and their session/ACL inputs;
+ * scheduled recovery always refreshes the complete state under its own lease.
  * Neither projection changes the route's own authorization or PDF checks.
  */
-export type RuntimeReadProjection = 'FULL' | 'LITE' | 'LEAN';
+export type RuntimeReadProjection = 'FULL' | 'LITE' | 'LEAN' | 'SIGNATURES';
+
+const SIGNATURE_PATHS = new Set([
+  '/signatures/jobs',
+  '/coordinator/signature-queue',
+  '/president/signature-queue',
+]);
 
 const LITE_PATHS = new Set([
   '/me',
@@ -80,6 +88,8 @@ export function runtimeReadProjection(
   // Mutations, audit feeds, exports and every unreviewed endpoint fail closed
   // to the canonical state, including new routes added in future changes.
   if (method !== 'GET') return 'FULL';
+  if (SIGNATURE_PATHS.has(requestPath) || /^\/processes\/[^/?#]+\/signatures$/.test(requestPath))
+    return 'SIGNATURES';
   if (
     LEAN_PATHS.has(requestPath) ||
     CURRENT_PROCESS_READS.some((pattern) => pattern.test(requestPath))
