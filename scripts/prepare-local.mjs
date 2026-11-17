@@ -107,8 +107,8 @@ if (normalizedEnv !== localEnv) await writeFile('.env.local', normalizedEnv, { e
 // writeFile(mode) não altera permissões de arquivo já copiado (ex.: 0644).
 if (process.platform !== 'win32') await chmod('.env.local', 0o600);
 
-const vitePath = process.platform === 'win32' ? 'node_modules/.bin/vite.cmd' : 'node_modules/.bin/vite';
-if (!(await exists(vitePath))) {
+const builderPath = process.platform === 'win32' ? 'node_modules/.bin/rsbuild.cmd' : 'node_modules/.bin/rsbuild';
+if (!(await exists(builderPath))) {
   console.log('[Portal TCC] dependências não encontradas; executando npm ci...');
   const code = await run(command('npm'), ['ci']);
   if (code !== 0) process.exit(code);

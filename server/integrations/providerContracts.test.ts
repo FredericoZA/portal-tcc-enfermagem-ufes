@@ -170,7 +170,7 @@ test('importação CSV aceita ponto e vírgula e acentos, sem coletar matrícula
 test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => {
   const config=JSON.parse(readFileSync(new URL('../../vercel.json',import.meta.url),'utf8'));
   const packageJson=JSON.parse(readFileSync(new URL('../../package.json',import.meta.url),'utf8'));
-  const viteConfig=readFileSync(new URL('../../vite.config.ts',import.meta.url),'utf8');
+  const frontendConfig=readFileSync(new URL('../../rsbuild.config.ts',import.meta.url),'utf8');
   const serverSource=readFileSync(new URL('../../server.ts',import.meta.url),'utf8');
   const genericApiRewrite=config.rewrites.find((rewrite:any)=>rewrite.source==='/api/(.*)');
   const replicationRewrite=config.rewrites.find((rewrite:any)=>rewrite.source==='/api/public/replication-models/:slug/download');
@@ -187,7 +187,7 @@ test('contrato Vercel encaminha API ao handler e SPA ao build estático', () => 
   assert.match(buildSource,/outfile: 'dist\/server\/server\.cjs'/);
   for(const entry of ['index','runtime-asset','replication-model','public-indicators'])assert.match(config.functions['api/'+entry+'.ts'].includeFiles,/dist\/server\/\*\*/);
   assert.doesNotMatch(packageJson.scripts.build,/--sourcemap/);
-  assert.match(viteConfig,/outDir:\s*'dist\/client'/);
+  assert.match(frontendConfig,/distPath:\s*\{\s*root:\s*'dist\/client'/);
   assert.match(serverSource,/dotenv\.config\(\{path:'\.env\.local',override:false,quiet:true\}\)/);
   assert.match(serverSource,/path\.join\(process\.cwd\(\), 'dist', 'client'\)/);
 });

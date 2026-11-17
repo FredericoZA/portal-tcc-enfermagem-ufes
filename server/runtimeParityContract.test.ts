@@ -31,11 +31,11 @@ test('desenvolvimento oferece bootstrap único, modo compilado e verificação d
 });
 
 test('build local identifica o mesmo commit que CI e Vercel',()=>{
-  const vite=read('vite.config.ts');
-  assert.match(vite,/VERCEL_GIT_COMMIT_SHA/);
-  assert.match(vite,/GITHUB_SHA/);
-  assert.match(vite,/PORTAL_GIT_COMMIT/);
-  assert.match(vite,/git', \['rev-parse', '--short=7', 'HEAD'\]/);
+  const frontend=read('rsbuild.config.ts');
+  assert.match(frontend,/VERCEL_GIT_COMMIT_SHA/);
+  assert.match(frontend,/GITHUB_SHA/);
+  assert.match(frontend,/PORTAL_GIT_COMMIT/);
+  assert.match(frontend,/git', \['rev-parse', '--short=7', 'HEAD'\]/);
 });
 
 test('health check local informa commit, versão e tipo de runtime',()=>{

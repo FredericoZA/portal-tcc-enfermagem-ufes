@@ -1,3 +1,4 @@
+import type { Server as HttpServer } from 'node:http';
 import {canonicalDriveOriginalLinks} from './server/driveOriginalLinks';
 import {processDriveReaderEmails} from './server/integrations/processDriveReaders';
 import {rateLimit} from 'express-rate-limit';
@@ -222,6 +223,8 @@ import { emailMatchesDomains, isPortalFeatureEnabled, resolveInstallationProfile
 import { emailAuditMailbox, isEmailAuditEnabled } from './src/utils/emailAuditSettings';
 import { operationalDocumentType, validateCourseStudio } from './src/utils/courseStudioValidator';
 import { StagedUploadCapacityError, cleanupExpiredDownloadTransfers, cleanupExpiredStagedUploads, createDrivePreviewTransfer, createDriveStagedUpload, readDrivePreviewTransfer, getSupabaseStagingSecurityStatus, withDriveStagedUpload, type StagedUploadPurpose } from './server/integrations/supabaseStorageStaging';
+
+declare const __PORTAL_COMPILED_SERVER__: true | undefined;
 
 // A Vercel injeta as variáveis diretamente. Em desenvolvimento, carregamos
 // primeiro o arquivo recomendado pelo guia e depois o .env convencional, sem
@@ -2457,7 +2460,8 @@ export async function createPortalApp() {
   }
   publishRuntimeTemplatesFromSettings();
   const app = createPortalHttpApp();
-  const serveCompiledClient = productionRuntime || process.env.PORTAL_SERVE_COMPILED_CLIENT === 'true';
+  const serveCompiledClient = typeof __PORTAL_COMPILED_SERVER__ !== 'undefined'
+    || productionRuntime || process.env.PORTAL_SERVE_COMPILED_CLIENT === 'true';
   const developmentNonce = serveCompiledClient ? '' : randomBytes(18).toString('base64');
   if(process.env.VERCEL)app.set('trust proxy',1);
 
@@ -7253,17 +7257,36 @@ ${auditChanges(log)}`).join('\n\n');
   });
 
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'Operação não encontrada.', code: 'API_NOT_FOUND' }); });
-  app.use(portalHttpError);
 
-  // Vite middleware for dev or Static serve for production
-  if (!serveCompiledClient) {
-    const {createServer:createViteServer}=await import('vite');
-    const vite = await createViteServer({
-      html: { cspNonce: developmentNonce },
-      server: { middlewareMode: true },
-      appType: 'spa'
+  if (typeof __PORTAL_COMPILED_SERVER__ === 'undefined' && !serveCompiledClient) {
+    let localServer: HttpServer | undefined;
+    app.locals.attachDevelopmentHttpServer = (server: HttpServer) => { localServer = server; };
+
+    async function startDevelopmentClient() {
+      const { createRsbuild, loadConfig } = await import('@rsbuild/core');
+      const { content } = await loadConfig();
+      const builder = await createRsbuild({
+        config: {
+          ...content,
+          server: { ...content.server, middlewareMode: true, printUrls: false },
+          security: { ...content.security, nonce: developmentNonce },
+        },
+      });
+      const client = await builder.createDevServer();
+      if (localServer) {
+        client.connectWebSocket({ server: localServer });
+        localServer.once('close', () => { void client.close(); });
+      }
+      await client.afterListen();
+      return client;
+    }
+
+    // API-only clients need neither the development compiler nor its file watcher.
+    let frontend: ReturnType<typeof startDevelopmentClient> | undefined;
+    app.use((request, response, next) => {
+      frontend ??= startDevelopmentClient();
+      void frontend.then(client => client.middlewares(request, response, next)).catch(next);
     });
-    app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist', 'client');
     app.use(express.static(distPath));
@@ -7271,6 +7294,7 @@ ${auditChanges(log)}`).join('\n\n');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+  app.use(portalHttpError);
 
   return app;
 }
@@ -7280,6 +7304,7 @@ if (!process.env.VERCEL) {
     if(reviewSeed){persistPortalState(true);console.log('[Portal TCC] Base local vazia preenchida com exemplos de demonstração.');}
     const port=Number(process.env.PORT||3000);
     const host=process.env.HOST||(productionRuntime?'0.0.0.0':'127.0.0.1');
-    app.listen(port,host,()=>console.log(`[Portal TCC] Server listening on http://${host}:${port}`));
+    const listener=app.listen(port,host,()=>console.log(`[Portal TCC] Server listening on http://${host}:${port}`));
+    app.locals.attachDevelopmentHttpServer?.(listener);
   }).catch((error)=>{console.error('[Portal TCC] Falha ao iniciar:',error);process.exitCode=1;});
 }

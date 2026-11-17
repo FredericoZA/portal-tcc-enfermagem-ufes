@@ -27,7 +27,7 @@ alterações de dados ficam em `.portal-data/`, e os segredos locais em `.env.lo
 Esses arquivos são ignorados pelo Git. Os registros reais e a configuração
 publicada no Supabase não são copiados para este ambiente.
 
-Alterações da interface atualizam pelo Vite; alterações do servidor reiniciam
+Alterações da interface atualizam pelo Rsbuild; alterações do servidor reiniciam
 automaticamente pelo `tsx watch`. Também é possível iniciar com `npm run dev`.
 Não é necessário fazer build, commit, push ou deploy para testar cada alteração.
 

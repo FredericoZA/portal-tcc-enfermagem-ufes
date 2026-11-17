@@ -12,7 +12,13 @@ const common = {
   packages: 'external',
 };
 
-await build({ ...common, entryPoints: ['server.ts'], outfile: 'dist/server/server.cjs' });
+await build({
+  ...common,
+  entryPoints: ['server.ts'],
+  outfile: 'dist/server/server.cjs',
+  // A função publicada serve arquivos prontos e não empacota o compilador local.
+  define: { __PORTAL_COMPILED_SERVER__: 'true' },
+});
 await build({
   ...common,
   entryPoints: ['index', 'runtime-asset', 'replication-model', 'public-indicators'].map(

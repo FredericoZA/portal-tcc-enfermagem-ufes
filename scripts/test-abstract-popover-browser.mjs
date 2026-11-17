@@ -3,20 +3,19 @@ import {mkdtemp, mkdir, writeFile, symlink, rm, realpath} from 'node:fs/promises
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
-import {createServer} from 'vite';
-import react from '@vitejs/plugin-react';
+import {startFrontendFixture} from './fixtures/start-frontend-fixture.mjs';
 
 // A real browser fixture with the production component and CSS. The temporary
-// Vite instance has its own cache; no Portal API or user data is involved.
+// build is isolated from the Portal API and user data.
 const repo = fileURLToPath(new URL('..',import.meta.url));
 const temporary = await realpath(await mkdtemp(path.join(tmpdir(),'portal-abstract-qa-')));
 const output=path.join(repo,'output/playwright/abstract-popover');
-let vite,browser;
+let fixture,browser;
 try{
   await mkdir(output,{recursive:true});
   await symlink(path.join(repo,'node_modules'),path.join(temporary,'node_modules'));
   await writeFile(path.join(temporary,'package.json'),'{"type":"module"}');
-  await writeFile(path.join(temporary,'index.html'),'<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module" src="/fixture.tsx"></script></body></html>');
+  await writeFile(path.join(temporary,'index.html'),'<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div></body></html>');
   await writeFile(path.join(temporary,'fixture.tsx'),`
 import React from'react';import{createRoot}from'react-dom/client';
 import{TccAbstractPopover}from${JSON.stringify(path.join(repo,'src/components/TccAbstractPopover.tsx'))};
@@ -26,8 +25,8 @@ const paragraph='Objetivo: conferir a apresentação do resumo no Portal TCC. O 
 const summary=Array.from({length:4},()=>paragraph).join('\\n\\n');
 createRoot(document.getElementById('root')).render(<main><h1>Repositório acadêmico</h1><p>Consulta aos resumos dos trabalhos</p><table><thead><tr><th>Processo</th><th>Trabalho</th><th>Resumo do TCC</th></tr></thead><tbody><tr><td>TCC-2026-0042</td><td>Exemplo com resumo</td><td><TccAbstractPopover summary={summary} processLabel="TCC-2026-0042"/></td></tr><tr><td>001 - Legado</td><td>Exemplo sem resumo</td><td><TccAbstractPopover processLabel="001 - Legado" unavailableLabel="Resumo não localizado no acervo importado"/></td></tr></tbody></table><button id="outside">Outra ação</button></main>);
 `);
-  vite=await createServer({configFile:false,root:temporary,cacheDir:path.join(temporary,'vite-cache'),plugins:[react()],server:{host:'127.0.0.1',port:0,hmr:false,fs:{allow:[temporary,repo]}},optimizeDeps:{include:['react','react-dom/client','react/jsx-runtime','lucide-react']}});
-  await vite.listen();const base=vite.resolvedUrls.local[0];
+  fixture=await startFrontendFixture(temporary);
+  const base=fixture.url;
   const modulePath=process.env.PLAYWRIGHT_MODULE||path.join(process.env.HOME||'','.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs');
   const{chromium}=await import(pathToFileURL(modulePath).href);
   browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE}:process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{})});
@@ -52,4 +51,4 @@ createRoot(document.getElementById('root')).render(<main><h1>Repositório acadê
   const{context:mobile,page:phone}=await setup({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
   const phoneTrigger=phone.getByRole('button',{name:'Ler resumo do TCC TCC-2026-0042',exact:true});await phoneTrigger.tap();const phonePopup=phone.getByRole('dialog',{name:/Resumo do TCC/});await phonePopup.waitFor();const mobileBox=await phonePopup.boundingBox();assert.ok(mobileBox.width<=366&&mobileBox.x>=12&&mobileBox.x+mobileBox.width<=378);assert.ok(mobileBox.height<=432&&mobileBox.y>=12&&mobileBox.y+mobileBox.height<=832);assert.equal(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await phone.screenshot({path:path.join(output,'resumo-ampliado-celular.png')});await phonePopup.getByRole('button',{name:'Fechar resumo',exact:true}).tap();assert.equal(await phonePopup.count(),0);await phone.screenshot({path:path.join(output,'sem-resumo-icone-celular.png')});report.checks.push({name:'celular: abre por toque, fecha, sem transbordamento',width:mobileBox.width,height:mobileBox.height});await mobile.close();
   assert.deepEqual(report.errors,[]);await writeFile(path.join(output,'qa.json'),JSON.stringify(report,null,2));console.log('PASS: resumo ampliado/justificado, ausência somente ícone, teclado, bordas e celular por toque.');
-}finally{if(browser)await browser.close();if(vite)await vite.close();await rm(temporary,{recursive:true,force:true});}
+}finally{if(browser)await browser.close();if(fixture)await fixture.close();await rm(temporary,{recursive:true,force:true});}

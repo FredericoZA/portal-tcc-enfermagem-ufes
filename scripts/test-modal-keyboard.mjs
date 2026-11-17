@@ -3,18 +3,17 @@ import {mkdtemp, mkdir, writeFile, symlink, rm, realpath} from 'node:fs/promises
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {createServer} from 'vite';
-import react from '@vitejs/plugin-react';
+import {startFrontendFixture} from './fixtures/start-frontend-fixture.mjs';
 
 // Exercises real React portals and keyboard events without starting the Portal API
-// or sharing Vite's cache with a developer's existing localhost instance.
+// or sharing build artifacts with a developer's existing localhost instance.
 const repo = path.resolve(new URL('..', import.meta.url).pathname);
 const temporary = await realpath(await mkdtemp(path.join(tmpdir(), 'portal-modal-keyboard-')));
-let vite, browser;
+let fixture, browser;
 try {
   await symlink(path.join(repo, 'node_modules'), path.join(temporary, 'node_modules'));
   await writeFile(path.join(temporary, 'package.json'), '{"type":"module"}');
-  await writeFile(path.join(temporary, 'index.html'), '<div id="root"></div><script type="module" src="/fixture.tsx"></script>');
+  await writeFile(path.join(temporary, 'index.html'), '<!doctype html><html><head></head><body><div id="root"></div></body></html>');
   await writeFile(path.join(temporary, 'fixture.tsx'), `
 import React,{useEffect,useRef,useState} from 'react';
 import{createRoot}from'react-dom/client';
@@ -38,9 +37,8 @@ function Fixture(){
 createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/></React.StrictMode>);
 `);
   await writeFile(path.join(temporary, 'styles.css'), '');
-  vite = await createServer({configFile:false,root:temporary,cacheDir:path.join(temporary,'vite-cache'),plugins:[react()],server:{host:'127.0.0.1',port:0,hmr:false,fs:{allow:[temporary,repo]}},optimizeDeps:{include:['react','react-dom/client','react/jsx-runtime']}});
-  await vite.listen();
-  const base = vite.resolvedUrls.local[0];
+  fixture = await startFrontendFixture(temporary);
+  const base = fixture.url;
   const modulePath = process.env.PLAYWRIGHT_MODULE || path.join(process.env.HOME || '', '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs');
   const {chromium} = await import(pathToFileURL(modulePath).href);
   browser = await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE}:process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{})});
@@ -79,6 +77,6 @@ createRoot(document.getElementById('root')).render(<React.StrictMode><Fixture/><
   console.log('PASS: modal stack, Escape, blocking operation, login, unique IDs and focus restoration in a real browser.');
 } finally {
   if(browser)await browser.close();
-  if(vite)await vite.close();
+  if(fixture)await fixture.close();
   await rm(temporary,{recursive:true,force:true});
 }
