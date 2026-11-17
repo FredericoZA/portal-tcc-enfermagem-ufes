@@ -112,3 +112,18 @@ test('signature widgets do not hide credential text, strings, metadata or person
   await signatureWidgetPdf('Ata oficial da defesa.','','https://provider.example.invalid/link?access_token=fixture_sensitive'),
  ])await assert.rejects(assertPublicAcademicPdf(bytes,process,options),/credencial/);
 });
+test('originais administrativos com imagem preservam bytes e continuam recusando credenciais',async()=>{
+ const process=structuredClone(DEMO_PROCESSES[0]),options={issuedAdministrativeDocument:true};
+ const rasterPdf=async(text:string,annotationUrl='')=>{
+  const document=await PDFDocument.load(await pdf(text,'',annotationUrl));
+  const image=await document.embedPng(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lE0AAAAASUVORK5CYII=','base64'));
+  document.getPage(0).drawImage(image,{x:50,y:700,width:40,height:30});
+  return Buffer.from(await document.save());
+ };
+ const bytes=await rasterPdf('Ata oficial da defesa. Autores e banca examinadora.'),before=Buffer.from(bytes);
+ await assert.rejects(assertPublicAcademicPdf(bytes,process),/imagem sem conferência/);
+ await assertPublicAcademicPdf(bytes,process,options);
+ assert.deepEqual(bytes,before);
+ await assert.rejects(assertPublicAcademicPdf(await rasterPdf('Ata oficial da defesa. senha=segredo_fixture'),process,options),/credencial/);
+ await assert.rejects(assertPublicAcademicPdf(await rasterPdf('Ata oficial da defesa. Autores e banca examinadora.','https://provider.example.invalid/link?access_token=fixture_sensitive'),process,options),/credencial/);
+});

@@ -18,6 +18,17 @@ test('prepara tabs na cópia DOCX preservando texto, estilos, cabeçalhos, rodap
  assert.ok(updated.indexOf('<w:tabs')<updated.indexOf('<w:spacing'));
  assert.deepEqual(await prepareAtaDocxTabs(result),result,'transformation is byte-idempotent');
 });
+test('DOCX já tabulado mantém bytes e datas ZIP antigas em uma cópia isolada',async()=>{
+ const zip=new JSZip(),date=new Date('2001-01-01T00:00:00Z');
+ const xml='<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="2000"/></w:tabs></w:pPr><w:r><w:t>Assinaturas preservadas</w:t></w:r></w:p></w:body></w:document>';
+ zip.file('word/document.xml',xml,{date});zip.file('word/header1.xml','CABEÇALHO PRESERVADO',{date});
+ const source=await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}),before=Buffer.from(source);
+ const copy=await prepareAtaDocxTabs(source);
+ assert.deepEqual(copy,before,'unchanged layout must preserve the complete ZIP, including entry dates');
+ assert.deepEqual(await prepareAtaDocxTabs(copy),before,'repeated preparation must remain byte-idempotent');
+ copy[0]^=0xff;
+ assert.deepEqual(source,before,'mutating the temporary copy must not mutate the approved original');
+});
 test('recusa ZIP sem documento e tamanho inválido',async()=>{
  const zip=new JSZip();zip.file('outra-parte.xml','texto');
  await assert.rejects(prepareAtaDocxTabs(await zip.generateAsync({type:'nodebuffer'})),/document.xml/);
