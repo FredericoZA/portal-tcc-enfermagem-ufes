@@ -25,6 +25,9 @@ export async function prepareAtaDocxTabs(source:Buffer):Promise<Buffer>{
   });
   return paragraph.replace(/^(<w:p\b[^>]*>)/,`$1<w:pPr>${tabs}</w:pPr>`);
  });
+ // Replacing an unchanged ZIP entry would refresh its timestamp and recompress
+ // the package. Preserve the validated bytes while keeping the copy isolated.
+ if(patched===xml)return Buffer.from(source);
  zip.file('word/document.xml',patched);
  const copy=await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'});
  if(copy.length>16*1024*1024)throw new Error('A cópia temporária do DOCX da ata ultrapassa 16 MB.');
