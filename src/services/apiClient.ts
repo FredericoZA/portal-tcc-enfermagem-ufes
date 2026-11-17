@@ -255,6 +255,18 @@ async function withDevelopmentFallback<T>(file:File, operation:()=>Promise<T>, f
 }
 
 export const apiClient = {
+  getRepositoryDocumentAvailability:()=>fetchApi<import('../utils/repositoryDocuments').RepositoryDocumentIndex>('/api/repository/document-availability'),
+  getRepositoryDocumentDriveLinks:(path:string)=>{
+    const url=new URL(path,window.location.origin);
+    const current=/^\/api\/(?:public\/)?processes\/[^/]+\/(?:location-proof\/download|reservation-receipt|documents\/doc-(?:convite|ata|termo|declaracao)\/download|files\/(?:trabalho-completo|resumo-expandido)\/download)$/;
+    const legacy=/^\/api\/(?:(?:admin|public)\/)?legacy-academic-records\/[^/]+\/(?:documents|files|evaluation-documents)\/(?:0|[1-9]\d?)\/download$/;
+    if(url.origin!==window.location.origin||(!current.test(url.pathname)&&!legacy.test(url.pathname)))throw Error('Endereço de documento inválido.');
+    const receipt=url.searchParams.get('receipt');
+    url.search='';
+    if(receipt)url.searchParams.set('receipt',receipt);
+    url.searchParams.set('delivery','drive-links');
+    return fetchApi<DriveDocumentAccess>(url.pathname+url.search);
+  },
   syncProcessDriveReaders,
   getReservationReceiptDriveLinks:(processId:string,receiptId:string)=>fetchApi<DriveDocumentAccess>(`/api/processes/${encodeURIComponent(processId)}/location-proof/download?receipt=${encodeURIComponent(receiptId)}&delivery=drive-links`),
   getPublicRepositoryDriveLinks:(path:string)=>{

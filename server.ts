@@ -8,6 +8,7 @@ import {installLegacyEvaluationParticipantRoutes,legacyEvaluationAccessRevision}
 import {publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
 import {archiveRetiredRuntimeBackups} from './server/backup/retention';
 import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
+import {currentRepositoryDocuments,legacyRepositoryDocuments} from './server/repositoryDocumentAvailability';
 import {loadPortalRepositorySnapshot} from './server/integrations/supabase';
 import {resourceUsageSnapshot} from './server/resourceUsage';
 import {conceptRegistrationBlocker} from './src/utils/evaluationForm';
@@ -4033,6 +4034,29 @@ export async function createPortalApp() {
 
   // GET /api/processes
   app.get('/api/public/calendar',(_req,res)=>res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO'&&p.status!=='CONCLUIDO'&&isDefenseOnCalendar(p)).map(publicCalendarView)));
+
+  app.get('/api/repository/document-availability',requireAuthenticated,(req,res)=>{
+    res.setHeader('Cache-Control','private, no-store');
+    const {email}=getPortalIdentity(req)!;
+    const master=hasFullAdministration(email);
+    const current=processesStore.flatMap(process=>{
+      if(process.status==='EM_RASCUNHO')return [];
+      const jobs=signatureJobsStore.filter(job=>job.processId===process.id);
+      const forms=formArchiveJobsStore.filter(job=>job.processId===process.id);
+      const publicDocuments=generateDefaultDocuments(process);
+      const participant=!master&&canAccessProcess(email,process.id);
+      const presence=currentRepositoryDocuments({
+        process,jobs,forms,master,participant,publicDocuments,
+        documents:master||participant?generateDefaultDocuments(process,'participants'):publicDocuments,
+        roles:participant?getActiveProcessRoles(email,process.id):[],
+        presidencyDeclaration:!master&&canAccessPresidencyDeclaration(email,process),
+      });
+      return [[process.protocolo,presence] as const];
+    });
+    const legacy=legacyAcademicRecordsStore.map(record=>
+      [record.id,legacyRepositoryDocuments(record,master,!master&&Boolean(legacyEvaluationRole(record,email)))] as const);
+    res.json(Object.fromEntries([...current,...legacy]));
+  });
 
   app.get('/api/public/processes/:id',(req,res)=>{
     const legacy=legacyAcademicRecordsStore.find(r=>r.id===req.params.id||r.protocolo===req.params.id);

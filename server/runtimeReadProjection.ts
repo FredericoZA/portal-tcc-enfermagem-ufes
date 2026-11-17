@@ -30,6 +30,7 @@ const LITE_PATHS = new Set([
   '/public/installation-profile',
   '/public/indicators',
   '/public/repository',
+  '/repository/document-availability',
   '/public/calendar',
   '/processes',
   '/registration/bootstrap',

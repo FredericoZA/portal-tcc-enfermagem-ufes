@@ -1,5 +1,12 @@
 import {displayParticipantInstitution} from '../utils/institutionName';
 import {matchesRepositoryQuery} from '../utils/repositoryQuery';
+import {
+  REPOSITORY_DOCUMENT_COLUMNS, REPOSITORY_DOCUMENT_STATUSES,
+  isRepositoryDocumentKey, publishedRepositoryDocuments, repositoryDocumentStatus,
+  type RepositoryDocumentIndex, type RepositoryDocumentKey,
+} from '../utils/repositoryDocuments';
+import {PORTAL_MANAGED_COLUMN_EVENT,type ManagedColumnChange} from '../utils/portalTableDom';
+import {openDriveDocument} from '../utils/driveDocumentAccess';
 import {institutionSearchText} from '../utils/institutionName';
 import {createPortal} from 'react-dom';
 import {buildCalendarMonthGrid,CALENDAR_WEEKDAY_LABELS} from '../utils/calendarMonthGrid';
@@ -10,7 +17,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
 import { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
-import { portalConfirm } from '../services/portalDialogs';
+import { portalConfirm, portalNotice } from '../services/portalDialogs';
 import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
@@ -497,6 +504,7 @@ const ALL_ACERVO_COLUMNS: ColumnDef[] = [
   { key: 'resumo', label: 'Resumo do TCC' },
   { key: 'palavrasChave', label: 'Palavras-chave' },
   { key: 'defesaLocal', label: 'Local da Defesa' },
+  ...REPOSITORY_DOCUMENT_COLUMNS,
 ];
 
 const FORMER_ACERVO_EXAMINER_LABELS: Record<string, string> = {
@@ -518,6 +526,7 @@ const DEFAULT_ACERVO_ORDER = [
   'palavrasChave',
   'defesaDataHora',
   'defesaLocal',
+  ...REPOSITORY_DOCUMENT_COLUMNS.map(column=>column.key),
 ];
 
 const DEFAULT_ACERVO_VISIBLE: Record<string, boolean> = {
@@ -534,6 +543,7 @@ const DEFAULT_ACERVO_VISIBLE: Record<string, boolean> = {
   palavrasChave: true,
   defesaDataHora: true,
   defesaLocal: true,
+  ...Object.fromEntries(REPOSITORY_DOCUMENT_COLUMNS.map(column=>[column.key,true])),
 };
 
 // Helper for column width classes
@@ -605,6 +615,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [repositoryProcesses, setRepositoryProcesses] = useState<ProcessData[]>(() => recentRepositoryRecords() ?? []);
   const [repositoryLoading, setRepositoryLoading] = useState(() => recentRepositoryRecords() === undefined);
   const [repositoryError, setRepositoryError] = useState('');
+  const [repositoryDocumentSnapshot,setRepositoryDocumentSnapshot] = useState<{
+    owner:string; records:RepositoryDocumentIndex; error?:boolean
+  }>();
   const [googleEvents, setGoogleEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -654,6 +667,30 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       window.removeEventListener(PORTAL_REPOSITORY_CHANGED_EVENT, onRevision);
     };
   }, [publicTab, loadAttempt]);
+  useEffect(() => {
+    if (publicTab !== 'biblioteca' || authLoading || !isAuthenticated) {
+      setRepositoryDocumentSnapshot(undefined);
+      return;
+    }
+    let active = true;
+    let generation = 0;
+    const loadDocuments = () => {
+      const requested = ++generation;
+      void apiClient.getRepositoryDocumentAvailability().then(records => {
+        if (active && requested === generation) setRepositoryDocumentSnapshot({owner:calendarIdentity,records});
+      }).catch(() => {
+        if (active && requested === generation) setRepositoryDocumentSnapshot({owner:calendarIdentity,records:{},error:true});
+      });
+    };
+    loadDocuments();
+    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT,loadDocuments);
+    window.addEventListener(PORTAL_REPOSITORY_CHANGED_EVENT,loadDocuments);
+    return () => {
+      active = false;
+      window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT,loadDocuments);
+      window.removeEventListener(PORTAL_REPOSITORY_CHANGED_EVENT,loadDocuments);
+    };
+  }, [publicTab,authLoading,isAuthenticated,calendarIdentity,loadAttempt]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'calendar' | 'cards'>('calendar');
   const [loginEmailInput, setLoginEmailInput] = useState('');
@@ -706,7 +743,22 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [libSearch, setLibSearch] = useState('');
   const [selectedLibSelection, setSelectedLibDoc] = useState<ProcessData | null>(null);
   const selectedLibDoc = selectedLibSelection ? repositoryProcesses.find(process => process.id === selectedLibSelection.id || process.protocolo === selectedLibSelection.protocolo) || null : null;
-  const libSortColumn: string | null = null;
+  const repositorySection = useRef<HTMLElement>(null);
+  const [documentFilters,setDocumentFilters] = useState<Partial<Record<RepositoryDocumentKey,string[]>>>({});
+  const [documentSort,setDocumentSort] = useState<{column:RepositoryDocumentKey; direction:'asc'|'desc'}>();
+  useEffect(() => {
+    const section = repositorySection.current;
+    if (!section) return;
+    const onDocumentColumn = (event:Event) => {
+      const change = (event as CustomEvent<ManagedColumnChange>).detail;
+      if (!change || !isRepositoryDocumentKey(change.columnKey)) return;
+      const column = change.columnKey;
+      if ('sort' in change) setDocumentSort({column,direction:change.sort});
+      else setDocumentFilters(previous => ({...previous,[column]:change.values ?? undefined}));
+    };
+    section.addEventListener(PORTAL_MANAGED_COLUMN_EVENT,onDocumentColumn);
+    return () => section.removeEventListener(PORTAL_MANAGED_COLUMN_EVENT,onDocumentColumn);
+  }, [publicTab]);
 
   // Column selection state for Biblioteca (Acervo)
   const initialAcervoConfig = loadTableConfig('acervo', DEFAULT_ACERVO_ORDER, DEFAULT_ACERVO_VISIBLE, 25);
@@ -718,6 +770,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [libRecordsLimit, setLibRecordsLimit] = useState<number | 'all'>(initialAcervoConfig.recordsLimit !== undefined ? initialAcervoConfig.recordsLimit : 25);
   const [libStartDate, setLibStartDate] = useState(initialAcervoConfig.startDate || '');
   const [libEndDate, setLibEndDate] = useState(initialAcervoConfig.endDate || '');
+  const authorizedRepositoryDocuments = isAuthenticated && !authLoading && repositoryDocumentSnapshot?.owner === calendarIdentity
+    ? repositoryDocumentSnapshot
+    : undefined;
+  const repositoryDocumentRows = useMemo(() => new Map(repositoryProcesses.map(process => [
+    process, authorizedRepositoryDocuments?.records[process.id] ?? publishedRepositoryDocuments(process),
+  ])), [repositoryProcesses,authorizedRepositoryDocuments]);
+  const openRepositoryDocument = (path:string) => {
+    const account = calendarIdentity;
+    void openDriveDocument(
+      () => apiClient.getRepositoryDocumentDriveLinks(path),
+      () => calendarIdentityRef.current === account,
+    ).catch(error => {
+      if (calendarIdentityRef.current === account) {
+        portalNotice(error instanceof Error ? error.message : 'Não foi possível abrir o arquivo no Google Drive.');
+      }
+    });
+  };
 
   // States and sorting for the List of Defenses (below the calendar)
   const [defensesSearch, setDefensesSearch] = useState('');
@@ -866,6 +935,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     if (visibleColumns.palavrasChave) colHeaders.push('Palavras-chave');
     if (visibleColumns.defesaDataHora) colHeaders.push('Data e Hora');
     if (visibleColumns.defesaLocal) colHeaders.push('Local da Defesa');
+    const exportedDocuments = REPOSITORY_DOCUMENT_COLUMNS.filter(column => visibleColumns[column.key]);
+    colHeaders.push(...exportedDocuments.map(column => column.label));
 
     const csvRows = dataToExport.map((proc) => {
       const row: string[] = [];
@@ -912,6 +983,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${dt}"`);
       }
       if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
+      for (const {key} of exportedDocuments) {
+        row.push(`"${repositoryDocumentStatus(repositoryDocumentRows.get(proc)?.[key])}"`);
+      }
 
       return row.join(';');
     });
@@ -2306,7 +2380,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       {/* PUBLIC TAB 2: REPOSITÓRIO DE TCCS & ACERVO DIGITAL */}
       {publicTab === 'biblioteca' && (
         <>
-          <section id="biblioteca-tccs-section" className="space-y-3">
+          <section id="biblioteca-tccs-section" className="space-y-3" ref={repositorySection}>
             {/* UNIFIED GRAY HEADER BANNER & SPREADSHEET CARD */}
             <div data-portal-sheet="repository" data-portal-has-filter="false" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(acervoTextFormat).fontFamilyClass}`} style={getTableStyles(acervoTextFormat).rootStyle}>
               {(() => {
@@ -2374,9 +2448,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 );
               })()}
 
+              {authorizedRepositoryDocuments?.error && (
+                <p role="status" className="px-4 py-2 text-sm text-slate-600">Não foi possível consultar a presença de documentos nesta sessão.</p>
+              )}
+
               {/* SPREADSHEET TABLE FOR BIBLIOTECA */}
               {(() => {
-              const filteredLibProcesses = repositoryProcesses.filter(process=>matchesRepositoryQuery(process,{search:libSearch,startDate:libStartDate,endDate:libEndDate}));
+              const activeDocumentFilters = REPOSITORY_DOCUMENT_COLUMNS.flatMap(({key}) => {
+                const allowed = documentFilters[key];
+                return visibleColumns[key] && allowed ? [{key,allowed}] : [];
+              });
+              const filteredLibProcesses = repositoryProcesses.filter(process =>
+                matchesRepositoryQuery(process,{search:libSearch,startDate:libStartDate,endDate:libEndDate}) &&
+                activeDocumentFilters.every(({key,allowed}) =>
+                  allowed.includes(repositoryDocumentStatus(repositoryDocumentRows.get(process)?.[key]))));
 
               const sortedLibProcesses = filteredLibProcesses.sort((a, b) => {
                 const archiveOrder = Number(Boolean(a.legacyRecord)) - Number(Boolean(b.legacyRecord));
@@ -2385,53 +2470,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 if (newestFirst) return newestFirst;
                 return (b.protocolo || '').localeCompare(a.protocolo || '', 'pt-BR', { numeric: true });
               });
-              if (libSortColumn) {
-                sortedLibProcesses.sort((a, b) => {
-                  let valA: any = '';
-                  let valB: any = '';
-
-                  if (libSortColumn === 'protocolo') {
-                    valA = (a.protocolo || '').toLowerCase();
-                    valB = (b.protocolo || '').toLowerCase();
-                  } else if (libSortColumn === 'defesaDataHora') {
-                    valA = a.defesa?.startAt ? new Date(a.defesa.startAt).getTime() : 0;
-                    valB = b.defesa?.startAt ? new Date(b.defesa.startAt).getTime() : 0;
-                  } else if (libSortColumn === 'titulo') {
-                    valA = formatTccTitle(a.titulo || '').toLowerCase();
-                    valB = formatTccTitle(b.titulo || '').toLowerCase();
-                  } else if (libSortColumn === 'aluno1') {
-                    valA = cleanPersonName(a.aluno1?.nome || '').toLowerCase();
-                    valB = cleanPersonName(b.aluno1?.nome || '').toLowerCase();
-                  } else if (libSortColumn === 'aluno2') {
-                    valA = cleanPersonName(a.aluno2?.nome || '').toLowerCase();
-                    valB = cleanPersonName(b.aluno2?.nome || '').toLowerCase();
-                  } else if (libSortColumn === 'orientador') {
-                    valA = cleanPersonName(a.orientador?.nome || '').toLowerCase();
-                    valB = cleanPersonName(b.orientador?.nome || '').toLowerCase();
-                  } else if (libSortColumn === 'coorientador') {
-                    valA = cleanPersonName(a.coorientador?.nome || '').toLowerCase();
-                    valB = cleanPersonName(b.coorientador?.nome || '').toLowerCase();
-                  } else if (libSortColumn === 'membro1') {
-                    const evalA = (a.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-                    const evalB = (b.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-                    valA = cleanPersonName(evalA[0]?.nome || '').toLowerCase();
-                    valB = cleanPersonName(evalB[0]?.nome || '').toLowerCase();
-                  } else if (libSortColumn === 'membro2') {
-                    const evalA = (a.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-                    const evalB = (b.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-                    valA = cleanPersonName(evalA[1]?.nome || '').toLowerCase();
-                    valB = cleanPersonName(evalB[1]?.nome || '').toLowerCase();
-                  } else if (libSortColumn === 'defesaLocal') {
-                    valA = (a.defesa?.local || '').toLowerCase();
-                    valB = (b.defesa?.local || '').toLowerCase();
-                  } else if (libSortColumn === 'progresso') {
-                    valA = getProcessProgress(a).percent;
-                    valB = getProcessProgress(b).percent;
-                  }
-
-                  if (valA < valB) return 1;
-                  if (valA > valB) return -1;
-                  return 0;
+              if (documentSort && visibleColumns[documentSort.column]) {
+                const {column,direction} = documentSort;
+                sortedLibProcesses.sort((a,b) => {
+                  const left = repositoryDocumentStatus(repositoryDocumentRows.get(a)?.[column]);
+                  const right = repositoryDocumentStatus(repositoryDocumentRows.get(b)?.[column]);
+                  const result = left.localeCompare(right,'pt-BR');
+                  return direction === 'asc' ? result : -result;
                 });
               }
 
@@ -2441,7 +2486,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 ? sortedLibProcesses
                 : sortedLibProcesses.slice(0, libRecordsLimit);
 
-              if (displayedLibProcesses.length === 0) {
+              if (displayedLibProcesses.length === 0 && !activeDocumentFilters.length) {
                 if (repositoryLoading) {
                   return <p role="status" className="p-6 text-center text-sm text-slate-600">Carregando o repositório…</p>;
                 }
@@ -2468,6 +2513,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   <th
                     key={colKey}
                     data-portal-column-key={colKey}
+                    data-portal-managed-column={isRepositoryDocumentKey(colKey) || undefined}
+                    data-portal-filter-options={isRepositoryDocumentKey(colKey) ? REPOSITORY_DOCUMENT_STATUSES.join('|') : undefined}
+                    data-portal-filter-selected={isRepositoryDocumentKey(colKey) ? documentFilters[colKey]?.join('|') : undefined}
+                    aria-sort={documentSort?.column === colKey ? documentSort.direction === 'asc' ? 'ascending' : 'descending' : undefined}
                     className={`${acervoStyles.headerThClass} ${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerTextColorClass} ${acervoStyles.headerFontSizeClass} ${acervoStyles.headerCasingClass} ${acervoStyles.headerBorderClass} ${acervoStyles.headerAlignClass} align-middle select-none transition-colors group`}
                   >
                     <div className={`flex items-center justify-center ${acervoStyles.headerWrapClass}`}>
@@ -2477,10 +2526,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 );
               };
 
-              const renderAcervoBodyCell = (colKey: string, proc: any, progress: any, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
+              const renderAcervoBodyCell = (colKey: string, proc: ProcessData, progress: any, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
                 if (!visibleColumns[colKey]) return null;
                 const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
                 const alignClass = acervoStyles.cellAlignClass;
+
+                if (isRepositoryDocumentKey(colKey)) {
+                  const value = repositoryDocumentRows.get(proc)?.[colKey];
+                  const label = REPOSITORY_DOCUMENT_COLUMNS.find(column => column.key === colKey)!.label;
+                  const status = repositoryDocumentStatus(value);
+                  return (
+                    <td key={colKey} data-portal-filter-value={status} className={`${acervoStyles.cellPadClass} ${acervoStyles.borderClass} ${acervoStyles.cellFontSizeClass} ${widthClass} text-center align-middle normal-case`}>
+                      {typeof value === 'string'
+                        ? <button type="button" className="font-semibold underline underline-offset-2" aria-label={`Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`} onClick={() => openRepositoryDocument(value)}>{status}</button>
+                        : status}
+                    </td>
+                  );
+                }
 
                 switch (colKey) {
                   case 'protocolo':
@@ -2652,6 +2714,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               return (
                 <TableScrollWrapper>
                   <table className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
+                    {displayedLibProcesses.length === 0 && (
+                      <caption className="caption-bottom p-6 text-center text-sm text-slate-600">Nenhum TCC encontrado para os filtros selecionados.</caption>
+                    )}
                     <thead className={`${acervoStyles.headerTheadClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerFontSizeClass} tracking-normal`} style={acervoStyles.theadStyle}>
                       <tr>
                         {acervoColumnOrder.map((colKey) => renderAcervoHeaderCell(colKey))}
