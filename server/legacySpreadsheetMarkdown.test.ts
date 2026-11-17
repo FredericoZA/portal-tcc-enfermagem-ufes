@@ -78,3 +78,19 @@ test('unmatched or unsupported sheet evidence stays out of the mirror and live p
   Object.assign(live,{provenance:fixture().provenance});
   assert.equal(buildDriveProcessDataMarkdown(live),before,'Only the canonical LegacyAcademicRecord source accepts these private sheet sections');
 });
+
+test('linear contact omission preserves long source text, punctuation and exact group labels',{timeout:5_000},()=>{
+  const record = fixture();
+  const evaluation = record.provenance.legacySpreadsheetEvidence!.evaluations[0];
+  const longText = 'A'.repeat(50_000);
+  evaluation.reportedSummary[2].value = `${longText}\nContatos: (nome+fonte@example.invalid.), outra@example-test.invalid!`;
+  evaluation.groups[0].grades.push(
+    {header:'10A',value:'10A confirmado',column:8,cell:'H42'},
+    {header:'10B',value:'Outro grupo',column:9,cell:'I42'},
+    {header:'11A',value:'Fora do intervalo',column:10,cell:'J42'},
+  );
+  const markdown = buildDriveProcessDataMarkdown(record);
+  assert.ok(markdown.includes(`${longText}\n  Contatos: (\\[contato omitido\\].), \\[contato omitido\\]!`));
+  assert.ok(markdown.includes('10A confirmado'));
+  assert.doesNotMatch(markdown, /Outro grupo|Fora do intervalo|@example/);
+});

@@ -52,13 +52,50 @@ function evidenceObject(value:unknown):Record<string,unknown>|undefined {
   return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:undefined;
 }
 
+const emailLocalPunctuation = ".!#$%&'*+/=?^_`{|}~-";
+
+function isAsciiAlphanumeric(text:string, index:number):boolean {
+  const code = text.charCodeAt(index);
+  return (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+}
+
+function omitEvidenceContacts(text:string):string {
+  const parts:string[] = [];
+  let copiedThrough = 0;
+  for (let at = text.indexOf('@'); at !== -1; at = text.indexOf('@', at + 1)) {
+    if (at <= copiedThrough || !isAsciiAlphanumeric(text, at + 1)) continue;
+
+    let start = at;
+    while (start > copiedThrough && (isAsciiAlphanumeric(text, start - 1) || emailLocalPunctuation.includes(text[start - 1]))) {
+      start--;
+    }
+    if (start === at) continue;
+
+    // Both adjacent runs stop at the next @, so each character is examined at most twice.
+    let end = at + 2;
+    for (let index = end; index < text.length; index++) {
+      if (isAsciiAlphanumeric(text, index)) end = index + 1;
+      else if (text[index] !== '.' && text[index] !== '-') break;
+    }
+    parts.push(text.slice(copiedThrough, start), '[contato omitido]');
+    copiedThrough = end;
+  }
+  parts.push(text.slice(copiedThrough));
+  return parts.join('');
+}
+
 /** Only academic text from the explicit sheet schema; never stringify nested provenance. */
 function evidenceText(value:unknown):string {
   if(typeof value!=='string'&&!(typeof value==='number'&&Number.isFinite(value)))return 'Não cadastrado';
-  const text=String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'')
-    .replace(/[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9.-]*[A-Z0-9])?/gi,'[contato omitido]');
-  return markdownText(text).replace(/\n/g,'\n  ');
+  const text=String(value).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g,'');
+  return markdownText(omitEvidenceContacts(text)).replace(/\n/g,'\n  ');
 }
+
+const gradeHeaders = {
+  A: new Set(['1A','2A','3A','4A','5A','6A','7A','8A','9A','10A']),
+  B: new Set(['1B','2B','3B','4B','5B','6B','7B','8B','9B','10B']),
+  C: new Set(['1C','2C','3C','4C','5C','6C','7C','8C','9C','10C']),
+};
 
 function legacySpreadsheetMarkdown(record:LegacyAcademicRecord):string[] {
   const evidence=evidenceObject(record.provenance?.legacySpreadsheetEvidence);
@@ -92,7 +129,7 @@ function legacySpreadsheetMarkdown(record:LegacyAcademicRecord):string[] {
       const evaluatorLines=evaluator?.roleHeader===roles[key]&&typeof evaluator.name==='string'
         ?[field('Função informada na fonte',evaluator.roleHeader),field('Avaliador informado na fonte',evaluator.name),...(location?[field('Célula do avaliador',location)]:[])]:[];
       return [`#### Grupo ${key}`,'',...evaluatorLines,
-        ...list(group.grades).flatMap(grade=>cell(grade,header=>new RegExp(`^(?:[1-9]|10)${key}$`).test(header))),
+        ...list(group.grades).flatMap(grade=>cell(grade,header=>gradeHeaders[key].has(header))),
         ...cell(group.reportedTotal,header=>header===`Total ${key}`,`Total ${key} informado na fonte`),''];
     });
     const summary=list(entry.reportedSummary).flatMap(value=>cell(value,header=>['Média ABC','Situação','Parecer'].includes(header),
