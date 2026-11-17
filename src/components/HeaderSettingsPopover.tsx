@@ -1,6 +1,6 @@
 import {enqueueTablePreferenceWrite} from '../services/tablePreferenceWrites';
 import {fetchApiRequest} from '../services/apiClient';
-import {applyTableRuntimePreference,mergeTablePreferences,readStoredTablePreference,sanitizeTablePreference,tablePreferenceKey,TABLE_DEFAULTS_EVENT,TABLE_PREFERENCE_EVENT,type TablePreference} from '../utils/tablePreferences';
+import {applyTableRuntimePreference,mergeTablePreferences,normalizeTableColumnOrder,readStoredTablePreference,sanitizeTablePreference,tablePreferenceKey,TABLE_DEFAULTS_EVENT,TABLE_PREFERENCE_EVENT,type TablePreference} from '../utils/tablePreferences';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, Columns3, ListFilter, Lock, RotateCcw, Settings, Star } from 'lucide-react';
@@ -76,13 +76,10 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
   const hasActiveFilters=Boolean((startDate&&startDate.trim())||(endDate&&endDate.trim())||pageSize!==defaultRecordsLimit||wrapMode==='nowrap');
 
   const fixedColumnKey=useMemo(()=>allColumns.find(column=>column.isFixed)?.key||(allColumns.some(column=>column.key==='protocolo')?'protocolo':undefined),[allColumns]);
-  const normalizedOrder=useMemo(()=>{
-    const valid=new Set(allColumns.map(column=>column.key));
-    const order=Array.from(new Set(columnOrder)).filter(key=>valid.has(key));
-    allColumns.forEach(column=>{if(!order.includes(column.key))order.push(column.key);});
-    if(fixedColumnKey){const index=order.indexOf(fixedColumnKey);if(index>0){order.splice(index,1);order.unshift(fixedColumnKey);}}
-    return order;
-  },[allColumns,columnOrder,fixedColumnKey]);
+  const normalizedOrder=useMemo(
+    ()=>normalizeTableColumnOrder(columnOrder,allColumns.map(column=>column.key),fixedColumnKey),
+    [allColumns,columnOrder,fixedColumnKey]
+  );
   const columnMap=useMemo(()=>new Map(allColumns.map(column=>[column.key,column])),[allColumns]);
 
   const persistPageSize=(next:PageSize)=>{
@@ -113,9 +110,10 @@ export const HeaderSettingsPopover:React.FC<HeaderSettingsPopoverProps> = (props
     let localRaw:string|null=null;try{localRaw=isAuthenticated&&currentPreferenceKey?localStorage.getItem(currentPreferenceKey):null;}catch{/* use server preference */}
     personalRef.current=localRaw?(()=>{try{return sanitizeTablePreference(JSON.parse(localRaw));}catch{return null;}})():null;
     const apply=()=>{
-      const base=loadTableConfig(storageKey,defaultColumnOrder||allColumns.map(c=>c.key),defaultVisibleColumns||Object.fromEntries(allColumns.map(c=>[c.key,true])),defaultRecordsLimit,false);
+      const defaultOrder=defaultColumnOrder||allColumns.map(c=>c.key);
+      const base=loadTableConfig(storageKey,defaultOrder,defaultVisibleColumns||Object.fromEntries(allColumns.map(c=>[c.key,true])),defaultRecordsLimit,false);
       const merged=mergeTablePreferences(readStoredTablePreference(storageKey),personalRef.current||{});
-      setColumnOrder?.(merged.columnOrder||base.columnOrder);
+      setColumnOrder?.(normalizeTableColumnOrder(merged.columnOrder??base.columnOrder,defaultOrder,fixedColumnKey));
       setVisibleColumns?.({...base.visibleColumns,...merged.visibleColumns,...(fixedColumnKey?{[fixedColumnKey]:true}:{})});
       setCustomLabels?.(merged.customLabels||base.customLabels||{});
       setColumnWidths?.(merged.columnWidths||base.columnWidths||{});

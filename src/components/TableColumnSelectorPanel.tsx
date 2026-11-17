@@ -1,6 +1,5 @@
 import {fetchApiRequest} from '../services/apiClient';
-import {sanitizeTablePreference,TABLE_DEFAULTS_EVENT} from '../utils/tablePreferences';
-import {readStoredTablePreference} from '../utils/tablePreferences';
+import {normalizeTableColumnOrder,readStoredTablePreference,sanitizeTablePreference,TABLE_DEFAULTS_EVENT} from '../utils/tablePreferences';
 import React, { useState } from 'react';
 import { Shield, Lock, ArrowUp, ArrowDown, RotateCcw, Check, List, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -325,18 +324,8 @@ export function loadTableConfig(
     const saved = localStorage.getItem(`default_table_config_${storageKey}`);
     if (saved || (includePersonal && localStorage.getItem('portal_tcc_active_email'))) {
       const parsed = {...JSON.parse(saved || '{}'), ...readStoredTablePreference(storageKey, includePersonal ? localStorage.getItem('portal_tcc_active_email') || '' : '')};
-      let order: string[] = parsed.columnOrder || defaultOrder;
-      
       // Process tables keep their protocol column fixed; generic tables do not invent it.
-      if (defaultOrder.includes('protocolo')) {
-        order = order.filter((k: string) => k !== 'protocolo');
-        order.unshift('protocolo');
-      }
-
-      // Add any missing column keys
-      defaultOrder.forEach((k) => {
-        if (!order.includes(k)) order.push(k);
-      });
+      const order = normalizeTableColumnOrder(parsed.columnOrder || defaultOrder, defaultOrder, 'protocolo');
 
       const visible = { ...defaultVisible, ...(parsed.visibleColumns || {}) };
       // Ensure protocolo is always visible in process tables.
@@ -394,15 +383,7 @@ export const TableColumnSelectorPanel: React.FC<TableColumnSelectorPanelProps> =
 
   const fixedColumnKey = allColumns.find((column) => column.isFixed)?.key
     || (allColumns.some((column) => column.key === 'protocolo') ? 'protocolo' : undefined);
-  const validColumnKeys = new Set(allColumns.map((column) => column.key));
-  const normalizedOrder: string[] = Array.from(new Set<string>(columnOrder)).filter((key) => validColumnKeys.has(key));
-  allColumns.forEach((column) => {
-    if (!normalizedOrder.includes(column.key)) normalizedOrder.push(column.key);
-  });
-  if (fixedColumnKey) {
-    const withoutFixed = normalizedOrder.filter((key) => key !== fixedColumnKey);
-    normalizedOrder.splice(0, normalizedOrder.length, fixedColumnKey, ...withoutFixed);
-  }
+  const normalizedOrder = normalizeTableColumnOrder(columnOrder, allColumns.map(column => column.key), fixedColumnKey);
 
   // Move column at index `fromIndex` to `toIndex` (never touching index 0)
   const handleMove = (fromIndex: number, toIndex: number) => {
