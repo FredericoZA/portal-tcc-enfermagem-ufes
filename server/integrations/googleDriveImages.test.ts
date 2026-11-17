@@ -20,6 +20,7 @@ async function fixture(t: any, suppliedBytes?: Buffer) {
     assert.equal(url.hostname, 'www.googleapis.com');
     if (url.pathname.endsWith('/permissions')) return Response.json({ permissions: [{ type: broad ? 'anyone' : 'user', role: 'owner' }] });
     if (url.pathname.endsWith('/' + technical)) return Response.json({ id: technical, mimeType: 'application/vnd.google-apps.folder', parents: ['outside_academic'], capabilities: { canAddChildren: true } });
+    if (url.pathname.endsWith('/outside_academic')) return Response.json({ id: 'outside_academic', mimeType: 'application/vnd.google-apps.folder', parents: [] });
     if (url.searchParams.has('q')) return Response.json({ files: url.searchParams.get('q')!.includes('appProperties') || missing ? [] : [{ id: folder }] });
     if (init?.method === 'POST') {
       writes++;

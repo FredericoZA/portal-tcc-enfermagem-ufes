@@ -1,13 +1,11 @@
-import React, {lazy, Suspense, useEffect, useState} from 'react';
-import {FileCheck} from 'lucide-react';
+import React, {useEffect, useRef, useState} from 'react';
 import {ProcessDocumentCard, ProcessDocumentsPanel} from './ProcessDocumentCard';
 import {apiClient} from '../services/apiClient';
 import type {ProcessDocument} from '../types';
 import type {LegacyAdministrativeFileView} from '../types/legacyArchive';
-import {PortalModalShell} from './PortalModalShell';
 import {LegacyEvaluationAccessEditor} from './LegacyEvaluationAccessEditor';
+import {openDriveDocument} from '../utils/driveDocumentAccess';
 
-const Preview=lazy(()=>import('./DocumentFilePreview').then(module=>({default:module.DocumentFilePreview})));
 const groups: {kind:LegacyAdministrativeFileView['kind'];label:string}[]=[
   {kind:'CONVITE',label:'Carta-Convite da Banca'},
   {kind:'AVALIACAO',label:'Instrumento de avaliação'},
@@ -23,10 +21,12 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
   const [error,setError]=useState('');
   const [downloading,setDownloading]=useState<number|null>(null);
   const [selected,setSelected]=useState<Record<string,number>>({});
-  const [preview,setPreview]=useState<LegacyAdministrativeFileView|null>(null);
+  const accessScope=`${processId}|${canAccessOriginals}|${canAccessEvaluation}`;
+  const scopeRef=useRef(accessScope);scopeRef.current=accessScope;
+  useEffect(()=>{scopeRef.current=accessScope;return()=>{scopeRef.current='';};},[accessScope]);
   useEffect(()=>{
     let active=true;
-    setLoading(true);setFiles([]);setError('');setPreview(null);setSelected({});
+    setLoading(true);setFiles([]);setError('');setSelected({});
     if (!canAccessOriginals && !canAccessEvaluation) {
       setLoading(false);
       return () => { active = false; };
@@ -49,13 +49,21 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
   }
   const publicPath=(file:LegacyAdministrativeFileView)=>file.downloadUrl.startsWith('/api/public/legacy-academic-records/');
   async function open(file:LegacyAdministrativeFileView,mode:'view'|'download'){
-    if(!publicPath(file)){if(mode==='view')setPreview(file);else await download(file);return;}
+    if(mode==='view'){
+      const scope=accessScope;
+      setDownloading(file.index);setError('');
+      try{await openDriveDocument(()=>publicPath(file)?apiClient.getPublicDocumentDriveLinks(file.downloadUrl):canAccessOriginals?apiClient.getLegacyAdministrativeDriveLinks(processId,file.index):apiClient.getLegacyEvaluationDriveLinks(processId,file.index),()=>scopeRef.current===scope);}
+      catch(error){if(scopeRef.current===scope)setError(error instanceof Error?error.message:'Não foi possível abrir o arquivo no Google Drive.');}
+      finally{if(scopeRef.current===scope)setDownloading(null);}
+      return;
+    }
+    if(!publicPath(file)){await download(file);return;}
     const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
     setDownloading(file.index);setError('');
     try{
       const {links}=await apiClient.getPublicDocumentDriveLinks(file.downloadUrl);
-      if(links){if(tab)tab.location.replace(mode==='view'?links.view:links.download);else setError('Permita a abertura de uma nova aba para acessar o PDF.');}
-      else if(mode==='view'){tab?.close();setPreview(file);}else if(tab)tab.location.replace(file.downloadUrl);
+      if(links){if(tab)tab.location.replace(links.download);else setError('Permita a abertura de uma nova aba para acessar o PDF.');}
+      else if(tab)tab.location.replace(file.downloadUrl);
     }catch{tab?.close();setError('Não foi possível confirmar a consulta pública deste documento.');}
     finally{setDownloading(null);}
   }
@@ -88,8 +96,5 @@ export function LegacyAdministrativeDocuments({processId, canAccessOriginals = f
         </ProcessDocumentCard>;
       })}
     </ProcessDocumentsPanel>
-    <PortalModalShell open={preview!==null&&(canAccessOriginals||(canAccessEvaluation&&preview.kind==='AVALIACAO')||publicPath(preview))} onClose={()=>setPreview(null)} title="Visualizar documento" icon={FileCheck} maxWidthClass="max-w-5xl" bodyClassName="p-3 overflow-auto" footer={<button type="button" className="portal-action" onClick={()=>setPreview(null)}>Fechar</button>}>
-      {preview&&<Suspense fallback={<p role="status">Carregando documento…</p>}><Preview url={preview.downloadUrl} format="pdf" label={preview.fileName}/></Suspense>}
-    </PortalModalShell>
   </>;
 }

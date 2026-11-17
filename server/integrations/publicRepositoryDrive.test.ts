@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {publicRepositoryDriveLinks} from './publicRepositoryDrive';import {withdrawDriveFilePublicAccess,withdrawManyPublicDriveFiles,preparePublicationSource} from './googleDriveArchive';
+import {DriveFlatFolderPermissionError,publicRepositoryDriveLinks} from './publicRepositoryDrive';import {withdrawDriveFilePublicAccess,withdrawManyPublicDriveFiles,preparePublicationSource} from './googleDriveArchive';
 function fixture(t:any){
  const calls:{path:string;method:string;body:any}[]=[],sha='a'.repeat(64),source='original_source_123',copy='old_copy_1234',parent='private_folder_123';
  const sourceMetadata={id:source,name:'work.pdf',mimeType:'application/pdf',sha256Checksum:sha,parents:[parent],appProperties:{portal:'portal-tcc',portalProcessId:'process-1',artifactType:'TRABALHO_COMPLETO'},webViewLink:`https://drive.google.com/file/d/${source}/view`,webContentLink:`https://drive.google.com/uc?id=${source}&export=download`};
@@ -23,6 +23,12 @@ function fixture(t:any){
 test('authorized original becomes public reader only; repeat clicks never copy or transfer PDF bytes',async t=>{
  const f=fixture(t);assert.deepEqual(await publicRepositoryDriveLinks(f.input),{view:f.sourceMetadata.webViewLink,download:f.sourceMetadata.webContentLink});
  await publicRepositoryDriveLinks(f.input);assert.equal(f.calls.filter(c=>c.method==='POST').length,1);assert.equal(f.state.writer,false);assert.equal(f.state.shared,true);assert.ok(f.calls.every(c=>c.method!=='DELETE'));
+});
+test('historical publication preserves nominal editors and remains pending without granting public access',async t=>{
+ const f=fixture(t);
+ await assert.rejects(publicRepositoryDriveLinks({...f.input,preserveNamedPermissions:true}),/permissão nominal de edição/);
+ assert.equal(f.state.writer,true);assert.equal(f.state.shared,false);
+ assert.ok(!f.calls.some(call=>call.method==='POST'||call.method==='PATCH'&&call.path.endsWith('/collaborator')));
 });
 test('denial reaches no provider; changed original hash revokes old public access',async t=>{
  const f=fixture(t);f.state.authorized=false;await assert.rejects(publicRepositoryDriveLinks(f.input));assert.equal(f.calls.length,0);
@@ -82,6 +88,37 @@ test('Drive refusal to remove collaborator editing fails closed and revokes publ
  });
  await assert.rejects(publicRepositoryDriveLinks(f.input));assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'&&c.path.endsWith('/permissions')));
 });
+test('flat process properties prevent inherited-editing fallback from creating subfolders or moving the original',async t=>{
+ const f=fixture(t),fetch=globalThis.fetch;f.state.shared=true;
+ t.mock.method(globalThis,'fetch',async(input:any,init?:RequestInit)=>{
+  const u=new URL(String(input));
+  if(init?.method==='PATCH'&&u.pathname.endsWith('/permissions/collaborator'))return Response.json({error:{errors:[{reason:'cannotModifyInheritedPermission'}]}},{status:403});
+  if(u.pathname==='/drive/v3/files/'+f.parent){
+   assert.ok((u.searchParams.get('fields')||'').split(',').includes('properties'),'Migration properties must be read across OAuth applications');
+   return Response.json({id:f.parent,mimeType:'application/vnd.google-apps.folder',parents:['academic_root_123'],properties:{portalDriveLayout:'flat-v1'}});
+  }
+  return fetch(input,init);
+ });
+ await assert.rejects(publicRepositoryDriveLinks(f.input),error=>error instanceof DriveFlatFolderPermissionError&&error.code==='DRIVE_FLAT_FOLDER_PERMISSION_CONFLICT'&&/leitura na pasta/.test(error.message));
+ assert.equal(f.state.shared,false);
+ assert.equal(f.state.writer,true,'Publication must not claim owner-only editing after an inherited permission refusal');
+ assert.deepEqual(f.sourceMetadata.parents,[f.parent]);
+ assert.equal(f.calls.some(call=>call.method==='POST'),false);
+ assert.equal(f.calls.some(call=>call.method==='PATCH'&&call.path==='/drive/v3/files/'+f.source),false);
+});
+test('a flat ancestor also blocks isolating an original still inside an old child folder',async t=>{
+ const f=fixture(t),fetch=globalThis.fetch;f.state.shared=true;
+ t.mock.method(globalThis,'fetch',async(input:any,init?:RequestInit)=>{
+  const u=new URL(String(input));
+  if(init?.method==='PATCH'&&u.pathname.endsWith('/permissions/collaborator'))return Response.json({error:{}},{status:403});
+  if(u.pathname==='/drive/v3/files/'+f.parent)return Response.json({id:f.parent,mimeType:'application/vnd.google-apps.folder',parents:['flat_process_123']});
+  if(u.pathname==='/drive/v3/files/flat_process_123')return Response.json({id:'flat_process_123',mimeType:'application/vnd.google-apps.folder',parents:[],properties:{portalDriveLayout:'flat-v1'}});
+  return fetch(input,init);
+ });
+ await assert.rejects(publicRepositoryDriveLinks(f.input),DriveFlatFolderPermissionError);
+ assert.equal(f.state.shared,false);
+ assert.equal(f.calls.some(call=>call.method==='POST'),false);
+});
 test('an expanded abstract can only be published with its own bound source type',async t=>{
  const f=fixture(t);await assert.rejects(publicRepositoryDriveLinks({...f.input,artifactType:'RESUMO_EXPANDIDO'}),/outro processo/);assert.equal(f.state.shared,false);assert.ok(!f.calls.some(c=>c.method==='POST'));
 });
@@ -102,6 +139,7 @@ test('inherited editing is isolated in an owner-only child while preserving the 
    if(method==='POST'){created++;assert.equal(body.mimeType,'application/vnd.google-apps.folder');assert.deepEqual(body.parents,[oldParent]);return Response.json(folder());}
    return Response.json({files:[]});
   }
+  if(u.pathname.endsWith('/'+oldParent))return Response.json({id:oldParent,mimeType:'application/vnd.google-apps.folder',parents:[],properties:{}});
   if(u.pathname.endsWith('/'+folderId)){if(method==='PATCH'){assert.deepEqual(body,{inheritedPermissionsDisabled:true});limited=true;}return Response.json(folder());}
   if(method==='PATCH'){assert.equal(u.pathname,'/drive/v3/files/'+sourceId);assert.equal(u.searchParams.get('addParents'),folderId);assert.equal(u.searchParams.get('removeParents'),oldParent);assert.deepEqual(body,{});moved=true;}
   return Response.json(source());

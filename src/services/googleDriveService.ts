@@ -9,6 +9,7 @@ export interface GoogleDriveFile {
   size?: string;
   parents?: string[];
   appProperties?: Record<string, string>;
+  properties?: Record<string, string>;
 }
 
 function escapeDriveQueryValue(value: string): string { return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
@@ -20,7 +21,7 @@ export async function listDriveFiles(accessToken: string, query?: string): Promi
   const defaultQuery = "trashed = false";
   const q = query ? `${defaultQuery} and ${query}` : defaultQuery;
 
-  const files:GoogleDriveFile[]=[]; let pageToken=''; do { const params=new URLSearchParams({q,fields:'nextPageToken,files(id,name,mimeType,webViewLink,iconLink,createdTime,modifiedTime,size,parents,appProperties)',pageSize:'100',orderBy:'folder,modifiedTime desc',supportsAllDrives:'true',includeItemsFromAllDrives:'true'}); if(pageToken)params.set('pageToken',pageToken); const response=await fetch(`https://www.googleapis.com/drive/v3/files?${params}`,{headers:{Authorization:`Bearer ${accessToken}`}}); if(!response.ok){const errorData=await response.json().catch(()=>({}));throw new Error(errorData.error?.message||`Erro no Google Drive (${response.status})`);}const data=await response.json();files.push(...(data.files||[]));pageToken=data.nextPageToken||'';}while(pageToken); return files;
+  const files:GoogleDriveFile[]=[]; let pageToken=''; do { const params=new URLSearchParams({q,fields:'nextPageToken,files(id,name,mimeType,webViewLink,iconLink,createdTime,modifiedTime,size,parents,appProperties,properties)',pageSize:'100',orderBy:'folder,modifiedTime desc',supportsAllDrives:'true',includeItemsFromAllDrives:'true'}); if(pageToken)params.set('pageToken',pageToken); const response=await fetch(`https://www.googleapis.com/drive/v3/files?${params}`,{headers:{Authorization:`Bearer ${accessToken}`}}); if(!response.ok){const errorData=await response.json().catch(()=>({}));throw new Error(errorData.error?.message||`Erro no Google Drive (${response.status})`);}const data=await response.json();files.push(...(data.files||[]));pageToken=data.nextPageToken||'';}while(pageToken); return files;
 }
 
 /**
@@ -30,7 +31,8 @@ export async function createDriveFolder(
   accessToken: string,
   folderName: string,
   parentFolderId?: string,
-  appProperties?: Record<string, string>
+  appProperties?: Record<string, string>,
+  properties?: Record<string, string>
 ): Promise<GoogleDriveFile> {
   const metadata: any = {
     name: folderName,
@@ -41,8 +43,9 @@ export async function createDriveFolder(
     metadata.parents = [parentFolderId];
   }
   if (appProperties) metadata.appProperties = appProperties;
+  if (properties) metadata.properties = properties;
 
-  const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name,mimeType,webViewLink,parents,appProperties&supportsAllDrives=true', {
+  const response = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name,mimeType,webViewLink,parents,appProperties,properties&supportsAllDrives=true', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,

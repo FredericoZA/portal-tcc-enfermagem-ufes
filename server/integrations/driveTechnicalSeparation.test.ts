@@ -30,7 +30,7 @@ test('bootstrap da configuração cria somente documentos e processos na raiz ac
   return reply({files:[]});
  });
  const result=await bootstrapPortalDriveStructure('test-token',academic);
- assert.deepEqual(writes.filter(item=>item.parents[0]===academic).map(item=>item.name),['01_DOCUMENTOS','02_PROCESSOS']);
+ assert.deepEqual(writes.filter(item=>item.parents[0]===academic).map(item=>item.name),['Documentos','Processos']);
  assert.equal(result.folders.system,undefined);
  assert.equal(writes.some(item=>item.name==='00_SISTEMA'),false);
 });
@@ -41,6 +41,7 @@ test('conversões e backups usam a raiz técnica sem criar outro Sistema',async 
   const url=String(input);
   if(url.includes('/permissions?'))return reply({permissions:[{type:'user',role:'owner'}]});
   if(url.includes(`/files/${technical}?`))return reply({id:technical,mimeType:'application/vnd.google-apps.folder',parents:['owner_root'],capabilities:{canAddChildren:true}});
+  if(url.includes('/files/owner_root?'))return reply({id:'owner_root',mimeType:'application/vnd.google-apps.folder',parents:[]});
   if(init?.method==='POST'){
    if(url.includes('uploadType=multipart'))return reply({id:'artifact',name:'file'});
    const body=JSON.parse(String(init.body));writes.push(body);return reply({id:`destination_${writes.length}`,name:body.name});
@@ -58,6 +59,7 @@ test('destino técnico público ou dentro da raiz acadêmica é recusado antes d
  const mock=t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
   if(init?.method==='POST')writes++;
   if(String(input).includes('/permissions?'))return reply({permissions:[{type:'anyone',role:'reader'}]});
+  if(String(input).includes('/files/owner_root?'))return reply({id:'owner_root',mimeType:'application/vnd.google-apps.folder',parents:[]});
   return reply({id:technical,mimeType:'application/vnd.google-apps.folder',parents:['owner_root'],capabilities:{canAddChildren:true}});
  });
  await assert.rejects(resolvePortalTechnicalRoot('test-token',academic),/compartilhada/);

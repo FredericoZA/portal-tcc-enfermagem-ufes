@@ -8,6 +8,28 @@ async function request(token:string,path:string,init:RequestInit={}){
  if(!r.ok){const data=await r.json().catch(()=>({}));throw Object.assign(Error('Não foi possível conferir a publicação no Google Drive.'),{driveStatus:r.status,driveReason:String(data?.error?.errors?.[0]?.reason||'').replace(/[^a-zA-Z0-9_]/g,'').slice(0,80)});}return r;
 }
 function browserLink(value:unknown){try{const u=new URL(String(value));return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(u.hostname)&&!['token','access_token','key'].some(k=>u.searchParams.has(k))?u.href:'';}catch{return '';}}
+export class DriveFlatFolderPermissionError extends Error {
+ readonly code='DRIVE_FLAT_FOLDER_PERMISSION_CONFLICT';
+ constructor(){
+  super('A pasta plana do processo permite edição herdada deste arquivo. Limite os colaboradores à leitura na pasta antes de publicar; apenas o proprietário do original pode editar.');
+  this.name='DriveFlatFolderPermissionError';
+ }
+}
+
+/** Layout is a public Drive property so both the Portal and migration app see it. */
+async function assertLegacyIsolationAllowed(token:string,parentId:string){
+ const seen=new Set<string>();let id=parentId;
+ while(id){
+  if(!idOk(id)||seen.has(id)||seen.size>=20)throw Error('Não foi possível confirmar a estrutura da pasta do original.');
+  seen.add(id);
+  const parent=await(await request(token,`/files/${encodeURIComponent(id)}?fields=id,mimeType,trashed,parents,properties&supportsAllDrives=true`)).json();
+  if(parent.id!==id||parent.trashed||parent.mimeType!=='application/vnd.google-apps.folder')throw Error('A pasta de origem do original não foi confirmada.');
+  if(parent.properties?.portalDriveLayout==='flat-v1')throw new DriveFlatFolderPermissionError();
+  const parents=parent.parents||[];
+  if(!Array.isArray(parents)||parents.length>1)throw Error('Não foi possível confirmar a estrutura da pasta do original.');
+  id=parents[0]||'';
+ }
+}
 /** Issued invitation identity is stored by the workflow; read only its canonical fingerprint. */
 export async function publicInvitationFingerprint(token:string,fileId:string,processId:string):Promise<string>{
  if(!idOk(fileId))throw Error('Identificador de convite inválido.');
@@ -20,6 +42,8 @@ export async function publicInvitationFingerprint(token:string,fileId:string,pro
  * Keep the same original ID in a restricted child owned by the institutional account. */
 async function isolateOriginal(input:{token:string;source:any;scope:string;ownerId:string;current:()=>Promise<void>}){
  const {token,source,scope,ownerId,current}=input,parent=source.parents[0];
+ await current();
+ await assertLegacyIsolationAllowed(token,parent);
  const folderFields='id,mimeType,trashed,parents,appProperties,inheritedPermissionsDisabled';
  const q=`trashed = false and '${esc(parent)}' in parents and mimeType = 'application/vnd.google-apps.folder' and appProperties has { key='portal' and value='portal-tcc' } and appProperties has { key='artifactType' and value='ORIGINALS_PRIVATE_FOLDER' } and appProperties has { key='portalProcessId' and value='${esc(scope)}' }`;
  await current();
@@ -45,7 +69,7 @@ async function isolateOriginal(input:{token:string;source:any;scope:string;owner
  return moved;
 }
 /** Publish the consent-bound original, never copy or transfer its bytes through the Portal. */
-export async function publicRepositoryDriveLinks(input:{accessToken:string;sourceFileId:string;scope:string;sha256:string;artifactType?:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO'|'CONVITE'|'ATA'|'TERMO'|'DECLARACAO'|'CONFIRMACAO_LOCAL';formVersion?:number;signatureJobId?:string;validatePublicContent?:(fileId:string)=>Promise<void>;assertAuthorized:()=>Promise<boolean>}){
+export async function publicRepositoryDriveLinks(input:{accessToken:string;sourceFileId:string;scope:string;sha256:string;artifactType?:'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO'|'CONVITE'|'ATA'|'TERMO'|'DECLARACAO'|'CONFIRMACAO_LOCAL';formVersion?:number;signatureJobId?:string;preserveNamedPermissions?:boolean;validatePublicContent?:(fileId:string)=>Promise<void>;assertAuthorized:()=>Promise<boolean>}){
  const {accessToken:token,sourceFileId,scope}=input,sha=input.sha256.toLowerCase();
  if(!idOk(sourceFileId)||!/^[a-f0-9]{64}$/.test(sha)||!scope||!await input.assertAuthorized())throw Error('Publicação não autorizada.');
  const endpoint=`/files/${encodeURIComponent(sourceFileId)}`;
@@ -75,6 +99,7 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
  try{
  let acl=await permissions();
  if(acl.filter(p=>p.role==='owner').length!==1)throw Error('Proprietário do original não confirmado.');
+ if(input.preserveNamedPermissions&&acl.some(p=>p.type==='user'&&p.role!=='owner'&&p.view!=='metadata'&&p.role!=='reader'))throw Error('O original histórico possui permissão nominal de edição. A publicação aguarda revisão, e esses acessos foram preservados.');
  const ownerId=acl.find(p=>p.role==='owner').id;let isolated=false;
  // Only the owner may edit. Named collaborators are reduced to readers on this file only.
  for(const p of acl){
@@ -85,6 +110,8 @@ export async function publicRepositoryDriveLinks(input:{accessToken:string;sourc
    try{await request(token,`${endpoint}/permissions/${encodeURIComponent(p.id)}?supportsAllDrives=true`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader',...(p.type==='anyone'?{allowFileDiscovery:false}:{})})});}
    catch(error){
     if(isolated||(error as {driveStatus?:number}).driveStatus!==403)throw error;
+    source=await metadata();
+    if(!valid(source)||!bound(source)||!Array.isArray(source.parents)||source.parents.length!==1)throw Error('O original mudou durante a conferência das permissões.');
     source=await isolateOriginal({token,source,scope,ownerId,current});isolated=true;
     for(const remaining of await permissions())if(remaining.role!=='owner'&&remaining.role!=='reader')await request(token,`${endpoint}/permissions/${encodeURIComponent(remaining.id)}?supportsAllDrives=true`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'reader'})});
     break;

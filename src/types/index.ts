@@ -283,6 +283,7 @@ export interface ProcessData {
   driveFolderId?: string;
   driveFolderUrl?: string;
   driveSyncedAt?: string;
+  driveDataSync?: {status:'PENDING'|'SYNCED';revision:number;updatedAt:string;fileId?:string;lastError?:string};
   signatureProviderPreferences?: Partial<Record<'ATA'|'TERMO'|'DECLARACAO', 'ASTEN'|'GOV_BR'>>;
   astenSignatureIntent?: { documentType: 'ATA'|'TERMO'|'DECLARACAO'; revision: number; queuedAt: string; attemptedAt?: string; lastError?: string; lastErrorCode?: string; studioRevision?: number };
   dataRevision: number;

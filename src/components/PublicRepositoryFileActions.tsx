@@ -1,26 +1,30 @@
-import React,{lazy,Suspense,useState} from 'react';
-import {PortalModalShell} from './PortalModalShell';
-const Preview=lazy(()=>import('./DocumentFilePreview').then(m=>({default:m.DocumentFilePreview})));
+import React,{useEffect,useRef,useState} from 'react';
+import {openDriveDocument} from '../utils/driveDocumentAccess';
 import {ProcessDocumentActions} from './ProcessDocumentCard';
 import {apiClient} from '../services/apiClient';
 import {portalNotice} from '../services/portalDialogs';
 /** Buttons are mounted only for publication-authorized catalog URLs. Server rechecks consent. */
 export function PublicRepositoryFileActions({url}:{url:string}){
  const [working,setWorking]=useState(false);
- const [preview,setPreview]=useState(false);
+ const currentUrl=useRef(url);currentUrl.current=url;
+ useEffect(()=>{currentUrl.current=url;return()=>{currentUrl.current='';};},[url]);
  const open=async(mode:'view'|'download')=>{
+  if(mode==='view'){
+   setWorking(true);
+   try{await openDriveDocument(()=>apiClient.getPublicRepositoryDriveLinks(url),()=>currentUrl.current===url);}
+   catch(error){if(currentUrl.current===url)portalNotice(error instanceof Error?error.message:'Não foi possível abrir o arquivo no Google Drive.');}
+   finally{if(currentUrl.current===url)setWorking(false);}
+   return;
+  }
   const tab=window.open('about:blank','_blank');if(tab)tab.opener=null;
   setWorking(true);
   try{
    const {links}=await apiClient.getPublicRepositoryDriveLinks(url);
-   if(!links){if(mode==='view'){tab?.close();setPreview(true);}else if(tab)tab.location.replace(url);return;}
-   if(tab)tab.location.replace(mode==='view'?links.view:links.download);
+   if(!links){if(tab)tab.location.replace(url);return;}
+   if(tab)tab.location.replace(links.download);
    else portalNotice('Permita a abertura de uma nova aba para acessar o PDF.');
   }catch(error){tab?.close();portalNotice(error instanceof Error?error.message:'Não foi possível abrir o PDF público.');}
   finally{setWorking(false);}
  };
- return <><ProcessDocumentActions available working={working} onView={()=>void open('view')} onDownload={()=>void open('download')}/>
- <PortalModalShell open={preview} onClose={()=>setPreview(false)} title="PDF público" maxWidthClass="max-w-5xl" bodyClassName="p-3 overflow-auto" footer={<button type="button" className="portal-action" onClick={()=>setPreview(false)}>Fechar</button>}>
- {preview&&<Suspense fallback={<p role="status">Carregando PDF…</p>}><Preview url={url} format="pdf" label="PDF público"/></Suspense>}
- </PortalModalShell></>;
+ return <ProcessDocumentActions available working={working} onView={()=>void open('view')} onDownload={()=>void open('download')}/>;
 }

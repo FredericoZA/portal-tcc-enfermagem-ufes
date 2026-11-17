@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import test from 'node:test';
-import { buildProcessArchiveFileName, buildSupersededAppProperties, downloadDrivePdf, isUnsafePrivateContainerPermission, listDriveFilePermissions } from './googleDriveArchive';
+import { buildProcessArchiveFileName, buildSupersededAppProperties, downloadDrivePdf, isUnsafePrivateContainerPermission, listDriveFilePermissions,readExistingGeneratedInvitation } from './googleDriveArchive';
 
 test('paginação ACL repetida não produz validação parcial nem consulta infinita',async t=>{
   let requests=0;
@@ -49,6 +49,26 @@ test('download do Drive preserva os bytes e valida vínculo e hash registrados',
   assert.deepEqual(result.pdf,pdf);assert.equal(result.fileName,'ata.pdf');
   await assert.rejects(downloadDrivePdf('test-token','file-test-id-123',{processId:'process-other'}),/não pertence a este processo/);
 });
+test('retry recovers the exact already-public invitation without mutation and still rejects a changed job, hash or unsafe public ACL',async t=>{
+  const fileId='issued_invitation_123456',parentId='process_folder_123456',rootId='portal_root_123456';
+  const pdf=Buffer.from('%PDF-1.7\nalready-issued-invitation'),sha256=createHash('sha256').update(pdf).digest('hex');
+  const file={id:fileId,name:'convite.pdf',mimeType:'application/pdf',parents:[parentId],trashed:false,appProperties:{portal:'portal-tcc',portalProcessId:'process-fixture',portalSignatureJobId:'workflow-fixture',portalLifecycle:'GERADO',artifactType:'CONVITE',sha256}};
+  let bytes=pdf,publicRole='reader',media=0;
+  t.mock.method(globalThis,'fetch',async(input:unknown,init?:RequestInit)=>{
+    assert.equal(init?.method||'GET','GET','Recovery cannot upload, replace, move or share an invitation');
+    const url=new URL(String(input));
+    if(url.pathname.endsWith('/permissions'))return Response.json({permissions:[{type:'user',role:'owner'},{type:'anyone',role:publicRole}]});
+    if(url.pathname.endsWith('/'+parentId))return Response.json({id:parentId,mimeType:'application/vnd.google-apps.folder',parents:[rootId]});
+    assert.ok(url.pathname.endsWith('/'+fileId));
+    if(url.searchParams.get('alt')==='media'){media++;return new Response(bytes);}
+    return Response.json(file);
+  });
+  const input={accessToken:'fixture',rootFolderId:rootId,processId:'process-fixture',jobId:'workflow-fixture',expectedFileId:fileId};
+  assert.deepEqual(await readExistingGeneratedInvitation(input),{id:fileId,fileName:'convite.pdf',sha256});assert.equal(media,1);
+  await assert.rejects(readExistingGeneratedInvitation({...input,jobId:'another-workflow'}),/não corresponde/);assert.equal(media,1);
+  bytes=Buffer.from('%PDF-1.7\nchanged-bytes');await assert.rejects(readExistingGeneratedInvitation(input),/O PDF difere do arquivo autorizado para publicação/);
+  bytes=pdf;publicRole='writer';await assert.rejects(readExistingGeneratedInvitation(input),/Compartilhamento amplo/);
+});
 
 test('nome de formulário contém código, alunos, tipo e versão', () => {
   assert.equal(
@@ -58,7 +78,7 @@ test('nome de formulário contém código, alunos, tipo e versão', () => {
       artifactLabel: 'FORMULARIO_DADOS_FINAIS',
       version: 2
     }),
-    'TCC_2026_0042__ANA_E_JOAO__FORMULARIO_DADOS_FINAIS__v002.pdf'
+    '00 - Registro de entrega final - TCC-2026-0042 - Ana Vitória e João D’Ávila - v002.pdf'
   );
 });
 
@@ -70,7 +90,7 @@ test('nome de arquivo remove caracteres impróprios do Drive', () => {
     version: 1,
     extension: '.p$d$f'
   });
-  assert.match(fileName, /^TCC_2026_0001__ALUNO__CADASTRO_INICIAL__v001\.pdf$/);
+  assert.equal(fileName, '00 - Registro Cadastro inicial - TCC 2026 0001 - Aluno Teste - v001.pdf');
 });
 
 

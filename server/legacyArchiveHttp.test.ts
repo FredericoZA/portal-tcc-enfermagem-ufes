@@ -100,7 +100,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     assert.equal(detail.body.canAccessPrivate,false);assert.deepEqual(detail.body.documents.map((doc:any)=>doc.type),['ATA']);
     const publicDocument=await fetch(base+detail.body.documents[0].url);assert.equal(publicDocument.status,200);assert.deepEqual(Buffer.from(await publicDocument.arrayBuffer()),publicAta);
     assert.equal((await request('/api/public/legacy-academic-records/legado-0001/documents/0/download')).status,404);
-    assert.deepEqual((await request(detail.body.documents[0].url+'?delivery=drive-links')).body,{links:null});
+    assert.deepEqual((await request(detail.body.documents[0].url+'?delivery=drive-links')).body,{links:{view:'https://drive.google.com/file/d/issued_admin_123456/view',download:'https://drive.google.com/uc?export=download&id=issued_admin_123456'}});
     assert.equal(detail.body.acervo.resumoSintese,record.resumo);
     assert.equal(detail.body.orientador.instituicao,'Universidade Federal do Espírito Santo');
     assert.equal(detail.body.aluno1.email,'');assert.equal(detail.body.avaliacao.status,'PENDENTE');
@@ -117,6 +117,10 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     const privateAcademicDownload=academic.body.files[0].downloadUrl;
     assert.equal((await request(privateAcademicDownload)).status,401);
     assert.equal((await request(privateAcademicDownload,'student@example.invalid')).status,403);
+    assert.equal((await request(privateAcademicDownload+'?delivery=drive-links')).status,401);
+    assert.equal((await request(privateAcademicDownload+'?delivery=drive-links','student@example.invalid')).status,403);
+    const academicLink=await request(privateAcademicDownload+'?delivery=drive-links',master);
+    assert.equal(academicLink.status,200);assert.equal(academicLink.body.links.view,'https://drive.google.com/file/d/private_file_123456/view');
     const privateAcademicPdf=await fetch(base+privateAcademicDownload,{headers:{'x-demo-user-email':master}});
     assert.equal(privateAcademicPdf.status,200);assert.match(privateAcademicPdf.headers.get('cache-control')||'',/private.*no-store/);
     assert.deepEqual(Buffer.from(await privateAcademicPdf.arrayBuffer()),pdf);
@@ -132,6 +136,9 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     assert.ok(!JSON.stringify(listing.body).includes('private_admin_123456'));
     assert.equal((await request(privateDocs+'/0/download')).status,401);
     assert.equal((await request(privateDocs+'/0/download','student@example.invalid')).status,403);
+    assert.equal((await request(privateDocs+'/0/download?delivery=drive-links')).status,401);
+    assert.equal((await request(privateDocs+'/0/download?delivery=drive-links','student@example.invalid')).status,403);
+    assert.equal((await request(privateDocs+'/0/download?delivery=drive-links',master)).body.links.view,'https://drive.google.com/file/d/private_admin_123456/view');
     const original=await fetch(base+listing.body[0].downloadUrl,{headers:{'x-demo-user-email':master}});
     assert.equal(original.status,200);assert.match(original.headers.get('cache-control')||'',/no-store/);
     assert.deepEqual(Buffer.from(await original.arrayBuffer()),pdf);
@@ -139,6 +146,7 @@ test('HTTP legacy import is Master-only, persists separately and never dispatche
     assert.equal((await request(privateDocs+'/-1/download',master)).status,404);
     await writeFile(path.join(dir,'legacy-import','drive-pdfs','admin.pdf'),Buffer.from('%PDF-changed'));
     assert.equal((await request(privateDocs+'/0/download',master)).status,409);
+    assert.equal((await request(privateDocs+'/0/download?delivery=drive-links',master)).body.links.view,'https://drive.google.com/file/d/private_admin_123456/view','Opening uses only the persisted original reference; explicit byte downloads still verify content');
 
     const deniedDownload=await request('/api/legacy-academic-records/legado-0001/files/0/download');
     assert.equal(deniedDownload.status,404);

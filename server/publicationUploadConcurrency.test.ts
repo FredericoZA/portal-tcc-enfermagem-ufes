@@ -23,6 +23,7 @@ function harness() {
     getPortalIdentity:()=>({email:'author@example.invalid'}),hasFullAdministration:()=>false,canAccessProcess:()=>true,
     getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({globalRoles:[]}),ataArchived:()=>true,finalDocumentFilesLocked:()=>false,
     localReviewFilesEnabled:()=>true,sourceFilesAccessToken:async()=> 'fixture-only',
+    ensureStoredProcessFolder:async()=>p.driveFolderId,
     uploadSourceFile:async()=>{started();await upload;return {id:'new-private-pdf',name:'Fixture.pdf'};},
     buildProcessArchiveFileName:()=> 'Fixture.pdf',publicationRequested:()=>false,
     readLegacyDevelopmentUpload:()=>pdf,persistPortalStateDurably:async()=>{persists++;},

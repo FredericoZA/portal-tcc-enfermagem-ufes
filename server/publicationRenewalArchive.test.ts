@@ -90,6 +90,8 @@ function harness() {
       published.push(input.sourceFileId);
       return { id: input.sourceFileId, webViewLink: 'https://drive.google.com/fixture-only' };
     },
+    publishArchivedAdministrativeOriginal:async()=>{},
+    publishAuthorizedAcademicOriginals:async()=>{},
     getUserRolesForEmail: () => ({ globalRoles: [] }),
     auditLogsStore: [],
     persistPortalStateDurably: async () => {

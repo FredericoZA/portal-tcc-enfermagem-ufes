@@ -1,15 +1,13 @@
 import { createHash } from 'node:crypto';
 import {readBoundedResponse,ResponseSizeError} from '../security/boundedResponse';
 import {grantMissingDriveReaders} from './processDriveReaders';
+import {buildDriveProcessFileName,buildDriveProcessFolderName,DRIVE_ACADEMIC_FOLDER_NAMES,DRIVE_ACADEMIC_FOLDER_ALIASES} from '../../src/utils/driveProcessLayout';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
 
 const escapeQuery = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-const DOCUMENT_FOLDER:Record<string,string>={CONVITE:'03_CARTA_CONVITE',ATA:'04_ATA_DEFESA',TERMO:'05_TERMO_AUTORIZACAO',DECLARACAO:'06_DECLARACAO_COMISSAO'};
-const SOURCE_FOLDER:Record<'TRABALHO_COMPLETO'|'RESUMO_EXPANDIDO',string>={TRABALHO_COMPLETO:'01_TRABALHO_COMPLETO',RESUMO_EXPANDIDO:'02_RESUMO_EXPANDIDO'};
-const FORM_FOLDER={CADASTRO_INICIAL:'01_CADASTRO_INICIAL',CONFIRMACAO_LOCAL:'02_CONFIRMACAO_LOCAL',AVALIACAO:'03_AVALIACAO',DADOS_FINAIS:'04_DADOS_FINAIS'} as const;
-export type ProcessFormArchiveType=keyof typeof FORM_FOLDER | (string & {});
+export type ProcessFormArchiveType='CADASTRO_INICIAL'|'CONFIRMACAO_LOCAL'|'AVALIACAO'|'DADOS_FINAIS'|(string & {});
 
 async function driveRequest(url: string, accessToken: string, init: RequestInit = {}) {
   const response = await fetch(url, { ...init, signal:init.signal??AbortSignal.timeout(30_000), headers: { Authorization: `Bearer ${accessToken}`, ...(init.headers || {}) } });
@@ -52,38 +50,137 @@ async function assertPrivateContainer(accessToken:string,fileId:string){
   if(unauthorized.length)throw new Error('O destino no Google Drive possui compartilhamento público, por domínio, grupo ou permissão não reconhecida. Acesso nominal de usuários autorizados pode permanecer.');
 }
 
-async function ensureFolder(accessToken: string, parentId: string, name: string) {
-  const query = `name = '${escapeQuery(name)}' and mimeType = 'application/vnd.google-apps.folder' and '${escapeQuery(parentId)}' in parents and trashed = false`;
-  const result = await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`, accessToken);
-  const files = (await result.json()).files || [];
-  if (files.length > 1) throw new Error(`Há pastas duplicadas chamadas ${name}. Corrija a estrutura antes de arquivar.`);
+async function ensureFolder(accessToken: string, parentId: string, name: string, aliases:readonly string[]=[name], appProperties:Record<string,string>={}, properties:Record<string,string>={}) {
+  const names=[...new Set([name,...aliases])];
+  const query = `(${names.map(value=>`name = '${escapeQuery(value)}'`).join(' or ')}) and mimeType = 'application/vnd.google-apps.folder' and '${escapeQuery(parentId)}' in parents and trashed = false`;
+  const result = await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,appProperties,properties),nextPageToken&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`, accessToken);
+  const listing=await result.json(),files=listing.files||[];
+  if (files.length > 1||listing.nextPageToken) throw new Error(`Há pastas duplicadas chamadas ${name}. Corrija a estrutura antes de arquivar.`);
   if (files[0]) { await assertPrivateContainer(accessToken,String(files[0].id)); return files[0]; }
-  const created = await driveRequest(`${DRIVE_API}/files?fields=id,name,webViewLink&supportsAllDrives=true`, accessToken, {
+  const created = await driveRequest(`${DRIVE_API}/files?fields=id,name,webViewLink,properties&supportsAllDrives=true`, accessToken, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId], appProperties: { portal: 'portal-tcc', lifecycle: 'signed' } })
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId], appProperties: { portal: 'portal-tcc', ...appProperties },properties })
   });
   return created.json();
 }
 
-export async function ensurePortalProcessDriveFolder(input:{accessToken:string;rootFolderId:string;protocol:string;processId:string}){
+async function isWithinDriveFolder(accessToken:string,file:any,ancestorId:string):Promise<boolean>{
+  let parents=file.parents;const visited=new Set<string>();
+  for(let depth=0;depth<10;depth++){
+    if(!Array.isArray(parents)||parents.length!==1||typeof parents[0]!=='string'||visited.has(parents[0]))return false;
+    if(parents[0]===ancestorId)return true;
+    const id=parents[0];visited.add(id);
+    const parent=await(await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,mimeType,trashed,parents&supportsAllDrives=true`,accessToken)).json();
+    if(parent.id!==id||parent.trashed||parent.mimeType!=='application/vnd.google-apps.folder')return false;
+    parents=parent.parents;
+  }
+  return false;
+}
+
+async function findArchivedFiles(accessToken:string,query:string):Promise<any[]>{
+  const response=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,trashed,parents,webViewLink,appProperties,properties,sha256Checksum),nextPageToken&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,accessToken);
+  const result=await response.json();
+  if(!Array.isArray(result.files)||result.nextPageToken||result.files.length>1)throw new Error('Há arquivos duplicados para o mesmo vínculo no Google Drive.');
+  return result.files;
+}
+
+async function verifyProcessFolderBinding(input:{accessToken:string;rootFolderId:string;protocol:string;processId?:string;protocolAliases?:readonly string[]},folder:any):Promise<void>{
+  const properties=folder.appProperties||{};
+  const names=[input.protocol,...input.protocolAliases||[]];
+  const matchesName=names.some(name=>folder.name===name||String(folder.name||'').startsWith(`${name} - `));
+  const folderMime='application/vnd.google-apps.folder';
+  if(folder.trashed||folder.mimeType!==folderMime||!Array.isArray(folder.parents)||folder.parents.length!==1||properties.portalProcessId&&properties.portalProcessId!==input.processId||!matchesName&&!(input.processId&&properties.portalProcessId===input.processId))throw new Error('A pasta não corresponde ao processo solicitado.');
+  const read=async(id:string)=>(await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=id,name,mimeType,trashed,parents&supportsAllDrives=true`,input.accessToken)).json();
+  let parent=await read(folder.parents[0]);
+  if(parent.mimeType===folderMime&&/^\d{4}$/.test(String(parent.name||''))&&parent.parents?.length===1)parent=await read(parent.parents[0]);
+  if(parent.trashed||parent.mimeType!==folderMime||!DRIVE_ACADEMIC_FOLDER_ALIASES.processes.includes(parent.name)||parent.parents?.length!==1||parent.parents[0]!==input.rootFolderId)throw new Error('A pasta não pertence à árvore deste processo na raiz do Portal.');
+}
+
+export async function ensurePortalProcessDriveFolder(input:{accessToken:string;rootFolderId:string;protocol:string;processId:string;folderId?:string;studentNames?:readonly string[];legacy?:boolean;protocolAliases?:readonly string[]}){
   await assertPrivateContainer(input.accessToken,input.rootFolderId);
-  const processes=await ensureFolder(input.accessToken,input.rootFolderId,'02_PROCESSOS');
-  const processFolder=await ensureFolder(input.accessToken,processes.id,input.protocol);
-  // Each upload creates its own destination on demand. Do not pre-create
-  // empty legacy document/publication trees for every new process.
+  const folderName=buildDriveProcessFolderName({protocol:input.protocol,studentNames:input.studentNames||[],legacy:input.legacy});
+  let processFolder:any;
+  if(input.folderId){
+    processFolder=await(await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.folderId)}?fields=id,name,mimeType,trashed,parents,webViewLink,appProperties,properties&supportsAllDrives=true`,input.accessToken)).json();
+    if(processFolder.id!==input.folderId)throw new Error('O Drive não confirmou a pasta vinculada ao processo.');
+  }else{
+    const query=`mimeType = 'application/vnd.google-apps.folder' and appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and trashed = false`;
+    [processFolder]=await findArchivedFiles(input.accessToken,query);
+  }
+  if(processFolder){
+    await verifyProcessFolderBinding(input,processFolder);
+    await assertPrivateContainer(input.accessToken,String(processFolder.id));
+  }else{
+    const processes=await ensureFolder(input.accessToken,input.rootFolderId,DRIVE_ACADEMIC_FOLDER_NAMES.processes,DRIVE_ACADEMIC_FOLDER_ALIASES.processes);
+    processFolder=await ensureFolder(input.accessToken,processes.id,folderName,[folderName,input.protocol],{portalProcessId:input.processId,protocol:input.protocol},{portalDriveLayout:'flat-v1'});
+    if(processFolder.appProperties?.portalProcessId&&processFolder.appProperties.portalProcessId!==input.processId)throw new Error('A pasta encontrada pertence a outro processo.');
+  }
+  const updateName=Boolean(input.studentNames?.some(name=>name.trim())&&processFolder.name!==folderName);
+  if(updateName||processFolder.properties?.portalDriveLayout!=='flat-v1')await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(processFolder.id)}?fields=id&supportsAllDrives=true`,input.accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({...(updateName?{name:folderName}:{}),properties:{...processFolder.properties,portalDriveLayout:'flat-v1'}})});
   return {id:String(processFolder.id),webViewLink:String(processFolder.webViewLink||`https://drive.google.com/drive/folders/${processFolder.id}`)};
 }
 
+/** Private, stable-ID mirror. Equal content performs no upload or permission change. */
+export async function syncProcessDataMarkdown(input:{accessToken:string;processFolderId:string;processId:string;fileName?:string;markdown:string;revision:number;fileId?:string;assertCurrent:()=>boolean|Promise<boolean>;bindFileId?:(id:string)=>Promise<void>}):Promise<{id:string;name:string;webViewLink?:string}>{
+  const current=async()=>{if(!await input.assertCurrent())throw new Error('Os dados do processo mudaram durante a sincronização.');};
+  await current();
+  if(!Number.isSafeInteger(input.revision)||input.revision<1)throw new Error('Revisão dos dados inválida.');
+  await assertPrivateContainer(input.accessToken,input.processFolderId);
+  const bytes=Buffer.from(input.markdown,'utf8');
+  if(!bytes.length||bytes.length>512*1024)throw new Error('O registro de dados ultrapassa o tamanho permitido.');
+  const sha256=createHash('sha256').update(bytes).digest('hex');
+  const fileName=String(input.fileName||'00 - Dados do processo.md').replace(/[\r\n/\\]/g,'_');
+  const query=`'${escapeQuery(input.processFolderId)}' in parents and trashed = false and ((properties has { key='portalProcessData' and value='flat-v1' } and properties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' }) or (appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='artifactType' and value='PROCESS_DATA' }) or name = '${escapeQuery(fileName)}')`;
+  const [listed]=await findArchivedFiles(input.accessToken,query);
+  if(input.fileId&&listed&&input.fileId!==listed.id)throw new Error('O arquivo de dados vinculado mudou.');
+  let fileId=input.fileId||listed?.id,existing:any,etag:string|undefined;
+  const fields='id,name,mimeType,trashed,parents,webViewLink,appProperties,properties,sha256Checksum';
+  const read=async(id:string)=>{
+    if(!/^[a-zA-Z0-9_-]{10,150}$/.test(id))throw new Error('Identificador do arquivo de dados inválido.');
+    try{const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=${fields}&supportsAllDrives=true`,input.accessToken);return {file:await response.json(),etag:response.headers.get('etag')||undefined};}
+    catch(error){if((error as {status?:number}).status===404)return undefined;throw error;}
+  };
+  if(fileId){const selected=await read(fileId);existing=selected?.file;etag=selected?.etag;if(listed&&!existing)throw new Error('O arquivo de dados mudou durante a consulta.');}
+  if(existing){
+    const properties=existing.properties||{},privateProperties=existing.appProperties||{};
+    if(existing.id!==fileId||existing.trashed||!['text/markdown','text/plain'].includes(existing.mimeType)||properties.portalProcessId&&properties.portalProcessId!==input.processId||privateProperties.portalProcessId&&privateProperties.portalProcessId!==input.processId||!await isWithinDriveFolder(input.accessToken,existing,input.processFolderId))throw new Error('O registro de dados existente pertence a outro destino.');
+    await assertPrivateContainer(input.accessToken,fileId);
+    const storedRevision=Number(properties.portalProcessDataRevision||privateProperties.portalProcessDataRevision||0);
+    if(!Number.isSafeInteger(storedRevision)||storedRevision<0||storedRevision>input.revision)throw new Error('O Drive já possui uma revisão mais recente dos dados.');
+    const currentSha=existing.sha256Checksum||properties.portalProcessDataSha256||privateProperties.sha256;
+    await current();
+    if(currentSha===sha256&&storedRevision===input.revision&&properties.portalProcessData==='flat-v1'&&properties.portalProcessId===input.processId&&existing.name===fileName){
+      if(input.fileId!==fileId&&input.bindFileId)await input.bindFileId(fileId);
+      await current();return existing;
+    }
+    // Conditional metadata/media update: never overwrite when a strong precondition is unavailable.
+    if(!etag||!/^"[^"\r\n]*"$/.test(etag))throw new Error('O Drive não forneceu uma condição segura para atualizar os dados. A sincronização permanece pendente.');
+  }
+  if(!fileId){
+    if(!input.bindFileId)throw new Error('O ID do arquivo de dados precisa ser persistido antes da criação.');
+    fileId=await reserveProcessFormPdfId(input.accessToken);
+  }
+  if(input.fileId!==fileId){
+    if(!input.bindFileId)throw new Error('O vínculo do arquivo de dados precisa ser persistido antes da atualização.');
+    await input.bindFileId(fileId);
+  }
+  await current();
+  const publicProperties={...existing?.properties,portalProcessData:'flat-v1',portalProcessId:input.processId,portalProcessDataSha256:sha256,portalProcessDataRevision:String(input.revision)};
+  const metadata={...(!existing?{id:fileId,parents:[input.processFolderId]}:{}),name:fileName,mimeType:'text/markdown',appProperties:{...existing?.appProperties,portal:'portal-tcc',schema:'10',portalProcessId:input.processId,artifactType:'PROCESS_DATA',sha256,portalProcessDataRevision:String(input.revision)},properties:publicProperties};
+  const boundary=`portal_data_${Date.now().toString(36)}`;
+  const body=Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: text/markdown; charset=UTF-8\r\n\r\n`),bytes,Buffer.from(`\r\n--${boundary}--`)]);
+  try{await driveRequest(`${DRIVE_UPLOAD_API}/files${existing?`/${encodeURIComponent(fileId)}`:''}?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true`,input.accessToken,{method:existing?'PATCH':'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`,...(existing?{'If-Match':etag!}:{})},body});}
+  catch(error){const status=(error as {status?:number}).status;if(status===412)throw new Error('O arquivo de dados mudou no Drive. A sincronização permanece pendente.');if(status!==409||existing)throw error;}
+  await current();
+  const confirmed=(await read(fileId))?.file;
+  const actualSha=confirmed?.sha256Checksum||confirmed?.properties?.portalProcessDataSha256||confirmed?.appProperties?.sha256;
+  if(!confirmed||confirmed.id!==fileId||confirmed.trashed||actualSha!==sha256||confirmed.properties?.portalProcessDataRevision!==String(input.revision)||!await isWithinDriveFolder(input.accessToken,confirmed,input.processFolderId))throw new Error('A revisão dos dados no Drive não foi confirmada.');
+  await current();return confirmed;
+}
 
-function archiveNamePart(value:string,max=80){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').toUpperCase().slice(0,max)||'NAO_INFORMADO';}
+
 export function buildProcessArchiveFileName(input:{protocol:string;studentNames:string[];artifactLabel:string;version:number;title?:string;extension?:string}){
-  const protocol=archiveNamePart(input.protocol,40);
-  const students=input.studentNames.map(name=>archiveNamePart(name.trim().split(/\s+/)[0],48)).filter(Boolean).join('_E_').slice(0,100)||'ALUNO_NAO_INFORMADO';
-  const label=archiveNamePart(input.artifactLabel,48);
-  const title=input.title?archiveNamePart(input.title,80):'';
-  const version=String(Math.max(1,Math.floor(input.version||1))).padStart(3,'0');
-  const extension=String(input.extension||'pdf').replace(/[^a-z0-9]/gi,'').toLowerCase()||'pdf';
-  return `${protocol}__${students}__${title?`${title}__`:''}${label}__v${version}.${extension}`;
+  return buildDriveProcessFileName({...input,kind:input.artifactLabel});
 }
 
 export async function reserveProcessFormPdfId(accessToken: string): Promise<string> {
@@ -111,9 +208,7 @@ export async function uploadProcessFormPdf(input:{accessToken:string;processFold
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!input.pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('O formulário gerado não é um PDF válido.');
   if(input.pdf.length>16*1024*1024)throw new Error('O PDF do formulário não pode ultrapassar 16 MB.');
-  const formsRoot=await ensureFolder(input.accessToken,input.processFolderId,'00_FORMULARIOS');
-  const destinationName=FORM_FOLDER[input.formType as keyof typeof FORM_FOLDER]||`05_PERSONALIZADO_${archiveNamePart(input.formType,48)}`;
-  const destination=await ensureFolder(input.accessToken,formsRoot.id,destinationName);
+  const destination={id:input.processFolderId};
   const version=String(Math.max(1,Math.floor(input.version||1)));
   const finish=async(file:any)=>{
     if(input.readerEmails?.length&&['CADASTRO_INICIAL','CONFIRMACAO_LOCAL'].includes(input.formType)){
@@ -121,11 +216,10 @@ export async function uploadProcessFormPdf(input:{accessToken:string;processFold
     }
     return file;
   };
-  const duplicateQuery=`'${escapeQuery(destination.id)}' in parents and appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='formType' and value='${input.formType}' } and appProperties has { key='formVersion' and value='${version}' } and trashed = false`;
-  const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
-  const existing=(await existingResponse.json()).files||[];
+  const duplicateQuery=`appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='formType' and value='${escapeQuery(input.formType)}' } and appProperties has { key='formVersion' and value='${version}' } and trashed = false`;
+  const existing=await findArchivedFiles(input.accessToken,duplicateQuery);
   if(existing.length>1)throw new Error('Foram encontrados PDFs duplicados para a mesma versão do formulário.');
-  if(existing[0]){if((input.reservedFileId&&existing[0].id!==input.reservedFileId)||existing[0].appProperties?.sha256!==input.sha256)throw new Error('Conflito de integridade na versão já arquivada do formulário.');return finish(existing[0]);}
+  if(existing[0]){if((input.reservedFileId&&existing[0].id!==input.reservedFileId)||existing[0].appProperties?.sha256!==input.sha256||existing[0].sha256Checksum&&String(existing[0].sha256Checksum).toLowerCase()!==input.sha256.toLowerCase()||!await isWithinDriveFolder(input.accessToken,existing[0],input.processFolderId))throw new Error('Conflito de integridade na versão já arquivada do formulário.');return finish(existing[0]);}
   const fileName=buildProcessArchiveFileName({protocol:input.protocol,studentNames:input.studentNames,artifactLabel:`FORMULARIO_${input.formType}`,version:input.version});
   const boundary=`portal_form_${Date.now().toString(36)}`;
   const metadata=Buffer.from(JSON.stringify({...(input.reservedFileId?{id:input.reservedFileId}:{}),name:fileName,parents:[destination.id],mimeType:'application/pdf',appProperties:{portal:'portal-tcc',schema:'5',portalProcessId:input.processId,formType:input.formType,formVersion:version,sha256:input.sha256}}),'utf8');
@@ -141,22 +235,10 @@ export async function uploadProcessFormPdf(input:{accessToken:string;processFold
 async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;accessToken:string;processFolderId:string;processId:string;jobId:string;documentType:string;lifecycle:'GERADO'|'ASSINADO';fileName:string;pdf:Buffer;sha256:string;readerEmails?:string[]}){
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if (!input.pdf.subarray(0, 5).equals(Buffer.from('%PDF-'))) throw new Error('O artefato documental não é um PDF válido.');
-  let parentId = input.processFolderId;
-  if(input.rootFolderId && input.protocol){
-    await assertPrivateContainer(input.accessToken,input.rootFolderId);
-    const documents=await ensureFolder(input.accessToken,input.rootFolderId,'01_DOCUMENTOS');
-    const names:Record<string,string>={CONVITE:'01_CARTA_CONVITE',ATA:'02_ATA_DEFESA',TERMO:'03_TERMO_AUTORIZACAO',DECLARACAO:'04_DECLARACAO_PARTICIPACAO'};
-    const typeFolder=await ensureFolder(input.accessToken,documents.id,names[input.documentType]||input.documentType);
-    const lifecycleFolder=await ensureFolder(input.accessToken,typeFolder.id,input.lifecycle==='GERADO'?'02_GERADOS':'03_ASSINADOS');
-    parentId=lifecycleFolder.id;
-  } else {
-    const legacy=await ensureFolder(input.accessToken,input.processFolderId,DOCUMENT_FOLDER[input.documentType]||'07_COMPROVANTES_ASTEN');
-    parentId=legacy.id;
-  }
-  const destination=input.rootFolderId&&input.protocol?{id:parentId}:await ensureFolder(input.accessToken,parentId,input.lifecycle==='GERADO'?'Gerados':'Assinados');
-  const duplicateQuery = `'${escapeQuery(destination.id)}' in parents and appProperties has { key='portalSignatureJobId' and value='${escapeQuery(input.jobId)}' } and appProperties has { key='portalLifecycle' and value='${input.lifecycle}' } and trashed = false`;
-  const existingResponse = await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`, input.accessToken);
-  const existing = (await existingResponse.json()).files || [];
+  const destination={id:input.processFolderId};
+  if(input.rootFolderId)await assertPrivateContainer(input.accessToken,input.rootFolderId);
+  const duplicateQuery = `appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='portalSignatureJobId' and value='${escapeQuery(input.jobId)}' } and appProperties has { key='portalLifecycle' and value='${input.lifecycle}' } and trashed = false`;
+  const existing = await findArchivedFiles(input.accessToken,duplicateQuery);
   const finish=async(file:any)=>{
     if(input.readerEmails?.length&&(input.lifecycle==='ASSINADO'||input.documentType==='CONVITE')){
       await resolvePrivateDriveBrowserLinks({accessToken:input.accessToken,fileId:String(file.id),email:input.readerEmails[0],readerEmails:input.readerEmails,processId:input.processId,artifactType:input.documentType,signatureJobId:input.jobId,expectedSha256:input.sha256,allowPublicRead:true});
@@ -164,7 +246,7 @@ async function uploadArtifactPdf(input:{rootFolderId?:string;protocol?:string;ac
     return file;
   };
   if (existing.length > 1) throw new Error('Foram encontrados PDFs duplicados para o mesmo trabalho de assinatura.');
-  if(existing[0]){if(existing[0].appProperties?.sha256!==input.sha256)throw new Error('Conflito de integridade no arquivo já existente do Drive.');return finish(existing[0]);}
+  if(existing[0]){if(existing[0].appProperties?.sha256!==input.sha256||existing[0].sha256Checksum&&String(existing[0].sha256Checksum).toLowerCase()!==input.sha256.toLowerCase()||existing[0].appProperties?.artifactType!==input.documentType||!await isWithinDriveFolder(input.accessToken,existing[0],input.rootFolderId||input.processFolderId))throw new Error('Conflito de integridade no arquivo já existente do Drive.');return finish(existing[0]);}
 
   const boundary = `portal_${Date.now().toString(36)}`;
   const metadata = Buffer.from(JSON.stringify({ name: input.fileName, parents: [destination.id], mimeType: 'application/pdf', appProperties: { portal: 'portal-tcc',schema:'7',portalProcessId:input.processId,portalSignatureJobId:input.jobId,portalLifecycle:input.lifecycle,artifactType:input.documentType,sha256:input.sha256 } }), 'utf8');
@@ -211,7 +293,7 @@ export async function readExistingGeneratedInvitation(input:{accessToken:string;
     parents=parent.parents;
   }
   if(!inside)throw new Error('O convite não pertence à raiz privada deste Portal.');
-  const {pdf,fileName}=await downloadDrivePdf(input.accessToken,String(file.id),{processId:input.processId,artifactType:'CONVITE',signatureJobId:input.jobId});
+  const {pdf,fileName}=await downloadDrivePdf(input.accessToken,String(file.id),{processId:input.processId,artifactType:'CONVITE',signatureJobId:input.jobId,allowPublicRead:true,expectedSha256:properties.sha256});
   const sha256=createHash('sha256').update(pdf).digest('hex');
   if(sha256!==properties.sha256)throw new Error('O hash do convite existente não foi confirmado.');
   return {id:String(file.id),fileName,sha256};
@@ -236,12 +318,12 @@ export async function uploadProcessSourcePdf(input:{accessToken:string;processFo
   await assertPrivateContainer(input.accessToken,input.processFolderId);
   if(!input.pdf.subarray(0,5).equals(Buffer.from('%PDF-')))throw new Error('Envie um arquivo PDF válido.');
   if(input.pdf.length>24*1024*1024)throw new Error('O PDF não pode ultrapassar 24 MB.');
-  const destination=await ensureFolder(input.accessToken,input.processFolderId,input.artifactType==='COMPROVANTE_LOCAL'?'09_COMPROVANTE_RESERVA':SOURCE_FOLDER[input.artifactType]);
-  const duplicateQuery=`'${escapeQuery(destination.id)}' in parents and appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='artifactType' and value='${input.artifactType}' } and appProperties has { key='sha256' and value='${input.sha256}' } and trashed = false`;
-  const existingResponse=await driveRequest(`${DRIVE_API}/files?q=${encodeURIComponent(duplicateQuery)}&fields=files(id,name,webViewLink,appProperties)&pageSize=2&supportsAllDrives=true&includeItemsFromAllDrives=true`,input.accessToken);
-  const existing=(await existingResponse.json()).files||[];
+  const destination={id:input.processFolderId};
+  const duplicateQuery=`appProperties has { key='portalProcessId' and value='${escapeQuery(input.processId)}' } and appProperties has { key='artifactType' and value='${input.artifactType}' } and appProperties has { key='sha256' and value='${input.sha256}' } and trashed = false`;
+  const existing=await findArchivedFiles(input.accessToken,duplicateQuery);
   if(existing.length>1)throw new Error('Foram encontrados arquivos duplicados para este TCC.');
   if(existing[0]){
+    if(existing[0].sha256Checksum&&String(existing[0].sha256Checksum).toLowerCase()!==input.sha256.toLowerCase()||!await isWithinDriveFolder(input.accessToken,existing[0],input.processFolderId))throw new Error('O arquivo já arquivado não pertence à pasta deste processo ou difere do conteúdo registrado.');
     if(input.previousFileId&&input.previousFileId!==String(existing[0].id))await markDriveFileSuperseded(input.accessToken,input.previousFileId,String(existing[0].id));
     return existing[0];
   }
@@ -413,12 +495,50 @@ export async function resolvePrivateDriveBrowserLinks(input:{accessToken:string;
   return view&&download?{view,download}:null;
 }
 
-export async function renamePortalProcessFolder(input:{accessToken:string;fileId:string;previousProtocol:string;protocol:string}){
+/** Read-only links for an already authorized original; absence never grants Drive access. */
+export async function resolveOriginalDriveBrowserLinks(input:{accessToken:string;fileId:string;expectedSha256:string;expectedFolderId?:string;email?:string;publicRead:boolean;allowPublicRead?:boolean;processId?:string;artifactType?:string;signatureJobId?:string;formVersion?:number;requiredPublicDocumentSha256?:string;validatePublicContent?:()=>Promise<void>}):Promise<{view:string;download:string}|null>{
+  if(!/^[a-zA-Z0-9_-]{10,}$/.test(input.fileId)||!/^[a-f0-9]{64}$/i.test(input.expectedSha256)||!input.processId&&!input.expectedFolderId)return null;
+  const permissions=await listDriveFilePermissions(input.accessToken,input.fileId);
+  if(permissions.some(p=>isUnsafePrivateContainerPermission(p)&&!((input.publicRead||input.allowPublicRead)&&p.type==='anyone'&&p.role==='reader')))return null;
+  const publicReader=permissions.some(p=>p.type==='anyone'&&p.role==='reader');
+  const nominal=permissions.some(p=>p.type==='user'&&p.view!=='metadata'&&input.email&&String(p.emailAddress||'').trim().toLowerCase()===input.email.trim().toLowerCase()&&['owner','organizer','fileorganizer','writer','commenter','reader'].includes(String(p.role).toLowerCase()));
+  if(input.publicRead?!publicReader:!nominal&&!(input.allowPublicRead&&publicReader))return null;
+  const read=async()=>(await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,mimeType,trashed,parents,appProperties,sha256Checksum,webViewLink,webContentLink&supportsAllDrives=true`,input.accessToken)).json();
+  let file=await read();const sha=input.expectedSha256.toLowerCase();
+  const valid=(candidate:any)=>{
+    const properties=candidate.appProperties||{};
+    return candidate.id===input.fileId&&!candidate.trashed&&candidate.mimeType==='application/pdf'&&String(candidate.sha256Checksum||'').toLowerCase()===sha
+      &&(!input.processId||properties.portal==='portal-tcc'&&properties.portalProcessId===input.processId)
+      &&(!input.artifactType||(input.formVersion===undefined?properties.artifactType===input.artifactType:properties.formType===input.artifactType&&properties.formVersion===String(input.formVersion)))
+      &&(!input.signatureJobId||properties.portalSignatureJobId===input.signatureJobId)
+      &&(!properties.sha256||String(properties.sha256).toLowerCase()===sha);
+  };
+  if(!valid(file))return null;
+  const properties=file.appProperties||{};
+  if(input.requiredPublicDocumentSha256&&(input.requiredPublicDocumentSha256.toLowerCase()!==sha||properties.portalPublicDocumentSha256!==sha))return null;
+  if(input.expectedFolderId){
+    if(!await isWithinDriveFolder(input.accessToken,file,input.expectedFolderId))return null;
+    await assertPrivateContainer(input.accessToken,input.expectedFolderId);
+  }
+  if(input.publicRead&&input.validatePublicContent&&properties.portalPublicDocumentSha256!==sha){
+    await input.validatePublicContent();
+    file=await read();
+    if(!valid(file)||input.expectedFolderId&&!await isWithinDriveFolder(input.accessToken,file,input.expectedFolderId))return null;
+    const reviewedPermissions=await listDriveFilePermissions(input.accessToken,input.fileId);
+    if(!reviewedPermissions.some(p=>p.type==='anyone'&&p.role==='reader')||reviewedPermissions.some(p=>isUnsafePrivateContainerPermission(p)&&!(p.type==='anyone'&&p.role==='reader')))return null;
+  }
+  const safe=(value:unknown)=>{try{const url=new URL(String(value));return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['drive.google.com','docs.google.com','drive.usercontent.google.com'].includes(url.hostname)&&!['access_token','token','key'].some(key=>url.searchParams.has(key))?url.href:'';}catch{return '';}};
+  const view=safe(file.webViewLink),download=safe(file.webContentLink);
+  return view&&download?{view,download}:null;
+}
+
+export async function renamePortalProcessFolder(input:{accessToken:string;fileId:string;previousProtocol:string;protocol:string;rootFolderId:string;processId?:string;studentNames?:readonly string[]}){
  await assertPrivateContainer(input.accessToken,input.fileId);
- const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name,mimeType,trashed&supportsAllDrives=true`,input.accessToken);
+ const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name,mimeType,trashed,parents,appProperties&supportsAllDrives=true`,input.accessToken);
  const folder=await response.json();
- if(folder.trashed||folder.mimeType!=='application/vnd.google-apps.folder'||folder.name!==input.previousProtocol)throw new Error('A pasta do processo mudou no Drive. Confira a sincronização antes de alterar o protocolo.');
- await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name&supportsAllDrives=true`,input.accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:input.protocol})});
+ if(folder.id!==input.fileId)throw new Error('A pasta do processo mudou no Drive. Confira a sincronização antes de alterar o protocolo.');
+ await verifyProcessFolderBinding({...input,protocol:input.previousProtocol},folder);
+ await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(input.fileId)}?fields=id,name&supportsAllDrives=true`,input.accessToken,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:buildDriveProcessFolderName({protocol:input.protocol,studentNames:input.studentNames||[]}),appProperties:{...folder.appProperties,...(input.processId?{portalProcessId:input.processId}:{}),protocol:input.protocol}})});
 }
 
 /** Delete only the selected process tree, after checking its ancestry and protecting shared/model resources. */
@@ -454,24 +574,25 @@ export async function deleteProcessDriveArtifacts(input:{accessToken:string;proc
   const folder=await get(id);if(!folder)return '';
   // An identity migration may retain the original folder name. Historical names
   // authorize only the exact folder already pinned in the deletion manifest.
-  const expectedName=folder.name===input.protocol?input.protocol
-    :id===input.folderId&&input.protocolAliases?.includes(folder.name)?folder.name:undefined;
+  const matches=(name:string)=>folder.name===name||String(folder.name||'').startsWith(`${name} - `);
+  const expectedName=matches(input.protocol)?input.protocol
+    :id===input.folderId&&input.protocolAliases?.find(matches);
   const folderYear=/^[A-Z0-9_-]{1,16}-([1-9]\d{3})-\d+$/.exec(expectedName||'')?.[1];
   const parent=await get(folder.parents?.[0]||'');
   const annual=parent?.mimeType===folderMime&&/^\d{4}$/.test(String(parent.name||''));
   const processRoot=annual?await get(parent.parents?.[0]||''):parent;
-  if(folder.mimeType!==folderMime||!expectedName||processRoot?.mimeType!==folderMime||processRoot.name!=='02_PROCESSOS'||!processRoot.parents?.includes(input.rootFolderId)||(annual&&folderYear&&parent.name!==folderYear))throw Error('A pasta não pertence à árvore deste TCC.');
+  if(folder.mimeType!==folderMime||!expectedName||processRoot?.mimeType!==folderMime||!DRIVE_ACADEMIC_FOLDER_ALIASES.processes.includes(processRoot.name)||!processRoot.parents?.includes(input.rootFolderId)||(annual&&folderYear&&parent.name!==folderYear))throw Error('A pasta não pertence à árvore deste TCC.');
   protectedIds.add(String(parent.id));protectedIds.add(String(processRoot.id));
   return id;
  };
  let verifiedFolder=input.folderId?await verifyProcessFolder(input.folderId):'';
  if(!verifiedFolder&&input.rootFolderId){
   const childFolders=(parentId:string,name:string)=>listIds(`'${escapeQuery(parentId)}' in parents and name = '${escapeQuery(name)}' and mimeType = '${folderMime}' and trashed = false`);
-  const processRoots=await childFolders(input.rootFolderId,'02_PROCESSOS');
-  if(processRoots.length>1)throw Error('Drive: há pastas 02_PROCESSOS duplicadas; a exclusão foi interrompida.');
+  const processRoots=[...new Set((await Promise.all(DRIVE_ACADEMIC_FOLDER_ALIASES.processes.map(name=>childFolders(input.rootFolderId,name)))).flat())];
+  if(processRoots.length>1)throw Error('Drive: há pastas de processos duplicadas; a exclusão foi interrompida.');
   if(processRoots[0]){
    const processRoot=await get(processRoots[0]);
-   if(!processRoot||processRoot.mimeType!==folderMime||processRoot.name!=='02_PROCESSOS'||!processRoot.parents?.includes(input.rootFolderId))throw Error('A pasta não pertence à árvore deste TCC.');
+   if(!processRoot||processRoot.mimeType!==folderMime||!DRIVE_ACADEMIC_FOLDER_ALIASES.processes.includes(processRoot.name)||!processRoot.parents?.includes(input.rootFolderId))throw Error('A pasta não pertence à árvore deste TCC.');
    protectedIds.add(processRoots[0]);
    const matches=new Set(await childFolders(processRoots[0],input.protocol));
    if(officialYear){
@@ -508,6 +629,7 @@ export async function deleteProcessDriveArtifacts(input:{accessToken:string;proc
   const jobMatches=properties.portal==='portal-tcc'&&jobIds.has(properties.portalSignatureJobId);
   const parentMatches=Boolean(parentId&&Array.isArray(file.parents)&&file.parents.includes(parentId));
   if(id!==verifiedFolder&&!processMatches&&!jobMatches&&!parentMatches)throw Error('Não foi possível comprovar o vínculo de um arquivo ao TCC.');
+  if(file.mimeType===folderMime&&id!==verifiedFolder&&!parentMatches)await verifyProcessFolder(id);
   active.add(id);
   try{
    if(file.mimeType==='application/vnd.google-apps.folder')for(const childId of await listIds(`'${escapeQuery(id)}' in parents`))await remove(childId,id);
