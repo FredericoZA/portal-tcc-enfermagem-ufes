@@ -157,7 +157,7 @@ test('catalog v2 isolates signature evidence and preserves the installed v1 cont
   for (const file of [
    '20261125155300_repository_legacy_faculty_evidence.sql',
    '20261117030854_conditional_signature_and_repository_reads.sql',
-   '20261125194311_public_repository_signature_evidence.sql',
+   '20261125230901_public_repository_signature_evidence.sql',
   ]) await db.exec(await readFile('supabase/migrations/' + file, 'utf8'));
   const read = (hash:string|null = null) => db.query<any>('select * from public.portal_read_repository_projection_v2($1)', [hash]);
   for (const role of ['anon', 'authenticated']) {
