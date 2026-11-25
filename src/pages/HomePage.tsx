@@ -906,10 +906,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             const name = proc.aluno2?.nome ? cleanPersonName(proc.aluno2.nome) : '';
             return name ? name : '';
           }
-          case 'orientador': return proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
-          case 'membro1': return evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
-          case 'membro2': return evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
-          case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
+          case 'orientador': return proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${displayParticipantInstitution(proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
+          case 'membro1': return evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
+          case 'membro2': return evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
+          case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${displayParticipantInstitution(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
           case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
@@ -969,19 +969,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${name ? (name).replace(/"/g, '""') : ''}"`);
       }
       if (visibleColumns.orientador) {
-        const orient = proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${installationProfile.institutionName})` : 'A definir';
+        const orient = proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${displayParticipantInstitution(installationProfile.institutionName)})` : 'A definir';
         row.push(`"${orient.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.membro1) {
-        const ev1 = evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
+        const ev1 = evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
         row.push(`"${ev1.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.membro2) {
-        const ev2 = evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
+        const ev2 = evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
         row.push(`"${ev2.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.coorientador) {
-        const coorient = proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
+        const coorient = proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${displayParticipantInstitution(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : '';
         row.push(`"${coorient.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.resumo) {
@@ -1791,7 +1791,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           </span>
                                           <span className="font-normal text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome))}</span>
                                           {calendarPopupFormat.showAdvisorInstitution !== false && (
-                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})</span>
+                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({displayParticipantInstitution(proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})</span>
                                           )}
                                         </div>
                                       )}
@@ -1802,7 +1802,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           </span>
                                           <span className="font-normal text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))}</span>
                                           {calendarPopupFormat.showAdvisorInstitution !== false && (
-                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({proc.coorientador.instituicao || installationProfile.defaultInstitutionName})</span>
+                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({displayParticipantInstitution(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)})</span>
                                           )}
                                         </div>
                                       )}
@@ -1815,7 +1815,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                             {proc.banca.filter(b => b.funcao !== 'ORIENTADOR').map((b, idx) => (
                                               <div key={idx} className="text-[11px] text-slate-800">
                                                 • {proc.legacyRecord ? cleanPersonName(b.nome) : academicName(b, 'abbreviated')} {calendarPopupFormat.showCommitteeInstitution !== false && (
-                                                  <span className="text-[10px] text-slate-500 font-mono">({b.instituicao || (b.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName)})</span>
+                                                  <span className="text-[10px] text-slate-500 font-mono">({displayParticipantInstitution(b.instituicao || (b.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName))})</span>
                                                 )}
                                               </div>
                                             ))}
@@ -2634,7 +2634,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             {formatCellText('orientador', (proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome)), acervoTextFormat, '')}
                           </div>
                           <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                            {formatCellText('orientador', installationProfile.institutionName, acervoTextFormat, '')}
+                            {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.institutionName), acervoTextFormat, '')}
                           </div>
                         </div>
                       </td>

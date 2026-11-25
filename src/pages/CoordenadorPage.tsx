@@ -1,3 +1,4 @@
+import {displayParticipantInstitution} from '../utils/institutionName';
 import {ASTEN_AUTOMATIC_GUIDANCE, ASTEN_SIGNATURE_GUIDANCE} from '../utils/signatureGuidance';
 import {documentSignatureCompleted} from '../utils/documentSignatureState';
 import React, { useState, useEffect, useRef } from 'react';
@@ -433,7 +434,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
     const cleanInst = (str?: string) => {
       if (!str) return '';
-      return str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim();
+      return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
     };
 
     switch (colKey) {

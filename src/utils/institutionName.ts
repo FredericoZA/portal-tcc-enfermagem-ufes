@@ -12,7 +12,11 @@ export function renderInstitutionName(raw: string): string {
 }
 
 const UNIVERSITY_ACRONYMS: ReadonlyMap<string, string> = new Map([
+  ['ufes', 'UFES'],
   ['universidade federal do espirito santo', 'UFES'],
+  ['unb', 'UnB'],
+  ['universidade de brasilia', 'UnB'],
+  ['faculdade de ciencias e tecnologias em saude da universidade de brasilia', 'UnB'],
   ['universidade federal de minas gerais', 'UFMG'],
   ['universidade federal do rio de janeiro', 'UFRJ'],
   ['universidade federal do estado do rio de janeiro', 'UNIRIO'],
@@ -27,10 +31,11 @@ const UNIVERSITY_ACRONYMS: ReadonlyMap<string, string> = new Map([
 export function displayParticipantInstitution(raw: string): string {
   const name = raw.trim();
   const key = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+  const base = key.replace(/\s*(?:\((?:ufes|unb)\)|[-–—]\s*(?:ufes|unb))$/u, '').trim();
   const explicitAcronym = /^universidade\b/u.test(key)
     ? name.match(/(?:\(([\p{Lu}][\p{Lu}\p{N}]{1,11})\)|\s[-–—]\s([\p{Lu}][\p{Lu}\p{N}]{1,11}))$/u)
     : null;
-  return UNIVERSITY_ACRONYMS.get(key) ?? explicitAcronym?.[1] ?? explicitAcronym?.[2] ?? name;
+  return UNIVERSITY_ACRONYMS.get(base) ?? explicitAcronym?.[1] ?? explicitAcronym?.[2] ?? name;
 }
 
 /** Search alias only: never rewrites the stored or displayed institution. */
