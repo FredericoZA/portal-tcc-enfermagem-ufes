@@ -2177,10 +2177,55 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 .portal-tcc-inline-edit:focus-visible { outline: 2px solid var(--portal-brand-header); outline-offset: 2px; }
 
 /* TCC: abas de fichário ligadas à folha selecionada. */
-.portal-tcc-workspace-tabs .portal-tcc-tab-list { gap: 5px; padding: 0 5px; flex-wrap: nowrap; }
-.portal-tcc-workspace-tabs .portal-tcc-tab-list button { background: var(--portal-surface-panel); border: 1px solid var(--portal-border); border-radius: 9px 9px 0 0; margin-bottom: -1px; box-shadow: none; white-space: nowrap; }
-.portal-tcc-workspace-tabs .portal-tcc-tab-list button[aria-pressed="true"] { background: var(--portal-surface-panel); border-bottom-color: var(--portal-surface-panel); position: relative; z-index: 1; color: var(--portal-text-dark); }
+.portal-tcc-workspace-tabs {
+  --tcc-sheet-background: var(--portal-surface-panel);
+  --tcc-sheet-border: var(--portal-border);
+}
+.portal-tcc-workspace-tabs .portal-tcc-tab-list {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+.portal-tcc-workspace-tabs .portal-tcc-tab-list > button {
+  background: var(--portal-surface-card);
+  border: 1px solid var(--portal-border);
+  border-radius: 9px 9px 0 0;
+  margin-bottom: -1px;
+  box-shadow: none;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.portal-tcc-workspace-tabs .portal-tcc-tab-list > button[aria-pressed="true"] {
+  position: relative;
+  z-index: 1;
+  background: var(--portal-surface-panel);
+  border-color: var(--portal-border);
+  border-bottom-color: var(--portal-surface-panel);
+  box-shadow: 0 2px 0 var(--portal-surface-panel);
+  color: var(--portal-text-dark);
+  font-weight: 800;
+}
+.portal-tcc-workspace-tabs .portal-tcc-tab-list > button:focus-visible {
+  outline: 2px solid var(--portal-focus);
+  outline-offset: -4px;
+}
 .portal-tcc-workspace-content { border: 1px solid var(--portal-border); border-radius: 0 0 10px 10px; }
+@media (max-width: 640px) {
+  .portal-tcc-workspace-tabs .portal-tcc-tab-list {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 2px 0 0;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 1;
+  }
+  .portal-tcc-workspace-tabs .portal-tcc-tab-list > button {
+    flex: 1 0 114px;
+    margin-bottom: 0;
+  }
+}
 .portal-tcc-workspace-content .portal-section-header { color: var(--portal-text-dark); }
 .portal-tcc-workspace-content .portal-section-header h2 { font-size: var(--portal-type-content); font-weight: 700; letter-spacing: .02em; text-transform: none; }
 .portal-tcc-document-card { background: var(--portal-surface-panel); }
@@ -2419,12 +2464,6 @@ dialog.portal-operation-blocking::backdrop {
 .portal-workflow-overview-step[aria-pressed="true"] .portal-workflow-overview-title { font-weight: 800; }
 .portal-workflow-overview-count { font-size: 11px; color: var(--portal-text-muted, #64748b); }
 .portal-workflow-overview .portal-workflow-add { min-height: 88px; }
-
-/* The active process-data tab joins its sheet without a dividing hairline. */
-.portal-tcc-tab-list button[data-process-tab="cadastral"][aria-pressed="true"] {
-  border-bottom-color: var(--portal-surface-panel);
-  box-shadow: 0 2px 0 var(--portal-surface-panel);
-}
 
 /* Make the scheduling day under the pointer or keyboard focus explicit. */
 .portal-reservation-calendar-modal .portal-calendar-day-cell {
