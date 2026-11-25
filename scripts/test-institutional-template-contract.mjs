@@ -13,6 +13,7 @@ const institutionalMarkers = [
   'examinador (3)',
   'data da defesa (extenso total)',
   'hora de inicio da defesa (extenso)',
+  'Hora de Início da Defesa',
   'local da defesa',
   'hora de início da defesa (por extenso)',
   'data da defesa (por extenso total)',
