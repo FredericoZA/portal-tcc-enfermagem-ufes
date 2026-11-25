@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { admitPortalRequest } from '../security/requestAdmission';
-import { getSupabaseRuntimeStatus, publicPortalRevisionToken } from '../integrations/supabase';
+import { getSupabaseRuntimeStatus, loadPortalRepositorySnapshot, publicPortalRevisionToken, readPortalRuntimeRevision } from '../integrations/supabase';
+import { createPublicRepositoryHandler, createPublicRepositoryReader } from '../publicRepositoryData';
 
 type StartupFailure = { code: string; message: string; missingGroups?: string[]; runtimeSignal?: string };
 type StartupStage = 'IMPORT_SERVER' | 'CREATE_APP';
@@ -136,12 +137,24 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
   });
 }
 
+const publicRepository = createPublicRepositoryHandler(createPublicRepositoryReader({
+  durable: () => getSupabaseRuntimeStatus().durablePersistenceReady,
+  readRevision: readPortalRuntimeRevision,
+  readDurable: () => loadPortalRepositorySnapshot({includeSignatureEvidence:true}),
+  readLocal: () => { throw new Error('Catálogo sem fonte durável.'); },
+}), true);
+
 export default async function handler(req: Request, res: Response) {
   if (!admitPortalRequest(req, res)) return;
   const preflight = productionPreflight();
   if (preflight) return unavailable(res, preflight);
 
   const requestPath = String(req.url || '').split('?')[0];
+  if ((req.method === 'GET' || req.method === 'HEAD') && requestPath === '/api/public/repository'
+    && getSupabaseRuntimeStatus().durablePersistenceReady) {
+    return publicRepository(req, res);
+  }
+
   if ((req.method === 'GET' || req.method === 'HEAD') && requestPath === '/api/public/sync/version'
     && getSupabaseRuntimeStatus().durablePersistenceReady) {
     try {

@@ -3,7 +3,7 @@ import {academicName} from '../utils/personPresentation';
 import {matchesRepositoryQuery} from '../utils/repositoryQuery';
 import {
   REPOSITORY_DOCUMENT_COLUMNS, REPOSITORY_DOCUMENT_STATUSES,
-  isRepositoryDocumentKey, publishedRepositoryDocuments, repositoryDocumentStatus,
+  isRepositoryDocumentKey, publishedRepositoryDocuments, repositoryDocumentStatus, repositoryDriveOriginalView,
   type RepositoryDocumentIndex, type RepositoryDocumentKey,
 } from '../utils/repositoryDocuments';
 import {PORTAL_MANAGED_COLUMN_EVENT,type ManagedColumnChange} from '../utils/portalTableDom';
@@ -561,7 +561,7 @@ const getColWidth = (colKey: string, widthsMap?: Record<string, string | number>
   return defaultClass;
 };
 
-const repositoryCacheMs = 15_000;
+const repositoryCacheMs = 120_000;
 let repositorySnapshot: {records: ProcessData[]; fetchedAt: number} | undefined;
 let repositoryRequest: Promise<ProcessData[]> | undefined;
 
@@ -656,17 +656,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       void loadRepository();
     };
     const cached = recentRepositoryRecords();
-    if (cached?.some(record => !record.legacyRecord) && loadAttempt === 0) {
+    if (cached && loadAttempt === 0) {
       setRepositoryProcesses(cached);
       setRepositoryLoading(false);
     } else {
       void loadRepository();
     }
-    window.addEventListener(PORTAL_LIVE_UPDATE_EVENT, onRevision);
     window.addEventListener(PORTAL_REPOSITORY_CHANGED_EVENT, onRevision);
     return () => {
       active = false;
-      window.removeEventListener(PORTAL_LIVE_UPDATE_EVENT, onRevision);
       window.removeEventListener(PORTAL_REPOSITORY_CHANGED_EVENT, onRevision);
     };
   }, [publicTab, loadAttempt]);
@@ -789,9 +787,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const authorizedRepositoryDocuments = isAuthenticated && !authLoading && repositoryDocumentSnapshot?.owner === calendarIdentity
     ? repositoryDocumentSnapshot
     : undefined;
-  const repositoryDocumentRows = useMemo(() => new Map(repositoryProcesses.map(process => [
-    process, authorizedRepositoryDocuments?.records[process.id] ?? publishedRepositoryDocuments(process),
-  ])), [repositoryProcesses,authorizedRepositoryDocuments]);
+  const repositoryDocumentRows = useMemo(() => new Map(repositoryProcesses.map(process => {
+    const published = publishedRepositoryDocuments(process);
+    const authorized = authorizedRepositoryDocuments?.records[process.id];
+    if (!authorized) return [process, published];
+    const documents = { ...authorized };
+    for (const key of ['docTccCompleto', 'docResumoExpandido'] as const) {
+      const driveUrl = repositoryDriveOriginalView(published[key]);
+      if (driveUrl && documents[key] !== false) documents[key] = driveUrl;
+    }
+    return [process, documents];
+  })), [repositoryProcesses,authorizedRepositoryDocuments]);
   const openRepositoryDocument = (path:string) => {
     const account = calendarIdentity;
     void openDriveDocument(
@@ -2658,11 +2664,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   const value = repositoryDocumentRows.get(proc)?.[colKey];
                   const label = REPOSITORY_DOCUMENT_COLUMNS.find(column => column.key === colKey)!.label;
                   const status = repositoryDocumentStatus(value);
+                  const driveUrl = repositoryDriveOriginalView(value);
+                  const openLabel = `Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`;
                   return (
                     <td key={colKey} data-portal-filter-value={status} className={`${acervoStyles.cellPadClass} ${acervoStyles.borderClass} ${acervoStyles.cellFontSizeClass} ${widthClass} text-center align-middle normal-case`}>
-                      {typeof value === 'string'
+                      {driveUrl
+                        ? <a href={driveUrl} target="_blank" rel="noopener noreferrer" className="portal-abstract-trigger"
+                            title={`${label} · ${status}`} aria-label={openLabel}>
+                            <DocumentEnvelope status="available" />
+                          </a>
+                        : typeof value === 'string'
                         ? <button type="button" className="portal-abstract-trigger" title={`${label} · ${status}`}
-                            aria-label={`Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`}
+                            aria-label={openLabel}
                             onClick={() => openRepositoryDocument(value)}>
                             <DocumentEnvelope status="available" />
                           </button>

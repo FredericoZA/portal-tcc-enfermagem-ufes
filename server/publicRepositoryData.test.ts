@@ -15,3 +15,26 @@ test('repository read preserves historical consent normalization and protocol co
  const actual=await read();assert.deepEqual(actual,buildPublicRepository([],[canonicalLegacyRecord(legacy)]));assert.equal(actual[0].protocolo,'001 - Legado');assert.equal(actual[0].acervo.publishFullWork,true);
  }
 });
+
+test('60 consultas simultâneas sobre 800 processos compartilham uma leitura fria', async t => {
+  const { gzipSync } = await import('node:zlib');
+  const exemplar = DEMO_PROCESSES.find(process => process.status !== 'EM_RASCUNHO')!;
+  const processes = Array.from({ length: 800 }, (_, i) => ({
+    ...structuredClone(exemplar), id: `fixture-${i}`, protocolo: `TCC - ${String(i + 1).padStart(5, '0')}`,
+    titulo: `Trabalho fictício ${i}: práticas de enfermagem`,
+  }));
+  let revisionReads = 0;
+  let projectionReads = 0;
+  const read = createPublicRepositoryReader({
+    durable: () => true,
+    readRevision: async () => { revisionReads++; return 1; },
+    readDurable: async () => { projectionReads++; return { processes, legacyAcademicRecords: [], revision: 1 }; },
+    readLocal: () => assert.fail('local fallback'),
+  });
+  const responses = await Promise.all(Array.from({ length: 60 }, () => read()));
+  assert.ok(responses.every(rows => rows.length === 800));
+  assert.equal(revisionReads, 1);
+  assert.equal(projectionReads, 1);
+  const body = JSON.stringify(responses[0]);
+  t.diagnostic(JSON.stringify({ syntheticRows: 800, originConcurrency: 60, revisionReads, projectionReads, jsonBytes: Buffer.byteLength(body), gzipBytes: gzipSync(body).byteLength }));
+});

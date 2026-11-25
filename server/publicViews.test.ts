@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { ProcessData } from '../src/types';
-import { publicCalendarView, publicRepositoryView } from './publicViews';
+import type { ProcessData, SignatureJob } from '../src/types';
+import { buildPublicRepository, publicCalendarView, publicRepositoryView } from './publicViews';
 import {ufesFacultyInstitution} from './ufesFacultyInstitution';
 
 function processData(patch: Partial<ProcessData> = {}): ProcessData {
@@ -114,4 +114,28 @@ test('submitted descriptive metadata and the registered opinion are public indep
  const p=processData();p.status='CONCLUIDO';p.acervo={...p.acervo,submittedAt:'2026-11-16T00:00:00Z',resumoSintese:'Resumo público em um parágrafo.',palavrasChave:['Um','Dois','Três','Quatro','Cinco'],publishFullWork:false,publishExpandedAbstract:false};
  const view=publicRepositoryView(p);assert.equal(view.avaliacao.parecer,p.avaliacao.parecer);assert.equal(view.acervo.resumoSintese,p.acervo.resumoSintese);assert.equal(view.acervo.palavrasChave.length,5);assert.equal(view.acervo.trabalhoCompletoFileUrl,undefined);assert.equal(view.acervo.resumoExpandidoFileUrl,undefined);
  p.avaliacao.status='PENDENTE';assert.equal(publicRepositoryView(p).avaliacao.parecer,undefined);
+});
+
+test('o catálogo só entrega o link nativo do original público com evidência atual', () => {
+  const p = processData();
+  const originalId = 'original_public_1234';
+  Object.assign(p.acervo, {
+    publishFullWork: true, publicationState: 'PUBLIC', submittedAt: p.updatedAt,
+    authorizationConfirmedAt: p.updatedAt, publicationSyncedAt: p.updatedAt,
+    trabalhoCompletoFileId: originalId, publicFullWorkFileId: originalId,
+    publicFullWorkFileUrl: 'https://example.invalid/old-route',
+  });
+  const jobs = [
+    { processId: p.id, documentType: 'ATA', documentVersion: 1, sourceDataRevision: 4, status: 'ARCHIVED', driveSignedFileId: 'ata_restricted_123' },
+    { processId: p.id, documentType: 'TERMO', documentVersion: 1, sourceDataRevision: 4, status: 'ARCHIVED', driveSignedFileId: 'term_restricted_123' },
+  ] as SignatureJob[];
+  const catalog = buildPublicRepository([p], [], jobs)[0];
+  assert.equal(catalog.acervo.repositoryFullWorkDriveUrl, 'https://drive.google.com/file/d/original_public_1234/view');
+  assert.doesNotMatch(JSON.stringify(catalog), /ata_restricted|term_restricted|private-abstract-id/);
+  assert.equal(buildPublicRepository([p], [], jobs.slice(0, 1))[0].acervo.repositoryFullWorkDriveUrl, undefined);
+  p.acervo.publicFullWorkFileId = 'previous_public_copy_1234';
+  assert.equal(buildPublicRepository([p], [], jobs)[0].acervo.repositoryFullWorkDriveUrl, undefined);
+  p.acervo.publicFullWorkFileId = originalId;
+  p.acervo.publicationWithdrawnAt = p.updatedAt;
+  assert.equal(buildPublicRepository([p], [], jobs)[0].acervo.repositoryFullWorkDriveUrl, undefined);
 });

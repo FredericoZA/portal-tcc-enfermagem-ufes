@@ -293,7 +293,7 @@ export const apiClient = {
   retryProcessDriveData:(id:string)=>fetchApi<ProcessData>(`/api/processes/${encodeURIComponent(id)}/drive-data/retry`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS}),
   withdrawLegacyPublication:(id:string,reason:string)=>fetchApi(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/publication/withdraw`,{method:'POST',body:JSON.stringify({reason})}),
   importLegacyAcademicRecords:(records:unknown[],expectedRevision:string)=>fetchApi<{imported:number;total:number;revision:string}>('/api/admin/legacy-academic-records/import',{method:'POST',body:JSON.stringify({records,expectedRevision})}),
-  getPublicRepository: () => fetchApi<ProcessData[]>('/api/public/repository'),
+  getPublicRepository: () => fetchApi<ProcessData[]>('/api/public/repository', { credentials: 'omit' }),
   getPublicCalendarData: (options: Pick<ApiRequestOptions, 'signal'> = {}) => fetchApi<{processes:ProcessData[];googleEvents:GoogleCalendarSyncedEvent[]}>('/api/public/calendar-data', options),
   getPrivateLegacyAcademicRecords:()=>fetchApi<{revision:string;records:import('../types/legacyArchive').LegacyAcademicRecord[]}>('/api/admin/legacy-academic-records'),
   getPrivateLegacyAcademicView:(id:string)=>fetchApi<import('../types/legacyArchive').PrivateLegacyAcademicView>(`/api/admin/legacy-academic-records/${encodeURIComponent(id)}/academic`),

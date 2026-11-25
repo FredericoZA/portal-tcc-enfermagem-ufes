@@ -135,3 +135,69 @@ test('production startup does not import the development frontend compiler',asyn
  const build=await readFile('scripts/build-server.mjs','utf8');
  assert.match(build,/define:\s*\{\s*__PORTAL_COMPILED_SERVER__:\s*'true'/);
 });
+
+test('catalog v2 isolates signature evidence and preserves the installed v1 contract', async () => {
+ const db = new PGlite();
+ try {
+  await db.exec('create role anon; create role authenticated; create role service_role bypassrls; create table public.portal_runtime_state(id text primary key, revision bigint, payload jsonb); grant select on public.portal_runtime_state to service_role;');
+  const state = {
+   ...fixture(),
+   processes: [
+    { id: 'public', status: 'CONCLUIDO', acervo: { publicationState: 'PUBLIC' } },
+    { id: 'private', status: 'CONCLUIDO', acervo: { publicationState: 'WITHDRAWN' } },
+   ],
+   signatureJobs: [
+    { id: 'ata', processId: 'public', documentType: 'ATA' },
+    { id: 'term', processId: 'public', documentType: 'TERMO' },
+    { id: 'declaration', processId: 'public', documentType: 'DECLARACAO' },
+    { id: 'withdrawn', processId: 'private', documentType: 'ATA' },
+   ],
+  };
+  await db.query("insert into public.portal_runtime_state values ('global', 7, $1)", [JSON.stringify(state)]);
+  for (const file of [
+   '20261125155300_repository_legacy_faculty_evidence.sql',
+   '20261117030854_conditional_signature_and_repository_reads.sql',
+   '20261125194311_public_repository_signature_evidence.sql',
+  ]) await db.exec(await readFile('supabase/migrations/' + file, 'utf8'));
+  const read = (hash:string|null = null) => db.query<any>('select * from public.portal_read_repository_projection_v2($1)', [hash]);
+  for (const role of ['anon', 'authenticated']) {
+   await db.exec('set role ' + role);
+   await assert.rejects(read(), /permission denied/);
+   await db.exec('reset role');
+  }
+  await db.exec('set role service_role');
+  const catalog = (await read()).rows[0];
+  assert.equal(catalog.revision, 7);
+  assert.deepEqual(catalog.payload.repositorySignatures.map((job:{id:string}) => job.id), ['ata', 'term']);
+  assert.deepEqual((await read(catalog.fingerprint)).rows[0], { ...catalog, payload: null });
+  const installed = (await db.query<any>('select * from public.portal_read_repository_projection_v1()')).rows[0];
+  assert.equal(installed.payload.repositorySignatures, undefined);
+ } finally {
+  await db.close();
+ }
+});
+
+test('catalog v2 can deploy before its migration and preserves authorization errors', async t => {
+ configure(t, 'https://catalog-evidence-rollout.invalid');
+ const v2 = repositoryRpc.replace('_v1', '_v2');
+ const calls:string[] = [];
+ const payload = { processes: [], legacyAcademicRecords: [] };
+ t.mock.method(globalThis, 'fetch', async (url: string, init?: RequestInit) => {
+  const path = new URL(url).pathname;
+  calls.push(path);
+  if (path === v2) return Response.json({ code: 'PGRST202' }, { status: 404 });
+  assert.equal(path, repositoryRpc);
+  const hash = fingerprint(payload);
+  const unchanged = JSON.parse(String(init?.body)).known_fingerprint === hash;
+  return Response.json([{ revision: 7, fingerprint: hash, payload: unchanged ? null : payload }]);
+ });
+ const read = () => loadPortalRepositorySnapshot({ includeSignatureEvidence: true });
+ for (const attempt of [1, 2]) assert.deepEqual(await read(), { ...payload, revision: 7 }, `read ${attempt}`);
+ assert.deepEqual(calls, [v2, repositoryRpc, repositoryRpc]);
+ process.env.SUPABASE_URL = 'https://catalog-evidence-denied.invalid';
+ t.mock.method(globalThis, 'fetch', async (url: string) => {
+  assert.equal(new URL(url).pathname, v2);
+  return Response.json({ code: '42501' }, { status: 403 });
+ });
+ await assert.rejects(read(), /403/);
+});

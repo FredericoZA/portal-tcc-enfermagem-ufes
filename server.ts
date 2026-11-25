@@ -11,7 +11,7 @@ import {installLegacyEvaluationDocumentRoutes} from './server/legacyEvaluationDo
 import {installLegacyEvaluationParticipantRoutes,legacyEvaluationAccessRevision} from './server/legacyEvaluationParticipantRoutes';
 import {publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
 import {archiveRetiredRuntimeBackups} from './server/backup/retention';
-import {createPublicRepositoryReader,installPublicRepositoryRoute} from './server/publicRepositoryData';
+import {createPublicRepositoryReader,createPublicRepositoryHandler} from './server/publicRepositoryData';
 import {currentRepositoryDocuments,legacyRepositoryDocuments} from './server/repositoryDocumentAvailability';
 import {loadPortalRepositorySnapshot} from './server/integrations/supabase';
 import {resourceUsageSnapshot} from './server/resourceUsage';
@@ -2571,7 +2571,16 @@ export async function createPortalApp() {
     readLocal:()=>{const state=loadPersistedPortalState();return state.processes?state:{processes:structuredClone(processesStore),settings:structuredClone(currentSettings)};},
   }));
 
-  installPublicRepositoryRoute(app,createPublicRepositoryReader({durable:()=>getSupabaseRuntimeStatus().durablePersistenceReady,readRevision:readPortalRuntimeRevision,readDurable:loadPortalRepositorySnapshot,readLocal:()=>{const s=loadPersistedPortalState();return {processes:s.processes||structuredClone(processesStore),legacyAcademicRecords:s.legacyAcademicRecords||structuredClone(legacyAcademicRecordsStore)};}}));
+  app.get('/api/public/repository',createPublicRepositoryHandler(createPublicRepositoryReader({
+    durable:()=>getSupabaseRuntimeStatus().durablePersistenceReady,
+    readRevision:readPortalRuntimeRevision,readDurable:()=>loadPortalRepositorySnapshot({includeSignatureEvidence:true}),
+    readLocal:()=>{
+      const state=loadPersistedPortalState();
+      return {processes:state.processes||structuredClone(processesStore),
+        legacyAcademicRecords:state.legacyAcademicRecords||structuredClone(legacyAcademicRecordsStore),
+        repositorySignatures:state.signatureJobs||structuredClone(signatureJobsStore)};
+    },
+  })));
 
   installDeletionStatusRoute(app,createDeletionStatusReader({
     durable:()=>getSupabaseRuntimeStatus().durablePersistenceReady,readRevision:readPortalRuntimeRevision,
