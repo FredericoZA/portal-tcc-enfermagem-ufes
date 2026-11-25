@@ -1,5 +1,5 @@
 import {formatTccTitle} from './formatters';
-import {suggestSentenceTitle,normalizeReviewedTccTitle} from './reviewedTccTitle';
+import {hasUppercaseTitlePassage,suggestSentenceTitle,normalizeReviewedTccTitle} from './reviewedTccTitle';
 
 export const allowsCapitalizationChoice=(key:string)=>key==='TITULO'||/_INSTITUICAO$/.test(key);
 export function capitalizationSuggestion(value:string,kind:'title'|'institution'):string {
@@ -7,5 +7,6 @@ export function capitalizationSuggestion(value:string,kind:'title'|'institution'
 }
 export function needsCapitalizationReview(value:unknown,kind:'title'|'institution',confirmed?:string):boolean {
   const text=normalizeReviewedTccTitle(String(value??''));
+  if (kind === 'title' && hasUppercaseTitlePassage(text)) return true;
   return Boolean(text&&capitalizationSuggestion(text,kind)!==text&&confirmed!==text);
 }

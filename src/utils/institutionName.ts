@@ -1,3 +1,4 @@
+import {normalizeCapsLevel} from './academicTextCase';
 import {formatTccTitle} from './formatters';
 
 export const INSTITUTION_ACRONYM_HELP =
@@ -8,10 +9,10 @@ export function normalizeInstitutionInput(raw: string): string {
   return formatTccTitle(String(raw || ''));
 }
 export function renderInstitutionName(raw: string): string {
-  return /\*[^*]+\*|\+[^+]+-/u.test(raw) ? normalizeInstitutionInput(raw) : String(raw || '').normalize('NFC').trim().replace(/\s+/gu,' ');
+  return /\*[^*]+\*|\+[^+]+-/u.test(raw) ? normalizeInstitutionInput(raw) : normalizeCapsLevel(String(raw || '').normalize('NFC').trim().replace(/\s+/gu,' '));
 }
 
-const UNIVERSITY_ACRONYMS: ReadonlyMap<string, string> = new Map([
+const INSTITUTION_ACRONYMS: ReadonlyMap<string, string> = new Map([
   ['ufes', 'UFES'],
   ['universidade federal do espirito santo', 'UFES'],
   ['unb', 'UnB'],
@@ -25,17 +26,35 @@ const UNIVERSITY_ACRONYMS: ReadonlyMap<string, string> = new Map([
   ['universidade estadual de campinas', 'UNICAMP'],
   ['universidade federal de sao paulo', 'UNIFESP'],
   ['universidade vila velha', 'UVV'],
+  ['universidade federal de pelotas', 'UFPel'],
+  ['ufpel', 'UFPel'],
+  ['hospital cassiano antonio moraes', 'HUCAM'],
+  ['hospital cassiano antonio de moraes', 'HUCAM'],
+  ['hospital universitario cassiano antonio moraes', 'HUCAM'],
+  ['hospital universitario cassiano antonio de moraes', 'HUCAM'],
+  ['hucam', 'HUCAM'],
+  ['hucam/ufes', 'HUCAM'],
+  ['hospital estadual infantil nossa senhora da gloria', 'HEINSG'],
+  ['hospital infantil nossa senhora da gloria', 'HEINSG'],
+  ['heinsg', 'HEINSG'],
+  ['hinsg', 'HEINSG'],
+  ['hospital regional dom moura', 'HRDM'],
+  ['hrdm', 'HRDM'],
+  ['secretaria municipal de saude sao mateus', 'SMS – São Mateus'],
+  ['secretaria municipal de saude de sao mateus', 'SMS – São Mateus'],
+  ['sms – sao mateus', 'SMS – São Mateus'],
+  ['sms - sao mateus', 'SMS – São Mateus'],
 ]);
 
-/** Abbreviate known universities in participant tables, without changing the saved name. */
+/** Abbreviate known institutions in participant tables, without changing the saved name. */
 export function displayParticipantInstitution(raw: string): string {
-  const name = raw.trim();
+  const name = renderInstitutionName(raw).replace(/^\(\s*(.*?)\s*\)$/u, '$1');
   const key = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
-  const base = key.replace(/\s*(?:\((?:ufes|unb)\)|[-–—]\s*(?:ufes|unb))$/u, '').trim();
+  const base = key.replace(/\s*(?:\((?:ufes|unb|ufpel|ucam|hucam|heinsg|hinsg|hrdm|sms|es)\)|[-–—]\s*(?:ufes|unb|ufpel|ucam|hucam|heinsg|hinsg|hrdm|sms|es))$/u, '').trim();
   const explicitAcronym = /^universidade\b/u.test(key)
     ? name.match(/(?:\(([\p{Lu}][\p{Lu}\p{N}]{1,11})\)|\s[-–—]\s([\p{Lu}][\p{Lu}\p{N}]{1,11}))$/u)
     : null;
-  return UNIVERSITY_ACRONYMS.get(base) ?? explicitAcronym?.[1] ?? explicitAcronym?.[2] ?? name;
+  return INSTITUTION_ACRONYMS.get(base) ?? explicitAcronym?.[1] ?? explicitAcronym?.[2] ?? name;
 }
 
 /** Search alias only: never rewrites the stored or displayed institution. */

@@ -39,12 +39,23 @@ test('HTTP: novo cadastro não coleta registros; edição preserva apenas identi
    ORIENTADOR_NOME:'Maria Souza Lima',ORIENTADOR_EMAIL:'orientadora@example.invalid',
    EXAMINADOR_2_NOME:'Carlos Pereira Souza',EXAMINADOR_2_EMAIL:'examinador@example.invalid',EXAMINADOR_2_INSTITUICAO:'UFES',
    EXAMINADOR_3_NOME:'Beatriz Mendes Lima',EXAMINADOR_3_EMAIL:'examinadora@example.invalid',EXAMINADOR_3_INSTITUICAO:'UFES',
-   TITULO:'Cuidado de Enfermagem',DEFESA_DATA_HORA:'2026-12-11T10:00',DEFESA_LOCAL:'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
+   TITULO:'Acesso ao SUS no projeto ABCE',DEFESA_DATA_HORA:'2026-12-11T10:00',DEFESA_LOCAL:'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
    ALUNO_1_CPF:'NOVO-DESCARTAR',ORIENTADOR_SIAPE:'NOVO-DESCARTAR',ALUNO_1_MATRICULA:'NOVO-DESCARTAR',
   }};
+  const uppercaseTitle='ETARISMO NA UNIVERSIDADE: Uma revisão integrativa';
+  const rejectedRegistration=await send('/api/processes',{
+    ...request,registrationAnswers:{...request.registrationAnswers,TITULO:uppercaseTitle},
+  });
+  assert.equal(rejectedRegistration.status,400);
+  assert.match((await rejectedRegistration.json()).error,/Escreva o título em caixa normal/);
+  assert.equal((await fetch(attemptPath,{headers})).status,404);
   const response=await send('/api/processes',request);
   assert.equal(response.status,202,await response.clone().text());
   const created=await response.json();
+  assert.equal(created.titulo,'Acesso ao SUS no projeto ABCE');
+  const rejectedEdit=await send(`/api/processes/${created.id}`,{titulo:uppercaseTitle},'PATCH');
+  assert.equal(rejectedEdit.status,400);
+  assert.equal((await rejectedEdit.json()).code,'TCC_TITLE_UPPERCASE');
   assert.equal(created.workflowProcessing,true);
   const recovered=await fetch(attemptPath,{headers});
   assert.equal(recovered.headers.get('cache-control'),'private, no-store');

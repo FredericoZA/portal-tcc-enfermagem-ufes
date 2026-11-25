@@ -240,6 +240,11 @@ test('HTTP: advisor corrects defense facts after invitation without replaying re
     assert.match(schema.headers.get('cache-control')||'',/private, no-store/);
     assert.ok((await schema.json()).operationalConfig.reservation.locations.length>0);
     const baseline=await(await f.request(`/api/processes/${process.id}`,advisor)).json() as ProcessData;
+    const rejectedTitle=await f.request(`/api/processes/${process.id}/data-review`,advisor,'POST',reviewInput(process,{
+      titulo:'ETARISMO NA UNIVERSIDADE: Uma revisão integrativa',
+    }));
+    assert.equal(rejectedTitle.status,400);
+    assert.equal((await rejectedTitle.json()).code,'TCC_TITLE_UPPERCASE');
     const board = process.banca.map(member => ({
       ...member,
       tratamento: member.funcao === 'EXAMINER_2' ? 'Senhora' : 'Senhor',

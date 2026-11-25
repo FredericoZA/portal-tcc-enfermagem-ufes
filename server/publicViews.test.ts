@@ -111,8 +111,8 @@ test('repositório distingue arquivo privado, público e resumo não apresentado
 });
 
 test('submitted descriptive metadata and the registered opinion are public independently of PDF consent',()=>{
- const p=processData();p.status='CONCLUIDO';p.acervo={...p.acervo,submittedAt:'2026-11-16T00:00:00Z',resumoSintese:'Resumo público em um parágrafo.',palavrasChave:['Um','Dois','Três','Quatro','Cinco'],publishFullWork:false,publishExpandedAbstract:false};
- const view=publicRepositoryView(p);assert.equal(view.avaliacao.parecer,p.avaliacao.parecer);assert.equal(view.acervo.resumoSintese,p.acervo.resumoSintese);assert.equal(view.acervo.palavrasChave.length,5);assert.equal(view.acervo.trabalhoCompletoFileUrl,undefined);assert.equal(view.acervo.resumoExpandidoFileUrl,undefined);
+ const p=processData();p.status='CONCLUIDO';p.acervo={...p.acervo,submittedAt:'2026-11-16T00:00:00Z',resumoSintese:'Resumo público em um parágrafo.',palavrasChave:['Covid-19','RAÇA','COR','GÊNERO','ANÁLISE DE DADOS'],publishFullWork:false,publishExpandedAbstract:false};
+ const view=publicRepositoryView(p);assert.equal(view.avaliacao.parecer,p.avaliacao.parecer);assert.equal(view.acervo.resumoSintese,p.acervo.resumoSintese);assert.deepEqual(view.acervo.palavrasChave,['COVID-19','Raça','Cor','Gênero','Análise de dados']);assert.equal(view.acervo.trabalhoCompletoFileUrl,undefined);assert.equal(view.acervo.resumoExpandidoFileUrl,undefined);
  p.avaliacao.status='PENDENTE';assert.equal(publicRepositoryView(p).avaliacao.parecer,undefined);
 });
 
@@ -138,4 +138,27 @@ test('o catálogo só entrega o link nativo do original público com evidência 
   p.acervo.publicFullWorkFileId = originalId;
   p.acervo.publicationWithdrawnAt = p.updatedAt;
   assert.equal(buildPublicRepository([p], [], jobs)[0].acervo.repositoryFullWorkDriveUrl, undefined);
+});
+
+test('calendário e repositório apresentam caixa normal sem alterar o cadastro histórico', () => {
+  const process = processData({ titulo: 'ETARISMO NA UNIVERSIDADE: Uma revisão integrativa' });
+  process.aluno1.nome = 'ANA DA SILVA';
+  process.orientador.nome = 'MARIA DE TESTE';
+  process.banca[0].nome = 'PEDRO McDonald';
+  for (const view of [publicCalendarView(process), publicRepositoryView(process)]) {
+    assert.equal(view.titulo, 'Etarismo na universidade: Uma revisão integrativa');
+    assert.equal(view.aluno1?.nome, 'Ana da Silva');
+    assert.equal(view.orientador?.nome, 'Maria de Teste');
+    assert.equal(view.banca[0].nome, 'Pedro McDonald');
+  }
+  assert.equal(process.titulo, 'ETARISMO NA UNIVERSIDADE: Uma revisão integrativa');
+  assert.equal(process.aluno1.nome, 'ANA DA SILVA');
+});
+
+test('repository venue labels do not change the operational reservation location', () => {
+  const process = processData();
+  process.defesa.local = 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES';
+  assert.equal(publicRepositoryView(process).defesa.local, 'Auditório do Prédio do Departamento de Enfermagem - CCS UFES');
+  assert.equal(publicCalendarView(process).defesa.local, process.defesa.local);
+  assert.match(process.defesa.local, /CCS\/UFES$/);
 });

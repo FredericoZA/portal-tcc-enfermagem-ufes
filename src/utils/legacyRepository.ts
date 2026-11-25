@@ -1,11 +1,11 @@
 import { DEFAULT_INSTALLATION_PROFILE } from '../constants/installation';
 import { COMMITTEE_TREATMENTS, FACULTY_TREATMENTS, recordedAcademicName } from './personPresentation';
 import type { ProcessData } from '../types';
-import type { PublicLegacyAcademicRecord } from '../types/legacyArchive';
+import type { LegacyAcademicPresentation, PublicLegacyAcademicRecord } from '../types/legacyArchive';
 
 /** Use the existing repository/detail presentation without inventing live workflow data. */
 export function legacyRepositoryProcess(record: PublicLegacyAcademicRecord): ProcessData {
-  const advisor = (nome: string, instituicao: string, evidence?: PublicLegacyAcademicRecord['advisorAcademic']) => {
+  const advisor = (nome: string, instituicao: string, evidence?: LegacyAcademicPresentation) => {
     const presentation = {...recordedAcademicName({nome}), ...evidence};
     const tratamento = FACULTY_TREATMENTS.find(value=>value===presentation.tratamento);
     return {nome,email:'',instituicao,tratamento,titulacao:presentation.titulacao};
@@ -19,7 +19,8 @@ export function legacyRepositoryProcess(record: PublicLegacyAcademicRecord): Pro
     createdAt:'', updatedAt:'', aluno1:student(record.autores[0]),
     aluno2:record.autores[1]?student(record.autores[1]):null,
     orientador:advisor(record.orientador,DEFAULT_INSTALLATION_PROFILE.institutionName,record.advisorAcademic),
-    coorientador:record.coorientador?advisor(record.coorientador,record.coorientadorInstituicao):null,
+    coorientador:record.coorientador || record.coorientadorInstituicao
+      ? advisor(record.coorientador,record.coorientadorInstituicao,record.coadvisorAcademic) : null,
     banca:record.examinadores.map((p,index)=>{
       const recorded = recordedAcademicName(p);
       return {id:`${record.id}-examinador-${index}`,nome:p.nome,email:'',instituicao:p.instituicao,

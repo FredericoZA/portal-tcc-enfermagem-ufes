@@ -1,5 +1,5 @@
 import {ETAPAS_CONFIG,ETAPA_PROGRESS_ALIAS,ETAPA_CURRENT_LABEL} from './processStagePresentation';
-import {academicAcronym,stripAcademicCaseMarkers} from './academicTextCase';
+import {academicAcronym,normalizeCapsLevel,stripAcademicCaseMarkers} from './academicTextCase';
 // Formatadores de data, hora e texto para o fluxo acadêmico configurável.
 import type { ProcessData } from '../types';
 
@@ -160,12 +160,13 @@ export function formatProfessorName(name: string): string {
  */
 export function formatTccTitle(title: string): string {
   if (!title) return '';
-  const clean = stripAcademicCaseMarkers(title).normalize('NFC').trim().replace(/\s+/gu, ' ');
+  const clean = normalizeCapsLevel(stripAcademicCaseMarkers(title).normalize('NFC').trim().replace(/\s+/gu, ' '));
   // Preserve recognized acronyms and alphanumeric codes without keeping ordinary words in capitals.
   let wordIndex = 0;
   const smallWords = new Set(['a', 'as', 'o', 'os', 'de', 'da', 'do', 'das', 'dos', 'e', 'é', 'em', 'no', 'na', 'nos', 'nas', 'por', 'para', 'com']);
-  const formatted = clean.replace(/[\p{L}\p{M}\p{N}]+(?:[-/][\p{L}\p{M}\p{N}]+)*/gu, token => {
+  const formatted = clean.replace(/\bCAPS(?: AD)? I{1,3}\b|[\p{L}\p{M}\p{N}]+(?:[-/][\p{L}\p{M}\p{N}]+)*/gu, token => {
     const first = wordIndex++ === 0;
+    if (token.startsWith('CAPS ')) return token;
     const code = /\p{L}/u.test(token) && /\p{N}/u.test(token);
     if (code) return token.replace(/\p{L}+/gu, part => academicAcronym(part) || part);
     if (token.includes('-') || token.includes('/')) return token.split(/([-/])/u).map(part => academicAcronym(part) || part.toLowerCase().replace(/^\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'))).join('');

@@ -1,6 +1,7 @@
 import { finalDeliveryBlocker } from '../utils/finalDeliveryGate';
 import {PublicRepositoryFileActions} from '../components/PublicRepositoryFileActions';
 import {openDriveDocument} from '../utils/driveDocumentAccess';
+import {normalizeAcademicKeyword} from '../utils/academicTextCase';
 import { displayParticipantInstitution } from '../utils/institutionName';
 import {signatureSignerNote,currentDocumentSignatureJob,frozenGovbrDownloadJob} from '../utils/signatureRecipientPresentation';
 import {repositorySubmissionConfirmed} from '../utils/repositorySubmissionConfirmation';
@@ -837,7 +838,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
     const keywordsList = acervoKeywords
       .split(',')
-      .map(k => k.trim())
+      .map(normalizeAcademicKeyword)
       .filter(Boolean);
 
     if (keywordsList.length !== 5) {
@@ -858,11 +859,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       portalNotice('Anexe o resumo expandido antes de autorizar sua publicação.');
       return;
     }
-    const keywordsFormatted = keywordsList;
     const requestScope=legacyAccessScope.current;
 
     const submission={
-        palavrasChave: keywordsFormatted,
+        palavrasChave: keywordsList,
         resumoSintese: acervoResumo.trim(),
         publishFullWork: acervoIsPublic,
         publishExpandedAbstract: acervoExpandedPublic,
@@ -1238,7 +1238,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                 {privateLegacyAccess?.error&&<p role="alert" className="portal-instruction p-3 text-xs">{privateLegacyAccess.error}</p>}
                 {privateLegacyAccess&&legacyAcademicDownloadError&&<p role="alert" className="portal-instruction p-3 text-xs">{legacyAcademicDownloadError}</p>}
                 <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Resumo síntese do TCC</h3><p className="whitespace-pre-wrap text-justify text-sm">{privateLegacyData?.resumo||process.acervo?.resumoSintese||(process.legacyRecord?'Resumo não localizado no acervo importado.':'Resumo ainda não informado.')}</p></section>
-                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Palavras-chave</h3><div className="grid grid-cols-1 gap-2 sm:grid-cols-5">{(privateLegacyData?.palavrasChave||process.acervo?.palavrasChave||[]).map((word,index)=><span key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs">{word}</span>)}</div></section>
+                <section className="rounded-xl border border-slate-200 bg-white p-4"><h3 className="mb-3 text-xs font-bold">Palavras-chave</h3><div className="grid grid-cols-1 gap-2 sm:grid-cols-5">{(privateLegacyData?.palavrasChave||process.acervo?.palavrasChave||[]).map((word,index)=><span key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs">{normalizeAcademicKeyword(word)}</span>)}</div></section>
                 {[
                   {kind:'TRABALHO_COMPLETO',title:'Trabalho completo',url:process.acervo?.trabalhoCompletoFileUrl},
                   {kind:'RESUMO_EXPANDIDO',title:'Resumo expandido',url:process.acervo?.resumoExpandidoFileUrl},
@@ -1298,7 +1298,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                     {/* Preview of Tags */}
                     {acervoKeywords.trim() && (
                       <div className="flex flex-wrap justify-center gap-1.5 pt-1">
-                        {acervoKeywords.split(',').map(s => s.trim()).filter(Boolean).map((kw, i) => (
+                        {acervoKeywords.split(',').map(normalizeAcademicKeyword).filter(Boolean).map((kw, i) => (
                           <span key={i} className="text-[11px] font-bold bg-[var(--portal-surface-inner)] text-[var(--portal-brand-header)] border border-[var(--portal-border)] px-2 py-0.5 rounded-md">
                             #{kw}
                           </span>

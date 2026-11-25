@@ -1,6 +1,6 @@
 import {CapitalizationReview} from './CapitalizationReview';
 import {allowsCapitalizationChoice,needsCapitalizationReview} from '../utils/capitalizationReview';
-import {normalizeReviewedTccTitle} from '../utils/reviewedTccTitle';
+import {hasUppercaseTitlePassage, normalizeReviewedTccTitle, UPPERCASE_TCC_TITLE_MESSAGE} from '../utils/reviewedTccTitle';
 import {DEFENSE_WEEKDAY_MESSAGE,isDefenseWeekday} from '../utils/defenseSchedule';
 import {ReservationCalendarPicker} from './ReservationCalendarPicker';
 import { PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
@@ -192,6 +192,7 @@ export function ConfigurableRegistration({ onSuccess, onCancel, previewStudio }:
   };
   const check=(all:boolean)=>{
     for(const field of all?visible:selected){const value=normalizeRegistrationValue(field.fieldKey,field.fieldType,answers[field.fieldKey]);
+      if (field.fieldKey === 'TITULO' && hasUppercaseTitlePassage(String(value ?? ''))) return UPPERCASE_TCC_TITLE_MESSAGE;
       if(allowsCapitalizationChoice(field.fieldKey)&&needsCapitalizationReview(value,field.fieldKey==='TITULO'?'title':'institution',confirmedCases[field.fieldKey]))return `Confira a capitalização de ${field.label}: use a sugestão ou escolha Manter como escrevi.`;
       if(field.required&&(!String(value??'').trim()||field.fieldType==='checkbox'&&value!==true))return `Preencha: ${field.label}.`;
       if(field.fieldKey==='DEFESA_DATA_HORA'&&value&&!isDefenseWeekday(String(value).split('T')[0]))return DEFENSE_WEEKDAY_MESSAGE;

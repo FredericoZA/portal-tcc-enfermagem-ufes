@@ -5,11 +5,11 @@ import {normalizeRegistrationValue} from '../src/utils/registrationNormalization
 import {registrationPayload} from '../src/utils/operationalConfig';
 import {renderInstitutionName} from '../src/utils/institutionName';
 
-test('uppercase title and unknown institutional acronym require review but can be explicitly kept; edits invalidate confirmation',()=>{
+test('uppercase title cannot be explicitly kept, while an institutional spelling still can',()=>{
   for(const [kind,value] of [['title','ESTUDO NO XYZQ'],['institution','XYZQ / CENTRO DE ESTUDOS']] as const){
     assert.equal(needsCapitalizationReview(value,kind),true);
     assert.notEqual(capitalizationSuggestion(value,kind),value);
-    assert.equal(needsCapitalizationReview(value,kind,value),false);
+    assert.equal(needsCapitalizationReview(value,kind,value),kind === 'title');
     assert.equal(needsCapitalizationReview(value+' II',kind,value),true);
   }
   assert.equal(needsCapitalizationReview('UFES','institution'),false);
@@ -26,17 +26,24 @@ test('initial normalization, payload and institutional rendering preserve the ch
   assert.equal(normalizeRegistrationValue('ALUNO_1_EMAIL','email','ANA@EXAMPLE.INVALID'),'ana@example.invalid');
 });
 
-test('server admission preserves the title and unknown institutions through the complete registration pipeline',async()=>{
+test('server admission blocks title prose and preserves acronyms, names and institution spellings',async()=>{
   const {acceptRegistration}=await import('./workflow/registration');
-  const payload=acceptRegistration({registrationAnswers:{
-    ALUNO_1_NOME:'Aluno de Revisão Local',ALUNO_1_EMAIL:'author@example.invalid',TEM_ALUNO_2:'Não',TEM_COORIENTADOR:'Sim',
-    ORIENTADOR_NOME:'Ana Paula Santos',ORIENTADOR_EMAIL:'advisor@example.invalid',
+  const registrationAnswers = {
+    ALUNO_1_NOME:'ALUNO DE REVISÃO LOCAL',ALUNO_1_EMAIL:'author@example.invalid',TEM_ALUNO_2:'Não',TEM_COORIENTADOR:'Sim',
+    ORIENTADOR_NOME:'ANA PAULA SANTOS',ORIENTADOR_EMAIL:'advisor@example.invalid',
     COORIENTADOR_NOME:'Roberto Lima',COORIENTADOR_EMAIL:'coadvisor@example.invalid',COORIENTADOR_INSTITUICAO:'CENTRO XYZQ',
-    EXAMINADOR_2_NOME:'Carlos Rocha',EXAMINADOR_2_EMAIL:'examiner-one@example.invalid',EXAMINADOR_2_INSTITUICAO:'XYZQ',
+    EXAMINADOR_2_NOME:'CARLOS ROCHA',EXAMINADOR_2_EMAIL:'examiner-one@example.invalid',EXAMINADOR_2_INSTITUICAO:'XYZQ',
     EXAMINADOR_3_NOME:'Beatriz Mendes',EXAMINADOR_3_EMAIL:'examiner-two@example.invalid',EXAMINADOR_3_INSTITUICAO:'Instituto iNOVA',
-    TITULO:'ESTUDO DO PROJETO XYZQ NO SUS',DEFESA_DATA_HORA:'2026-11-16T22:00',DEFESA_LOCAL:'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
-  }});
-  assert.equal(payload.titulo,'ESTUDO DO PROJETO XYZQ NO SUS');
+    TITULO:'Estudo do projeto XYZQ no SUS',DEFESA_DATA_HORA:'2026-11-16T22:00',DEFESA_LOCAL:'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
+  };
+  assert.throws(() => acceptRegistration({registrationAnswers:{...registrationAnswers,
+    TITULO:'ETARISMO NA UNIVERSIDADE: Uma revisão integrativa',
+  }}), /Escreva o título em caixa normal/);
+  const payload = acceptRegistration({registrationAnswers});
+  assert.equal(payload.titulo,registrationAnswers.TITULO);
+  assert.equal(payload.aluno1.nome,'Aluno de Revisão Local');
+  assert.equal(payload.orientador.nome,'Ana Paula Santos');
+  assert.equal(payload.banca[0].nome,'Carlos Rocha');
   assert.equal(payload.registrationAnswers.TITULO,payload.titulo);
   assert.equal(payload.banca[0].instituicao,'XYZQ');
   assert.equal(payload.banca[1].instituicao,'Instituto iNOVA');

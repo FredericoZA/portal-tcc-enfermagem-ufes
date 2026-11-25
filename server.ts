@@ -19,7 +19,8 @@ import {conceptRegistrationBlocker} from './src/utils/evaluationForm';
 import {publicPdfEtag,matchesPublicPdfEtag,PUBLIC_PDF_CACHE_CONTROL} from './server/publicDownloadRevalidation';
 import {canReadPagedAudit} from './server/auditPageRead';
 import {readCriticalAuditPage} from './server/integrations/supabase';
-import {normalizeReviewedTccTitle} from './src/utils/reviewedTccTitle';
+import {hasUppercaseTitlePassage, normalizeReviewedTccTitle, UPPERCASE_TCC_TITLE_MESSAGE} from './src/utils/reviewedTccTitle';
+import {normalizeAcademicKeyword,stripAcademicCaseMarkers} from './src/utils/academicTextCase';
 import {runtimeReadProjection} from './server/runtimeReadProjection';
 import {communicationCopyBlocker,sendConsciousCommunicationCopy} from './server/workflow/emailCommunicationCopy';
 import {createDeletionStatusReader,installDeletionStatusRoute} from './server/processDeletionStatusRead';
@@ -80,7 +81,6 @@ import {processEmailMessage} from './src/utils/processEmailMessage';
 import { reservationToken, readReservationToken, reservationAlreadyAnsweredPage, readSavedReservationDecision, reservationRuntimeUnavailablePage, reservationPage, reservationEscape } from './server/workflow/reservationConfirmation';
 import {RESERVATION_RESCHEDULED,reservationScheduleChanged,canRestartReservation,restartReservation,rescheduledReservationStudio} from './server/workflow/reservationReschedule';
 import {normalizePersonName} from './src/utils/personNameCase';
-import {formatTccTitle} from './src/utils/formatters';
 import {studentRegistrationEmailAllowed} from './src/utils/studentRegistrationEmail';
 import {publishReviewedModel} from './server/documents/reviewedModelPublication';
 import {inspectDefenseConflicts} from './server/defenseConflicts';
@@ -5119,7 +5119,13 @@ export async function createPortalApp() {
     const forbiddenKeys=Object.keys(req.body||{}).filter(key=>['avaliacao','acervo','etapaAtual','status','driveFolderId','driveFolderUrl','driveSyncedAt','driveDataSync'].includes(key));
     if(forbiddenKeys.length)return res.status(400).json({error:'Conceito e ata, entrega final, estado e vínculos do Drive só podem mudar pelas ações próprias do fluxo.',code:'PROTECTED_WORKFLOW_FIELDS'});
     const acceptedUpdates:any=Object.fromEntries(Object.entries(req.body||{}).filter(([key])=>allowedKeys.includes(key)));
-    if(typeof acceptedUpdates.titulo==='string')acceptedUpdates.titulo=dataReview?normalizeReviewedTccTitle(acceptedUpdates.titulo):formatTccTitle(acceptedUpdates.titulo).replace(/\+([^+]+?)-/g,'$1');
+    if (typeof acceptedUpdates.titulo === 'string') {
+      const title = normalizeReviewedTccTitle(dataReview ? acceptedUpdates.titulo : stripAcademicCaseMarkers(acceptedUpdates.titulo));
+      if (title !== normalizeReviewedTccTitle(existing.titulo || '') && hasUppercaseTitlePassage(title)) {
+        return res.status(400).json({ error: UPPERCASE_TCC_TITLE_MESSAGE, code: 'TCC_TITLE_UPPERCASE' });
+      }
+      acceptedUpdates.titulo = title;
+    }
     for(const key of ['aluno1','aluno2','orientador','coorientador','banca']){
       const value=acceptedUpdates[key];
       if(!value)continue;
@@ -5867,7 +5873,7 @@ export async function createPortalApp() {
     if (blocker) return res.status(409).json(blocker);
     if(process.status==='CONCLUIDO'||process.acervo?.submittedAt||signatureJobsStore.some(job=>job.processId===process.id&&job.documentType!=='ATA'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'Os dados finais ficam bloqueados após a criação do Termo ou da Declaração. Use o fluxo administrativo de retirada ou gere uma nova versão formal.',code:'FINAL_DATA_LOCKED_BY_SIGNATURE'});
     const rawKeywords:unknown=req.body?.palavrasChave;
-    const palavrasChave=Array.isArray(rawKeywords)&&rawKeywords.every(value=>typeof value==='string')?rawKeywords.map(value=>value.trim()).filter(Boolean):[];
+    const palavrasChave=Array.isArray(rawKeywords)&&rawKeywords.every(value=>typeof value==='string')?rawKeywords.map(normalizeAcademicKeyword).filter(Boolean):[];
     const signatureProvider=req.body?.signatureProvider||'ASTEN';
     if(!['ASTEN','GOV_BR'].includes(signatureProvider))return res.status(400).json({error:'Provedor de assinatura inválido.'});
     const resumoSintese=typeof req.body?.resumoSintese==='string'?req.body.resumoSintese.trim():'';

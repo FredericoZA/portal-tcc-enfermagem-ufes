@@ -12,3 +12,23 @@ test('capitalization suggestion preserves recognized acronyms and Roman numerals
   assert.equal(suggestSentenceTitle('A CONVIVÊNCIA ENTRE A PESSOA COM TRANSTORNO BIPOLAR E SEUS FAMILIARES'),'A convivência entre a pessoa com transtorno bipolar e seus familiares');
   assert.equal(suggestSentenceTitle('ESTUDO NO CAPS III E NO SUS'),'Estudo no CAPS III e no SUS');
 });
+
+test('a caixa alta em um trecho do título é identificada mesmo com subtítulo em caixa normal', () => {
+  for (const value of [
+    'ETARISMO NA UNIVERSIDADE: Uma revisão integrativa',
+    'ETARISMO na UNIVERSIDADE: Uma revisão integrativa',
+  ]) {
+    assert.equal(suggestSentenceTitle(value), 'Etarismo na universidade: Uma revisão integrativa');
+  }
+  assert.equal(suggestSentenceTitle('ETARISMO'), 'Etarismo');
+  assert.equal(suggestSentenceTitle('BOM DIA'), 'Bom dia');
+  assert.equal(suggestSentenceTitle('O ACESSO AO SUS: estudo sobre HIV-1'), 'O acesso ao SUS: estudo sobre HIV-1');
+  for (const value of [
+    'HTLV e HIV-1 na UFES',
+    'O programa ABCE na universidade',
+    'Pesquisa com ABCE e PECA',
+    'Cuidado com PrEP na atenção primária',
+    'Fatores A, B e C no CAPS III',
+    'Avaliação em UFES e PEP no SUS',
+  ]) assert.equal(suggestSentenceTitle(value), value);
+});

@@ -236,7 +236,7 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
       assert.equal(maintenance.status,200,JSON.stringify(maintenance.body));
       assert.ok(maintenance.body.configurationErrors.some((item:string)=>item.includes(auto.protocolo)&&item.includes('Asten')));
     }
-    const delivery={palavrasChave:['Cuidado','Saúde','Ensino','Pesquisa','Enfermagem'],resumoSintese:'Resumo de teste.'};
+    const delivery={palavrasChave:['câncer de mama','ações do enfermeiro','EDUCAÇÃO EM SAÚDE','COVID- 19','HIV-1'],resumoSintese:'Resumo de teste.'};
     const prematureDelivery=await request(`/api/processes/${auto.id}/final-data`,p.aluno1.email,delivery);
     assert.equal(prematureDelivery.body.code,'ATA_SIGNATURE_REQUIRED');
     for (const [index,type] of ['TERMO','DECLARACAO'].entries()) {
@@ -250,6 +250,10 @@ test('HTTP: orientador confere e registra avaliação; aluno é recusado; aparê
       assert.equal(manual.body.code,'ASTEN_AUTOMATIC_WORKFLOW');
     }
     const finalDisk=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
+    for (const fixture of deliveryFixtures) {
+      assert.deepEqual(finalDisk.processes.find((item:any)=>item.id===fixture.id).acervo.palavrasChave,
+        ['Câncer de mama','Ações do enfermeiro','Educação em saúde','COVID-19','HIV-1']);
+    }
     assert.deepEqual(finalDisk.signatureJobs,JSON.parse(JSON.stringify(originalJobs)),'a manutenção sem integração não envia nem duplica uma assinatura conhecida');
     assert.equal(finalDisk.processes.find((item:any)=>item.id===resumed.id).astenSignatureIntent,undefined,'retomada reconhece envelope já encaminhado');
     assert.ok(finalDisk.processes.find((item:any)=>item.id===auto.id).astenSignatureIntent.attemptedAt,'intenção persiste para próxima tentativa');

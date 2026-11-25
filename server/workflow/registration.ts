@@ -1,3 +1,4 @@
+import {hasUppercaseTitlePassage, UPPERCASE_TCC_TITLE_MESSAGE} from '../../src/utils/reviewedTccTitle';
 import {isEmailAddress} from '../../src/utils/emailAddress';
 import {renderInstitutionName} from '../../src/utils/institutionName';
 import {CUSTOM_DEFENSE_LOCATION} from '../../src/utils/reservationLocation';
@@ -88,6 +89,7 @@ export function acceptRegistration(input: any, studio?: Partial<IntegrationStudi
   if(accepted.DEFESA_LOCAL===CUSTOM_DEFENSE_LOCATION&&!String(accepted.DEFESA_LOCAL_PERSONALIZADO||'').trim())throw new Error('Informe o nome completo do local da defesa.');
 
   const payload=registrationPayload(accepted, timezone);
+  if (hasUppercaseTitlePassage(payload.titulo)) throw new Error(UPPERCASE_TCC_TITLE_MESSAGE);
   payload.registrationAnswers=Object.fromEntries(Object.entries(payload.registrationAnswers).map(([key,value])=>[key,typeof value==='string'?/_INSTITUICAO$/.test(key)?renderInstitutionName(value):key==='TITULO'?value.replace(/\+([^+]+?)-|\*([^*]+)\*/g,(_match,old,current)=>old||current):value:value]));
   return payload;
 }

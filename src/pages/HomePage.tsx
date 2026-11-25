@@ -91,6 +91,16 @@ interface HomePageProps {
   initialPublicTab?: 'calendario' | 'biblioteca' | 'tutorial';
 }
 
+function repositoryCoadvisorText(process: ProcessData): string {
+  const person = process.coorientador;
+  if (!person) return '';
+  const name = academicName(person, 'abbreviated');
+  const institution = displayParticipantInstitution(person.instituicao || '');
+  if (!name) return institution;
+  const fallback = process.legacyRecord ? 'Não informado' : 'Instituição Externa';
+  return `${name} (${institution || fallback})`;
+}
+
 /** The current request controls the notice, independently of receipts from earlier requests. */
 const PendingDefenseConfirmationNote: React.FC<{ process: Pick<ProcessData, 'defesa'> }> = ({ process }) => {
   if (!isDefenseReservationPending(process)) return null;
@@ -917,7 +927,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           case 'orientador': return proc.orientador?.nome ? `${academicName(proc.orientador, 'abbreviated')} (${displayParticipantInstitution(proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
           case 'membro1': return evalMembers[0] ? `${academicName(evalMembers[0],'abbreviated')} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
           case 'membro2': return evalMembers[1] ? `${academicName(evalMembers[1],'abbreviated')} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
-          case 'coorientador': return proc.coorientador?.nome ? `${academicName(proc.coorientador, 'abbreviated')} (${displayParticipantInstitution(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : '';
+          case 'coorientador': return repositoryCoadvisorText(proc);
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
           case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
@@ -989,7 +999,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${ev2.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.coorientador) {
-        const coorient = proc.coorientador?.nome ? `${academicName(proc.coorientador, 'abbreviated')} (${displayParticipantInstitution(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : '';
+        const coorient = repositoryCoadvisorText(proc);
         row.push(`"${coorient.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.resumo) {
@@ -2476,7 +2486,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                       const cleanInst = (str?: string) => {
                         if (!str) return '';
-                        return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
+                        return displayParticipantInstitution(str);
                       };
 
                       return (
@@ -2803,11 +2813,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     return (
                       <td key="coorientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className="w-full mx-auto">
-                          {proc.coorientador?.nome ? (
+                          {proc.coorientador && (proc.coorientador.nome || proc.coorientador.instituicao) ? (
                             <div>
-                              <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), acervoTextFormat, '')}
-                              </div>
+                              {proc.coorientador.nome && (
+                                <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                                  {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), acervoTextFormat, '')}
+                                </div>
+                              )}
                               <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
                                 {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
                               </div>
@@ -2874,7 +2886,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                         const cleanInst = (str?: string) => {
                           if (!str) return '';
-                          return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
+                          return displayParticipantInstitution(str);
                         };
 
                         return (
