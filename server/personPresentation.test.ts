@@ -15,7 +15,7 @@ test('academic name uses declared choices, removes duplicate prefixes and never 
  assert.equal(academicName({nome:'João da Silva',tratamento:'Professor',titulacao:'Mestre'}),'Professor Mestre João da Silva');
  assert.equal(academicName({nome:'Maria da Silva',tratamento:'Professora',titulacao:'Doutora'},'abbreviated'),'Prof.ª Dr.ª Maria da Silva');
  assert.equal(academicName({nome:'Maria da Silva'}),'Maria da Silva');
- assert.equal(academicName({nome:'Prof. Dr. Carlos Silva',titulacao:'Doutor'}),'Prof. Dr. Carlos Silva');
+ assert.equal(academicName({nome:'Prof. Dr. Carlos Silva',titulacao:'Doutor'},'abbreviated'),'Prof. Dr. Carlos Silva');
 });
 test('document variables and legacy models use civil treatment without an academic degree',()=>{
  const p=fixture();

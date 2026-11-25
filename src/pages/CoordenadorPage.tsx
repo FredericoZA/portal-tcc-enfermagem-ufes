@@ -520,7 +520,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
           <td key={colKey} className={cellClass}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat)}
+                {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), coordTextFormat)}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
@@ -582,7 +582,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {proc.coorientador?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat)}
+                    {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}

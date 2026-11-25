@@ -18,9 +18,29 @@ export function plainPersonName(person?:AcademicPerson|null):string{
  if(!person)return '';
  return person.nome.replace(/^(?:(?:prof(?:essor(?:a)?|a|[.．]?[ªº])?|dr(?:a|[.．]?[ªº])?|doutor(?:a)?|me|ma|mestre|mestra|esp(?:ecialista)?|senhora?|sra?)\.?\s+)+/i,'').trim();
 }
+const sourceTreatment = /^(professora|prof(?:\.?(?:ª|a))\.?|professor|prof\.?|senhora|sra\.?|senhor|sr\.?)\s+/iu;
+const sourceDegree = /^(doutora|dr(?:\.?(?:ª|a))\.?|doutor|dr\.?|mestra|ma\.?|mestre|me\.?|especialista|esp\.?)\s+/iu;
+
+function recordedAcademicName(person: AcademicPerson): AcademicPerson {
+  const original = person.nome.trim();
+  const treatment = sourceTreatment.exec(original);
+  const rest = treatment ? original.slice(treatment[0].length) : original;
+  const degree = sourceDegree.exec(rest);
+  if (!treatment && !degree) return person;
+  const key = (text: string) => text.toLocaleLowerCase('pt-BR').replaceAll('.', '');
+  const t = treatment ? key(treatment[1]) : '';
+  const d = degree ? key(degree[1]) : '';
+  return {
+    ...person,
+    tratamento: person.tratamento ?? (t === 'senhora' || t === 'sra' ? 'Senhora' : t === 'senhor' || t === 'sr' ? 'Senhor' : /a$|ª$/u.test(t) ? 'Professora' : t ? 'Professor' : ''),
+    titulacao: person.titulacao ?? (/^(?:dra|drª|doutora)$/.test(d) ? 'Doutora' : /^(?:dr|doutor)$/.test(d) ? 'Doutor' : /^(?:ma|mestra)$/.test(d) ? 'Mestra' : /^(?:me|mestre)$/.test(d) ? 'Mestre' : d ? 'Especialista' : undefined),
+  };
+}
 /** Canonical participant data stays separate; document representations are derived. */
 export function academicName(person?:AcademicPerson|null,style:'full'|'abbreviated'='full'):string{
- if(!person)return '';if(person.tratamento===undefined||person.tratamento===null)return person.nome.trim();
+ if(!person)return '';
+ if(person.tratamento===undefined||person.tratamento===null) person=recordedAcademicName(person);
+ if(person.tratamento===undefined||person.tratamento===null)return person.nome.trim();
  const name=plainPersonName(person),short=style==='abbreviated';
  const selectedTreatment=COMMITTEE_TREATMENTS.find(treatment=>treatment===person.tratamento);
  const treatment=selectedTreatment&&short?abbreviatedTreatments[selectedTreatment]:selectedTreatment;
