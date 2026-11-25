@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
@@ -12,7 +13,7 @@ function functions(names:string[],ports:Record<string,unknown>){
   const declarations=parsed.statements.filter(ts.isFunctionDeclaration).filter(node=>node.name&&names.includes(node.name.text));
   assert.equal(declarations.length,names.length);
   const code=ts.transpileModule(declarations.map(node=>node.getText(parsed)).join('\n')+`\n({${names.join(',')}})`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
-  return runInNewContext(code,{Date,buildDriveProcessDataMarkdown,buildDriveProcessFileName,processesStore:[],currentPublicationProcess:()=>true,currentPortalRuntimeRevision:()=>null,productionRuntime:false,...ports});
+  return runInNewContext(code,{Date,createHash,buildDriveProcessDataMarkdown,buildDriveProcessFileName,processesStore:[],currentPublicationProcess:()=>true,currentPortalRuntimeRevision:()=>null,productionRuntime:false,...ports});
 }
 test('persisted registration updates keep their revision and explicit pending state when Drive fails',async()=>{
   const process=structuredClone(DEMO_PROCESSES[0]);process.driveFolderId='original_process_folder';process.dataRevision=8;
@@ -103,4 +104,55 @@ test('automatic Drive recovery picks up superseded revisions and respects backof
   });
   assert.equal(await retryPendingProcessData(),2);
   assert.deepEqual(called,['superseded','untracked']);
+});
+
+test('the same confirmed mirror skips Drive calls but changed content or a forced retry is verified', async () => {
+  const process = structuredClone(DEMO_PROCESSES[0]);
+  process.driveFolderId = 'canonical_folder_123';
+  let providerWrites = 0;
+  const {syncStoredProcessData} = functions(['syncStoredProcessData'], {
+    processesStore: [process], localReviewFilesEnabled: () => false,
+    syncProcessDataMarkdown: async (input: { fileId?: string }) => {
+      providerWrites++;
+      if (providerWrites > 1) assert.equal(input.fileId, 'stable_data_original');
+      return {id: 'stable_data_original'};
+    },
+  });
+  await syncStoredProcessData(process, 'fixture');
+  await syncStoredProcessData(process, 'fixture');
+  assert.equal(providerWrites, 1);
+  assert.equal(process.driveDataSync?.folderId, process.driveFolderId);
+  assert.match(process.driveDataSync!.sha256!, /^[a-f0-9]{64}$/);
+  process.titulo += ' com título atualizado';
+  await syncStoredProcessData(process, 'fixture');
+  assert.equal(providerWrites, 2, 'metadata can change without changing the logical revision');
+  process.driveDataSync!.status = 'PENDING';
+  await syncStoredProcessData(process, 'fixture');
+  assert.equal(providerWrites, 3, 'retry verifies the original even when its content has not changed');
+});
+
+test('maintenance reconciles changed content at the same revision and shares one OAuth exchange', async () => {
+  const create = (id: string) => ({
+    ...structuredClone(DEMO_PROCESSES[0]), id, driveFolderId: 'folder_' + id,
+  });
+  const pending = create('pending-mirror');
+  const changed = create('changed-mirror');
+  changed.driveDataSync = {
+    status: 'SYNCED', revision: changed.dataRevision, updatedAt: changed.updatedAt, folderId: changed.driveFolderId,
+    sha256: createHash('sha256').update(buildDriveProcessDataMarkdown(changed)).digest('hex'),
+  };
+  changed.titulo += ' com título atualizado';
+  let exchanges = 0;
+  const calls: string[] = [];
+  const {retryPendingProcessData} = functions(['retryPendingProcessData'], {
+    processesStore: [pending, changed], localReviewFilesEnabled: () => false, currentSettings: {driveRootFolderId: 'root'},
+    getGoogleWorkspaceAccessToken: async () => { exchanges++; return 'fixture'; },
+    syncPersistedProcessData: async (process: {id: string}, accessToken: () => Promise<string>) => {
+      assert.equal(await accessToken(), 'fixture');
+      calls.push(process.id);
+    },
+  });
+  assert.equal(await retryPendingProcessData(), 2);
+  assert.equal(exchanges, 1);
+  assert.deepEqual(calls, ['pending-mirror', 'changed-mirror']);
 });

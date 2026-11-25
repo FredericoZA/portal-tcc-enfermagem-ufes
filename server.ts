@@ -1517,6 +1517,11 @@ async function syncStoredProcessData(portalProcess:ProcessData,accessToken:strin
   const source=portalProcess.legacyRecord?legacyAcademicRecordsStore.find(record=>record.id===portalProcess.id):portalProcess;
   if(!source)throw Error('O registro canônico do processo não foi encontrado.');
   const markdown=buildDriveProcessDataMarkdown(source);
+  const sha256=createHash('sha256').update(markdown).digest('hex');
+  const previous=portalProcess.driveDataSync;
+  // Workflow steps may ask for the same mirror several times. Only reuse a
+  // confirmed file with the same folder, content and logical revision.
+  if(previous?.status==='SYNCED'&&previous.fileId&&previous.folderId===folderId&&previous.revision===revision&&previous.sha256===sha256)return;
   let runtimeRevision=currentPortalRuntimeRevision();
   const canonical=()=>portalProcess.legacyRecord?legacyAcademicRecordsStore.includes(source as LegacyAcademicRecord)&&currentPublicationProcess(portalProcess):processesStore.includes(portalProcess);
   const current=async()=>{
@@ -1534,7 +1539,7 @@ async function syncStoredProcessData(portalProcess:ProcessData,accessToken:strin
       if(!await current())throw Error('O vínculo do arquivo não pertence à revisão atual.');
     }});
   if(!await current())throw Error('Os dados foram alterados durante a sincronização.');
-  portalProcess.driveDataSync={status:'SYNCED',revision,updatedAt:new Date().toISOString(),fileId:file.id};
+  portalProcess.driveDataSync={status:'SYNCED',revision,updatedAt:new Date().toISOString(),fileId:file.id,folderId,sha256};
 }
 async function ensureStoredProcessFolder(portalProcess:ProcessData,accessToken:string,rootFolderId:string):Promise<string>{
   if(portalProcess.legacyRecord&&!portalProcess.driveFolderId)throw Error('A pasta original do legado precisa ser vinculada antes desta operação.');
@@ -1547,7 +1552,7 @@ async function ensureStoredProcessFolder(portalProcess:ProcessData,accessToken:s
   return folder.id;
 }
 /** The pending state is committed with the registration change before external I/O. */
-async function syncPersistedProcessData(portalProcess: ProcessData): Promise<void> {
+async function syncPersistedProcessData(portalProcess: ProcessData, accessToken = getGoogleWorkspaceAccessToken): Promise<void> {
   if (localReviewFilesEnabled() || portalProcess.status === 'EM_RASCUNHO' || !processesStore.includes(portalProcess)) return;
   const revision = portalProcess.dataRevision;
   const previous = portalProcess.driveDataSync;
@@ -1562,7 +1567,7 @@ async function syncPersistedProcessData(portalProcess: ProcessData): Promise<voi
     };
   };
   try {
-    const token = await getGoogleWorkspaceAccessToken();
+    const token = await accessToken();
     if (portalProcess.driveFolderId) await syncStoredProcessData(portalProcess, token);
     else {
       if (!currentSettings.driveRootFolderId) throw new Error('Pasta raiz do Drive não configurada.');
@@ -1589,14 +1594,18 @@ async function retryPendingProcessData(): Promise<number> {
   const due = processesStore.filter(process => {
     if (process.status === 'EM_RASCUNHO') return false;
     const sync = process.driveDataSync;
-    if (sync?.status === 'SYNCED' && sync.revision === process.dataRevision) return false;
+    if (sync?.status === 'SYNCED' && sync.revision === process.dataRevision &&
+      (!sync.sha256 || (sync.folderId === process.driveFolderId &&
+        sync.sha256 === createHash('sha256').update(buildDriveProcessDataMarkdown(process)).digest('hex')))) return false;
     if (!sync && !process.driveFolderId) return false;
     const dueAt = sync?.revision === process.dataRevision ? Date.parse(sync.nextAttemptAt || '') : NaN;
     return !Number.isFinite(dueAt) || dueAt <= now;
   });
   due.sort((a, b) => (a.driveDataSync?.updatedAt || a.updatedAt).localeCompare(b.driveDataSync?.updatedAt || b.updatedAt));
   const batch = due.slice(0, 2);
-  for (const process of batch) await syncPersistedProcessData(process);
+  let token: Promise<string> | undefined;
+  const accessToken = () => token ??= getGoogleWorkspaceAccessToken();
+  for (const process of batch) await syncPersistedProcessData(process, accessToken);
   return batch.length;
 }
 async function ensureWorkflowProcessFolder(portalProcess:ProcessData):Promise<{accessToken:string;folderId:string}>{
@@ -4769,8 +4778,9 @@ export async function createPortalApp() {
     }
 
     afterReservationChangeResponse(req,res,async()=>{
-      const archived=await retryExistingFormArchiveJob(initialArchive,newProcess);
-      if (newProcess.driveDataSync?.status === 'PENDING') await syncPersistedProcessData(newProcess);
+      const archived=await retryExistingFormArchiveJob(initialArchive,newProcess).finally(async()=>{
+        if (newProcess.driveDataSync?.status === 'PENDING') await syncPersistedProcessData(newProcess);
+      });
       if(archived.status==='ARCHIVED')await resumeWorkflowAfterNativeFormArchive(newProcess,'CADASTRO_INICIAL',actorEmail);
     },{retain:beginRuntimeRequestTask,waitUntil:process.env.VERCEL?waitUntil:undefined,
       onError:()=>{console.error('[Cadastro] Registro salvo; ações posteriores permanecem pendentes.');}});
@@ -5153,7 +5163,7 @@ export async function createPortalApp() {
       overriddenConflicts=conflicts;
     }
 
-    if (revalidateInvitation && Object.keys(acceptedUpdates).every(key => isDeepStrictEqual(
+    if (!dataReview && !scheduleChanged && Object.keys(acceptedUpdates).every(key => isDeepStrictEqual(
       existing[key as keyof ProcessData], updated[key as keyof ProcessData],
     ))) return res.json(existing);
     const reservationRestarted = !dataReview && (scheduleChanged || revalidateInvitation) &&
@@ -5162,7 +5172,9 @@ export async function createPortalApp() {
     const renamedFolder=updated.protocolo!==existing.protocolo&&Boolean(existing.driveFolderId);
     if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:existing.protocolo,protocol:updated.protocolo,rootFolderId:currentSettings.driveRootFolderId||'',processId:existing.id,studentNames:[updated.aluno1.nome,updated.aluno2?.nome].filter(Boolean) as string[]});
     const reviewRollback=dataReview?{memberships:structuredClone(membershipsStore),access:structuredClone(authorizedStudentsStore),jobs:structuredClone(signatureJobsStore),auditLength:auditLogsStore.length}:undefined;
-    if(!localReviewFilesEnabled())updated.driveDataSync={...updated.driveDataSync,status:'PENDING',revision:updated.dataRevision,updatedAt:new Date().toISOString()};
+    if(!localReviewFilesEnabled())updated.driveDataSync={
+      status:'PENDING',revision:updated.dataRevision,updatedAt:updated.updatedAt,fileId:existing.driveDataSync?.fileId,
+    };
     processesStore[procIndex] = updated;
     synchronizeProcessParticipants(updated,actorEmail);
 
@@ -5214,8 +5226,9 @@ export async function createPortalApp() {
     const process=processesStore.find(item=>item.id===req.params.id);
     if(!process || process.status === 'EM_RASCUNHO')return res.status(404).json({error:'Processo não encontrado.'});
     if(localReviewFilesEnabled())return res.status(409).json({error:'A sincronização real do Drive não está habilitada nesta revisão local.'});
+    // The retry creates no process revision. Force provider readback and
+    // commit its result once, retaining the previously confirmed file ID.
     process.driveDataSync={...process.driveDataSync,status:'PENDING',revision:process.dataRevision,updatedAt:new Date().toISOString()};
-    await persistPortalStateDurably();
     await syncPersistedProcessData(process);
     res.status(process.driveDataSync?.status==='SYNCED'?200:202).json(process);
   });

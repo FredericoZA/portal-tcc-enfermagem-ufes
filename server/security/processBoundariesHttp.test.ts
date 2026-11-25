@@ -144,7 +144,12 @@ test('HTTP: authors and the advisor cannot override a reservation conflict; Mast
   try {
     const edited=await f.request(`/api/processes/${process.id}`, student, 'PATCH', { titulo: 'Correção permitida antes do convite' });
     assert.equal(edited.status, 200);
-    const {dataRevision}=await edited.json();
+    const {dataRevision,titulo}=await edited.json();
+    const beforeRepeat = await f.state();
+    const repeat = await f.request(`/api/processes/${process.id}`, student, 'PATCH', { titulo, expectedDataRevision: dataRevision });
+    assert.equal(repeat.status, 200);
+    assert.equal((await repeat.json()).dataRevision, dataRevision);
+    assert.deepEqual(await f.state(), beforeRepeat, 'saving identical data leaves the Drive and audit state alone');
     const raw = await f.request(`/api/processes/${process.id}`, student, 'PATCH', { defesa: { startAt: '2000-01-01T14:00:00Z' } });
     assert.equal(raw.status, 400);
     assert.equal((await raw.json()).code, 'RESERVATION_CHANGE_REQUIRED');
