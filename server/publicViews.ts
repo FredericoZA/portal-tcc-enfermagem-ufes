@@ -6,7 +6,7 @@ import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
 import {reservationReceipts} from './reservationReceipts';
 import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
 import type { ProcessData } from '../src/types';
-import {ufesFacultyInstitution} from './ufesFacultyInstitution';
+import {advisorInstitutionResolver,ufesFacultyInstitution} from './ufesFacultyInstitution';
 
 export type PublicArtifactState = 'NOT_PRESENTED' | 'PRIVATE' | 'PUBLIC';
 
@@ -199,7 +199,7 @@ export function buildPublicRepository(processes:ProcessData[],legacyRecords:Lega
   legacyGroups.set(key,group);
  }
  return [
-  ...canonicalRepositoryCurrentRecords(processes).filter(process=>process.status!=='EM_RASCUNHO').map(publicRepositoryView),
+  ...canonicalRepositoryCurrentRecords(processes).filter(process=>process.status!=='EM_RASCUNHO').map(advisorInstitutionResolver(processes)).map(publicRepositoryView),
   ...[...legacyGroups.values()].flatMap(records=>records.map(record=>legacyRepositoryProcess(publicLegacyAcademicView(record)))),
  ];
 }

@@ -46,3 +46,35 @@ export function ufesFacultyInstitution(person: { nome?: string; email?: string; 
   const identity = `${normalizeName(person.nome || '')}|${(person.email || '').trim().toLowerCase()}`;
   return identities.has(identity) ? DEFAULT_INSTALLATION_PROFILE.institutionName : person.instituicao;
 }
+
+import type { ProcessData } from '../src/types';
+import { plainPersonName } from '../src/utils/personPresentation';
+
+const facultyKey = (person: { nome: string; email?: string }) =>
+  `${normalizeName(plainPersonName(person))}|${person.email?.trim().toLowerCase() || ''}`;
+
+export function advisorInstitutionResolver(processes: readonly ProcessData[]) {
+  const advisors = new Map<string, Set<string>>();
+  for (const process of processes) {
+    if (process.status === 'EM_RASCUNHO' || !process.orientador.email) continue;
+    const key = facultyKey(process.orientador);
+    const institutions = advisors.get(key) ?? new Set<string>();
+    institutions.add(process.orientador.instituicao?.trim() || DEFAULT_INSTALLATION_PROFILE.institutionName);
+    advisors.set(key, institutions);
+  }
+
+  return (process: ProcessData): ProcessData => {
+    const withInstitution = <T extends { nome: string; email: string; instituicao?: string }>(person: T): T => {
+      if (person.instituicao?.trim()) return person;
+      const known = advisors.get(facultyKey(person));
+      const institution = ufesFacultyInstitution(person) || (known?.size === 1 ? [...known][0] : undefined);
+      return institution ? { ...person, instituicao: institution } : person;
+    };
+    return {
+      ...process,
+      orientador: withInstitution(process.orientador),
+      coorientador: process.coorientador && withInstitution(process.coorientador),
+      banca: process.banca.map(withInstitution),
+    };
+  };
+}

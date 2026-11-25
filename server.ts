@@ -1,3 +1,4 @@
+import { advisorInstitutionResolver } from './server/ufesFacultyInstitution';
 import type { Server as HttpServer } from 'node:http';
 import {canonicalDriveOriginalLinks} from './server/driveOriginalLinks';
 import {processDriveReaderEmails} from './server/integrations/processDriveReaders';
@@ -4037,7 +4038,7 @@ export async function createPortalApp() {
   });
 
   // GET /api/processes
-  app.get('/api/public/calendar',(_req,res)=>res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO'&&p.status!=='CONCLUIDO'&&isDefenseOnCalendar(p)).map(publicCalendarView)));
+  app.get('/api/public/calendar',(_req,res)=>res.json(processesStore.filter(p=>p.status!=='EM_RASCUNHO'&&p.status!=='CONCLUIDO'&&isDefenseOnCalendar(p)).map(advisorInstitutionResolver(processesStore)).map(publicCalendarView)));
 
   app.get('/api/repository/document-availability',requireAuthenticated,(req,res)=>{
     res.setHeader('Cache-Control','private, no-store');
@@ -4293,14 +4294,14 @@ export async function createPortalApp() {
 
     // A fila da Presidência tem uma projeção própria de declarações.
     if (hasFullAdministration(email)) {
-      return res.json(processesStore.map(process=>processWithPendingAtaStage(process,signatureJobsStore)));
+      return res.json(processesStore.map(advisorInstitutionResolver(processesStore)).map(process=>processWithPendingAtaStage(process,signatureJobsStore)));
     }
 
     // Filter by process IDs where user has an active membership
     const accessibleProcessIds = new Set(memberships.map((m) => m.processId));
 
     const filtered = processesStore.filter((p) => accessibleProcessIds.has(p.id)&&canAccessProcess(email,p.id));
-    res.json(filtered.map(process=>processWithPendingAtaStage(process,signatureJobsStore)));
+    res.json(filtered.map(advisorInstitutionResolver(processesStore)).map(process=>processWithPendingAtaStage(process,signatureJobsStore)));
   });
 
   // POST /api/processes
@@ -4879,7 +4880,7 @@ export async function createPortalApp() {
     if (!proc) {
       return res.status(404).json({ error: 'Processo não encontrado.' });
     }
-    const identity=getPortalIdentity(req);if(!identity){if(proc.status==='EM_RASCUNHO')return res.status(404).json({error:'Processo não encontrado.'});return res.json(publicLegacyProcessView(proc));}if(!canAccessProcess(identity.email,proc.id))return res.status(404).json({error:'Processo não encontrado.'});res.json(processWithPendingAtaStage(proc,signatureJobsStore));
+    const identity=getPortalIdentity(req);if(!identity){if(proc.status==='EM_RASCUNHO')return res.status(404).json({error:'Processo não encontrado.'});return res.json(publicLegacyProcessView(proc));}if(!canAccessProcess(identity.email,proc.id))return res.status(404).json({error:'Processo não encontrado.'});res.json(processWithPendingAtaStage(advisorInstitutionResolver(processesStore)(proc),signatureJobsStore));
   });
 
   // PATCH /api/processes/:id (Edit by student or advisor)
