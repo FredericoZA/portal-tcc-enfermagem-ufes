@@ -5,6 +5,8 @@ import {buildDriveProcessFileName,buildDriveProcessFolderName,DRIVE_ACADEMIC_FOL
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3';
+const DRIVE_V2_API = 'https://www.googleapis.com/drive/v2';
+const DRIVE_V2_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v2';
 
 const escapeQuery = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 export type ProcessFormArchiveType='CADASTRO_INICIAL'|'CONFIRMACAO_LOCAL'|'AVALIACAO'|'DADOS_FINAIS'|(string & {});
@@ -121,6 +123,10 @@ export async function ensurePortalProcessDriveFolder(input:{accessToken:string;r
 }
 
 /** Private, stable-ID mirror. Equal content performs no upload or permission change. */
+function strongDriveETag(value: unknown): value is string {
+  return typeof value === 'string' && /^"[^"\r\n]+"$/.test(value);
+}
+
 export async function syncProcessDataMarkdown(input:{accessToken:string;processFolderId:string;processId:string;fileName?:string;markdown:string;revision:number;fileId?:string;assertCurrent:()=>boolean|Promise<boolean>;bindFileId?:(id:string)=>Promise<void>}):Promise<{id:string;name:string;webViewLink?:string}>{
   const current=async()=>{if(!await input.assertCurrent())throw new Error('Os dados do processo mudaram durante a sincronização.');};
   await current();
@@ -134,7 +140,8 @@ export async function syncProcessDataMarkdown(input:{accessToken:string;processF
   const [listed]=await findArchivedFiles(input.accessToken,query);
   if(input.fileId&&listed&&input.fileId!==listed.id)throw new Error('O arquivo de dados vinculado mudou.');
   let fileId=input.fileId||listed?.id,existing:any,etag:string|undefined;
-  const fields='id,name,mimeType,trashed,parents,webViewLink,appProperties,properties,sha256Checksum';
+  let useVersion2Upload=false;
+  const fields='id,name,mimeType,trashed,parents,webViewLink,appProperties,properties,sha256Checksum,version';
   const read=async(id:string)=>{
     if(!/^[a-zA-Z0-9_-]{10,150}$/.test(id))throw new Error('Identificador do arquivo de dados inválido.');
     try{const response=await driveRequest(`${DRIVE_API}/files/${encodeURIComponent(id)}?fields=${fields}&supportsAllDrives=true`,input.accessToken);return {file:await response.json(),etag:response.headers.get('etag')||undefined};}
@@ -153,8 +160,17 @@ export async function syncProcessDataMarkdown(input:{accessToken:string;processF
       if(input.fileId!==fileId&&input.bindFileId)await input.bindFileId(fileId);
       await current();return existing;
     }
-    // Conditional metadata/media update: never overwrite when a strong precondition is unavailable.
-    if(!etag||!/^"[^"\r\n]*"$/.test(etag))throw new Error('O Drive não forneceu uma condição segura para atualizar os dados. A sincronização permanece pendente.');
+    if(!strongDriveETag(etag)){
+      if(!/^\d+$/.test(String(existing.version||'')))throw Error('O Drive não forneceu uma condição segura para atualizar os dados. A sincronização permanece pendente.');
+      // Drive v2 exposes the file ETag as a resource field. Pair it with the
+      // same provider version previously checked against the expected folder.
+      const response=await driveRequest(`${DRIVE_V2_API}/files/${encodeURIComponent(fileId!)}?fields=id,version,etag&supportsAllDrives=true`,input.accessToken);
+      const version=await response.json();
+      if(version.id!==fileId||String(version.version)!==String(existing.version))throw Error('O arquivo de dados mudou no Drive. A sincronização permanece pendente.');
+      if(!strongDriveETag(version.etag))throw Error('O Drive não forneceu uma condição segura para atualizar os dados. A sincronização permanece pendente.');
+      etag=version.etag;
+      useVersion2Upload=true;
+    }
   }
   if(!fileId){
     if(!input.bindFileId)throw new Error('O ID do arquivo de dados precisa ser persistido antes da criação.');
@@ -166,10 +182,17 @@ export async function syncProcessDataMarkdown(input:{accessToken:string;processF
   }
   await current();
   const publicProperties={...existing?.properties,portalProcessData:'flat-v1',portalProcessId:input.processId,portalProcessDataSha256:sha256,portalProcessDataRevision:String(input.revision)};
-  const metadata={...(!existing?{id:fileId,parents:[input.processFolderId]}:{}),name:fileName,mimeType:'text/markdown',appProperties:{...existing?.appProperties,portal:'portal-tcc',schema:'10',portalProcessId:input.processId,artifactType:'PROCESS_DATA',sha256,portalProcessDataRevision:String(input.revision)},properties:publicProperties};
+  const privateProperties={...existing?.appProperties,portal:'portal-tcc',schema:'10',portalProcessId:input.processId,artifactType:'PROCESS_DATA',sha256,portalProcessDataRevision:String(input.revision)};
+  const metadata=useVersion2Upload
+    ?{title:fileName,mimeType:'text/markdown',properties:[
+        ...Object.entries(publicProperties).map(([key,value])=>({key,value,visibility:'PUBLIC'})),
+        ...Object.entries(privateProperties).map(([key,value])=>({key,value,visibility:'PRIVATE'})),
+      ]}
+    :{...(!existing?{id:fileId,parents:[input.processFolderId]}:{}),name:fileName,mimeType:'text/markdown',appProperties:privateProperties,properties:publicProperties};
   const boundary=`portal_data_${Date.now().toString(36)}`;
   const body=Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: text/markdown; charset=UTF-8\r\n\r\n`),bytes,Buffer.from(`\r\n--${boundary}--`)]);
-  try{await driveRequest(`${DRIVE_UPLOAD_API}/files${existing?`/${encodeURIComponent(fileId)}`:''}?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true`,input.accessToken,{method:existing?'PATCH':'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`,...(existing?{'If-Match':etag!}:{})},body});}
+  const uploadApi=useVersion2Upload?DRIVE_V2_UPLOAD_API:DRIVE_UPLOAD_API;
+  try{await driveRequest(`${uploadApi}/files${existing?`/${encodeURIComponent(fileId)}`:''}?uploadType=multipart&fields=id&supportsAllDrives=true`,input.accessToken,{method:useVersion2Upload?'PUT':existing?'PATCH':'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`,...(existing?{'If-Match':etag!}:{})},body});}
   catch(error){const status=(error as {status?:number}).status;if(status===412)throw new Error('O arquivo de dados mudou no Drive. A sincronização permanece pendente.');if(status!==409||existing)throw error;}
   await current();
   const confirmed=(await read(fileId))?.file;

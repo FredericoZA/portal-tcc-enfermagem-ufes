@@ -82,3 +82,25 @@ test('the mirror pins a generated file ID durably before creation and retains th
   });
   await syncStoredProcessData(process,'fixture');assert.equal(process.driveDataSync?.status,'SYNCED');assert.equal(process.driveDataSync?.fileId,'reserved_data_original_123');
 });
+
+test('automatic Drive recovery picks up superseded revisions and respects backoff for the current revision',async()=>{
+  const nextAttemptAt=new Date(Date.now()+180000).toISOString();
+  const oldDate='2026-01-01T12:00:00.000Z';
+  const create=(id:string,dataRevision:number,synced?:number)=>({
+    ...structuredClone(DEMO_PROCESSES[0]),id,dataRevision,driveFolderId:'folder_'+id,
+    driveDataSync:synced===undefined?undefined:{status:'SYNCED',revision:synced,updatedAt:oldDate,nextAttemptAt},
+  });
+  const current=create('current',2,2);
+  const superseded=create('superseded',2,1);
+  const untracked=create('untracked',3);
+  const waiting=create('waiting',3,3);
+  waiting.driveDataSync!.status='PENDING';
+  const called:string[]=[];
+  const {retryPendingProcessData}=functions(['retryPendingProcessData'],{
+    processesStore:[current,superseded,untracked,waiting],
+    currentSettings:{driveRootFolderId:'root'},localReviewFilesEnabled:()=>false,
+    syncPersistedProcessData:async(process:{id:string})=>{called.push(process.id);},
+  });
+  assert.equal(await retryPendingProcessData(),2);
+  assert.deepEqual(called,['superseded','untracked']);
+});

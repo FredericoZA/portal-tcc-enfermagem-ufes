@@ -207,3 +207,40 @@ test('links originais legados usam somente GET e exigem hash, origem e ACL já c
   assert.equal(await resolveOriginalDriveBrowserLinks({...input,validatePublicContent:async()=>{hash='b'.repeat(64);}}),null);hash=sha256;publicRead=false;
   parent='foreign_folder_fixture_123';assert.equal(await resolveOriginalDriveBrowserLinks({...input,publicRead:false,email:'owner@example.invalid'}),null);
 });
+
+test('a Drive response without a v3 ETag updates the same file using the matching v2 ETag', async t=>{
+  const id='linked_process_data_123', parent='process_fixture_123';
+  let revision='1', providerVersion='8', tokenVersion='8', writes=0, conflict=false;
+  const input={accessToken:'fixture',processFolderId:parent,processId:'process-1',fileId:id,revision:2,markdown:'# Nova revisão\n',assertCurrent:()=>true};
+  const file=()=>({id,name:'00 - Dados do processo.md',mimeType:'text/markdown',parents:[parent],version:providerVersion,
+    properties:{portalProcessData:'flat-v1',portalProcessId:'process-1',portalProcessDataRevision:revision,
+      portalProcessDataSha256:revision==='2'?createHash('sha256').update(input.markdown).digest('hex'):'a'.repeat(64)}});
+  t.mock.method(globalThis,'fetch',async(url:unknown,options?:RequestInit)=>{
+    const path=new URL(String(url)).pathname;
+    if(path.endsWith('/permissions'))return Response.json({permissions:[]});
+    if(path==='/drive/v3/files')return Response.json({files:[file()]});
+    if(path===`/drive/v3/files/${id}`)return Response.json(file());
+    if(path===`/drive/v2/files/${id}`)return Response.json({id,version:tokenVersion,etag:'"drive-token"'});
+    assert.equal(path,`/upload/drive/v2/files/${id}`);
+    assert.equal(options?.method,'PUT');
+    assert.equal(new Headers(options?.headers).get('if-match'),'"drive-token"');
+    if(conflict) return new Response(null,{status:412});
+    const payload=Buffer.from(options?.body as Uint8Array).toString().split('\r\n\r\n')[1].split('\r\n--')[0];
+    const metadata=JSON.parse(payload);
+    assert.equal(metadata.title,'00 - Dados do processo.md');
+    assert.ok(metadata.properties.some((p:Record<string,string>)=>p.key==='portalProcessDataRevision'&&p.value==='2'&&p.visibility==='PUBLIC'));
+    writes++;
+    revision='2';
+    return Response.json({id});
+  });
+  tokenVersion='9';
+  await assert.rejects(syncProcessDataMarkdown(input),/mudou no Drive/);
+  assert.equal(writes,0);
+  tokenVersion='8';
+  conflict=true;
+  await assert.rejects(syncProcessDataMarkdown(input),/mudou no Drive/);
+  assert.equal(writes,0);
+  conflict=false;
+  assert.equal((await syncProcessDataMarkdown(input)).id,id);
+  assert.equal(writes,1);
+});

@@ -1572,7 +1572,7 @@ async function syncPersistedProcessData(portalProcess: ProcessData): Promise<voi
   } catch (error) {
     if (!processesStore.includes(portalProcess) || portalProcess.dataRevision !== revision) return;
     const reason = error instanceof Error ? error.message : '';
-    const detail = /^(?:O Drive não forneceu uma condição segura|O registro de dados existente pertence|O destino no Google Drive possui|A pasta|Pasta raiz)/.test(reason)
+    const detail = /^(?:O Drive não forneceu uma condição segura|O registro de dados existente pertence|O destino no Google Drive possui|O arquivo de dados mudou no Drive|O Drive já possui uma revisão|Há arquivos duplicados|A pasta|Pasta raiz)/.test(reason)
       ? reason : 'Os dados foram salvos no Portal. A atualização do arquivo no Google Drive ainda não foi confirmada.';
     pending(detail);
   }
@@ -1586,11 +1586,15 @@ async function syncPersistedProcessData(portalProcess: ProcessData): Promise<voi
 async function retryPendingProcessData(): Promise<number> {
   if (localReviewFilesEnabled() || !currentSettings.driveRootFolderId) return 0;
   const now = Date.now();
-  const due = processesStore.filter(process =>
-    process.status !== 'EM_RASCUNHO' &&
-    process.driveDataSync?.status === 'PENDING' &&
-    (!process.driveDataSync.nextAttemptAt || Date.parse(process.driveDataSync.nextAttemptAt) <= now));
-  due.sort((a, b) => a.driveDataSync!.updatedAt.localeCompare(b.driveDataSync!.updatedAt));
+  const due = processesStore.filter(process => {
+    if (process.status === 'EM_RASCUNHO') return false;
+    const sync = process.driveDataSync;
+    if (sync?.status === 'SYNCED' && sync.revision === process.dataRevision) return false;
+    if (!sync && !process.driveFolderId) return false;
+    const dueAt = sync?.revision === process.dataRevision ? Date.parse(sync.nextAttemptAt || '') : NaN;
+    return !Number.isFinite(dueAt) || dueAt <= now;
+  });
+  due.sort((a, b) => (a.driveDataSync?.updatedAt || a.updatedAt).localeCompare(b.driveDataSync?.updatedAt || b.updatedAt));
   const batch = due.slice(0, 2);
   for (const process of batch) await syncPersistedProcessData(process);
   return batch.length;
