@@ -1572,7 +1572,7 @@ async function syncPersistedProcessData(portalProcess: ProcessData): Promise<voi
     if (!processesStore.includes(portalProcess) || portalProcess.dataRevision !== revision) return;
     const reason = error instanceof Error ? error.message : '';
     const detail = /^(?:O Drive não forneceu uma condição segura|O registro de dados existente pertence|O destino no Google Drive possui|A pasta|Pasta raiz)/.test(reason)
-      ? reason : 'A atualização do arquivo de dados no Google Drive ainda não foi confirmada.';
+      ? reason : 'Os dados foram salvos no Portal. A atualização do arquivo no Google Drive ainda não foi confirmada.';
     pending(detail);
   }
   try { await persistPortalStateDurably(); }

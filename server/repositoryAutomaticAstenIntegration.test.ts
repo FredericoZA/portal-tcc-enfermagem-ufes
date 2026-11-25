@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
 import {executeWorkflowEvent,normalizeWorkflowEventCode} from './workflow/runtime';
 import {ataArchived,declarationReady} from './workflow/gates';
+import { finalDeliveryBlocker } from '../src/utils/finalDeliveryGate';
 import {deriveSignatureSigners,assertSignatureEligibility,publicationRequested,signatureJobMatchesCurrentRevision} from './workflow/signaturePolicy';
 import {signatureDocumentRevision} from '../src/utils/documentSignatureState';
 import {operationalDocumentType} from '../src/utils/courseStudioValidator';
@@ -24,7 +25,7 @@ function harness(options:{paired?:boolean;rejectDispatch?:boolean}={}){
  const snapshots:any[]=[];const dispatches:any[]=[];const events:any[]=[];const scheduled:Array<()=>void>=[];const background:Promise<void>[]=[];let handler:any;
  const context:any={Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture',ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
   app:{post:(_path:any,_auth:any,callback:any)=>{handler=callback;}},requireAuthenticated:()=>{},processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],currentSettings:settings,
-  getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],ataArchived,declarationReady,signatureDocumentRevision,signatureJobMatchesCurrentRevision,publicationRequested,safeRepositorySignatureError,normalizeWorkflowEventCode,operationalDocumentType,
+  getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],finalDeliveryBlocker,ataArchived,declarationReady,signatureDocumentRevision,signatureJobMatchesCurrentRevision,publicationRequested,safeRepositorySignatureError,normalizeWorkflowEventCode,operationalDocumentType,
   assertSignatureEligibility:(process:any,type:any)=>assertSignatureEligibility(process,type,jobs),inspectAstenDelivery,
   getPersistentAstenStatus:async()=>({dispatchEnabled:true,securityMessage:''}),astenWebhookInboxReady:async()=>true,resolveAstenDocumentFolder:async()=>10,getGoogleWorkspaceStatus:async()=>({connected:true}),
   persistPortalStateDurably:async()=>{snapshots.push(structuredClone({processes:context.processesStore,jobs}));},
