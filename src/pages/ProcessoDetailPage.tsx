@@ -135,6 +135,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [signatureNotice,setSignatureNotice]=useState<{ok:boolean;text:string;documentType?:string}|null>(null);
   const [verifications,setVerifications]=useState<Array<{documentType:string;version:number;code:string;url:string;sha256?:string;signedAt?:string}>>([]);
   const [isDownloadingDossier,setIsDownloadingDossier]=useState(false);
+  const [editingRegistration, setEditingRegistration] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [canRetryLoad, setCanRetryLoad] = useState(false);
@@ -601,9 +602,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const canStudentEdit = isStudent && !isEvaluationSubmitted && !isAcervoSubmitted && !readOnly;
   const canAdvisorEdit = (isAdvisor || isCoAdvisor) && !isAcervoSubmitted && !readOnly;
-  const canCoordinatorEdit = isMasterAdmin && !readOnly && !isEvaluationSubmitted && !isAcervoSubmitted;
-
-  const canEditData = canCoordinatorEdit || Boolean((isStudent || isAdvisor) && !isEvaluationSubmitted && !readOnly && !process.defesa.invitationDriveFileId && !process.defesa.invitationSentAt);
+  const hasIssuedInvitation = Boolean(process.defesa.invitationDriveFileId || process.defesa.invitationSentAt);
+  const canOpenRegistrationEdit = isAuthenticated && !readOnly && !process.legacyRecord &&
+    !isEvaluationSubmitted && !isAcervoSubmitted && process.status !== 'CONCLUIDO' &&
+    (isMasterAdmin || isStudent || isAdvisor) && !hasIssuedInvitation &&
+    !signatureJobs.some(job => job.status !== 'CANCELED' && Boolean(job.driveSignedFileId || job.driveUnsignedFileId));
+  const canEditData = canOpenRegistrationEdit && editingRegistration;
 
   const canEditDefense=isAuthenticated&&(canStudentEdit||canAdvisorEdit&&!isEvaluationSubmitted&&isAdvisor)&&!process.legacyRecord&&process.status!=='CONCLUIDO';
   const defenseDate=new Date(process.defesa.startAt);
@@ -1021,6 +1025,12 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
           <div className="p-4 sm:p-5">
             <div className="space-y-3">
+              {canOpenRegistrationEdit && (
+                <button type="button" className="portal-action" aria-pressed={editingRegistration}
+                  onClick={() => setEditingRegistration(open => !open)}>
+                  {editingRegistration ? 'Encerrar edição' : 'Alterar dados'}
+                </button>
+              )}
               <ProcessSummaryCard process={process} advisorViewerEmail={isAuthenticated && isAdvisor ? normEmail : undefined} canEdit={!readOnly&&canEditData} canEditReservation={canEditDefense} isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onReservationSaved={saved=>{if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;const previous=lastProcessRevision.current;if(previous&&(saved.dataRevision<previous.revision||(saved.dataRevision===previous.revision&&Date.parse(saved.updatedAt)<Date.parse(previous.updatedAt))))return;lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};setRemoteUpdatePending(false);setProcess(saved);}} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
               <section className="portal-tcc-members-box" aria-label="Dados dos membros">
                 <h2 className="mb-2 text-xs font-bold normal-case">Dados dos membros</h2>
