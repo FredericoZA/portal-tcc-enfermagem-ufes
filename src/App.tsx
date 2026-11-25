@@ -157,7 +157,7 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <PortalLiveSync viewingPublicData={Boolean(selectedProcessId) ||
+      <PortalLiveSync pauseAnonymous={currentTab === 'biblioteca' && !selectedProcessId} viewingPublicData={Boolean(selectedProcessId) ||
         !['tutorial', 'fluxo-tcc', 'informacoes-gerais', 'como-chegar', 'replicar'].includes(currentTab)} />
       <PortalDialogs />
       <PortalOperationStatus />

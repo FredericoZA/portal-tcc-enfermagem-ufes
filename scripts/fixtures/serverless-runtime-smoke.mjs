@@ -31,6 +31,11 @@ globalThis.fetch = async (input, init = {}) => {
   const method = String(init.method || 'GET').toUpperCase();
   calls.push({ host: url.host, path: url.pathname, method });
   if (url.origin === 'https://database.example.invalid') {
+    if (method === 'POST' && url.pathname === '/rest/v1/rpc/portal_read_repository_projection_v2') {
+      const payload = { processes: [], legacyAcademicRecords: runtimePayload.legacyAcademicRecords, repositorySignatures: [] };
+      const fingerprint = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+      return json([{ revision: 1, fingerprint, payload: JSON.parse(init.body).known_fingerprint === fingerprint ? null : payload }]);
+    }
     if (method === 'POST' && url.pathname === '/rest/v1/rpc/portal_check_runtime_v1') {
       if (!initialHealthCheckFailed) {
         initialHealthCheckFailed = true;

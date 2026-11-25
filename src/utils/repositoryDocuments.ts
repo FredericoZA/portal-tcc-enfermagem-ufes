@@ -21,10 +21,16 @@ export function isRepositoryDocumentKey(key:string):key is RepositoryDocumentKey
   return REPOSITORY_DOCUMENT_COLUMNS.some(column => column.key === key);
 }
 
-/** A string is an authorized Portal route. No browser list receives private Drive IDs. */
+/** A string is a confirmed public Drive link or an authorized Portal route. */
 export function repositoryDocumentStatus(value: boolean | string | undefined): RepositoryDocumentStatus {
   if (value === undefined) return 'Não exibido';
   return value ? 'Presente' : 'Ausente';
+}
+
+export function repositoryDriveOriginalView(value: unknown): string | undefined {
+  if (typeof value === 'string' && /^https:\/\/drive\.google\.com\/file\/d\/(?!local_)[A-Za-z0-9_-]{10,150}\/view$/.test(value)) {
+    return value;
+  }
 }
 
 /** Anonymous rows may only use information already released in the public catalog. */
@@ -34,7 +40,7 @@ export function publishedRepositoryDocuments(process:ProcessData):RepositoryDocu
   const publicAcademicPath = (kind:'trabalho-completo'|'resumo-expandido', url:string) =>
     process.legacyRecord ? url : `/api/public/processes/${encodeURIComponent(process.protocolo)}/files/${kind}/download`;
   return {
-    ...(work ? {docTccCompleto: publicAcademicPath('trabalho-completo', work)} : {}),
-    ...(abstract ? {docResumoExpandido: publicAcademicPath('resumo-expandido', abstract)} : {}),
+    ...(work ? {docTccCompleto: repositoryDriveOriginalView(process.acervo.repositoryFullWorkDriveUrl) ?? publicAcademicPath('trabalho-completo', work)} : {}),
+    ...(abstract ? {docResumoExpandido: repositoryDriveOriginalView(process.acervo.repositoryExpandedAbstractDriveUrl) ?? publicAcademicPath('resumo-expandido', abstract)} : {}),
   };
 }

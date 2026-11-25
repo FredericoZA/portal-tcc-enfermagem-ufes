@@ -84,6 +84,31 @@ try {
   assert.equal(beforeStartup[0].path, '/rest/v1/portal_runtime_state');
   assert.equal(beforeStartup[0].method, 'GET');
 
+  result = await get('/api/public/repository');
+  assert.equal(result.status, 200, await result.clone().text());
+  assert.match(result.headers.get('vercel-cdn-cache-control') || '', /s-maxage=120/);
+  const catalogTag = result.headers.get('etag');
+  const catalog = await result.json();
+  assert.equal(catalog.length, 6);
+  assert.equal(catalog[0].acervo.repositoryFullWorkDriveUrl, 'https://drive.google.com/file/d/private_historical_file_0/view');
+  assert.doesNotMatch(JSON.stringify(catalog[3]), /private_historical_file_3/);
+  let callsAfterCatalog = (await (await get('/__smoke/calls')).json()).calls;
+  assert.deepEqual(callsAfterCatalog.slice(beforeStartup.length).map(({ path }) => path), [
+    '/rest/v1/portal_runtime_state', '/rest/v1/rpc/portal_read_repository_projection_v2',
+  ]);
+  const conditional = await fetch(base + '/api/public/repository', { headers: { 'If-None-Match': catalogTag } });
+  assert.equal(conditional.status, 304);
+  assert.equal(await conditional.text(), '');
+  const head = await fetch(base + '/api/public/repository', { method: 'HEAD' });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), '');
+  callsAfterCatalog = (await (await get('/__smoke/calls')).json()).calls;
+  const query = await fetch(base + '/api/public/repository?unneeded=1', { redirect: 'manual' });
+  assert.equal(query.status, 308);
+  assert.equal(query.headers.get('location'), '/api/public/repository');
+  assert.equal(query.headers.get('cache-control'), 'no-store');
+  assert.equal((await (await get('/__smoke/calls')).json()).calls.length, callsAfterCatalog.length);
+
   result = await get('/api/health');
   assert.equal(result.status, 503);
   assert.equal((await result.json()).code, 'SUPABASE_CONNECTION_UNAVAILABLE');

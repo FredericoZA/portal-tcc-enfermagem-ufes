@@ -10,10 +10,10 @@ import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_LIVE_POLL_INTERVAL_MS, PORTAL_PUBLIC_P
  * Desliga o polling quando a aba está oculta/offline. Ao voltar para a aba
  * revalida imediatamente e avisa os componentes que usam o estado remoto.
  */
-export const PortalLiveSync:React.FC<{viewingPublicData: boolean}> = ({viewingPublicData}) => {
+export const PortalLiveSync:React.FC<{viewingPublicData: boolean; pauseAnonymous?: boolean}> = ({viewingPublicData, pauseAnonymous = false}) => {
   const { isAuthenticated, userEmail } = useAuth();
   const lastRevision = useRef<string | null>(null);
-  const pollingEnabled = isAuthenticated || viewingPublicData;
+  const pollingEnabled = isAuthenticated || (!pauseAnonymous && viewingPublicData);
 
   useEffect(() => {
     if (!pollingEnabled) return;

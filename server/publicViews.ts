@@ -1,11 +1,13 @@
 import {isDeepStrictEqual} from 'node:util';
 import type {LegacyAcademicRecord} from '../src/types/legacyArchive';
-import {publicLegacyAcademicView} from './legacyArchive';
+import {legacyFileIsPublic,publicLegacyAcademicView} from './legacyArchive';
+import {canonicalDriveOriginalLinks} from './driveOriginalLinks';
+import {publicFileAuthorized} from './workflow/publicationAccess';
 import {legacyRepositoryProcess} from '../src/utils/legacyRepository';
 import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
 import {reservationReceipts} from './reservationReceipts';
 import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
-import type { ProcessData } from '../src/types';
+import type { ProcessData, SignatureJob } from '../src/types';
 import {advisorInstitutionResolver,ufesFacultyInstitution} from './ufesFacultyInstitution';
 
 export type PublicArtifactState = 'NOT_PRESENTED' | 'PRIVATE' | 'PUBLIC';
@@ -189,7 +191,11 @@ export function canonicalRepositoryCurrentRecords(processes:ProcessData[]):Proce
 }
 
 /** Public repository projection is identical for visitors and authenticated roles. */
-export function buildPublicRepository(processes:ProcessData[],legacyRecords:LegacyAcademicRecord[]){
+export function buildPublicRepository(
+ processes: ProcessData[],
+ legacyRecords: LegacyAcademicRecord[],
+ repositorySignatures: SignatureJob[] = [],
+) {
  const legacyGroups=new Map<string,LegacyAcademicRecord[]>();
  for(const record of legacyRecords){
   const key=record.id?`id:${record.id}`:`protocol:${record.protocolo}`;
@@ -198,8 +204,42 @@ export function buildPublicRepository(processes:ProcessData[],legacyRecords:Lega
   if(!group.some(existing=>isDeepStrictEqual(existing,record)))group.push(record);
   legacyGroups.set(key,group);
  }
+ const signaturesByProcess = new Map<string, SignatureJob[]>();
+ for (const job of repositorySignatures) {
+  const jobs = signaturesByProcess.get(job.processId) ?? [];
+  jobs.push(job);
+  signaturesByProcess.set(job.processId, jobs);
+ }
  return [
-  ...canonicalRepositoryCurrentRecords(processes).filter(process=>process.status!=='EM_RASCUNHO').map(advisorInstitutionResolver(processes)).map(publicRepositoryView),
-  ...[...legacyGroups.values()].flatMap(records=>records.map(record=>legacyRepositoryProcess(publicLegacyAcademicView(record)))),
+  ...canonicalRepositoryCurrentRecords(processes).filter(process=>process.status!=='EM_RASCUNHO')
+   .map(advisorInstitutionResolver(processes)).map(process => {
+    const row = publicRepositoryView(process);
+    const jobs = signaturesByProcess.get(process.id) ?? [];
+    const acervo = process.acervo;
+    const workId = acervo?.trabalhoCompletoFileId;
+    const abstractId = acervo?.resumoExpandidoFileId;
+    const work = acervo && workId && row.acervo.trabalhoCompletoFileUrl && workId === acervo.publicFullWorkFileId &&
+      publicFileAuthorized(process, jobs, 'trabalho-completo')
+      ? canonicalDriveOriginalLinks(workId, acervo.trabalhoCompletoSha256)?.view : undefined;
+    const abstract = acervo && abstractId && row.acervo.resumoExpandidoFileUrl && abstractId === acervo.publicExpandedAbstractFileId &&
+      publicFileAuthorized(process, jobs, 'resumo-expandido')
+      ? canonicalDriveOriginalLinks(abstractId, acervo.resumoExpandidoSha256)?.view : undefined;
+    return { ...row, acervo: { ...row.acervo, repositoryFullWorkDriveUrl: work, repositoryExpandedAbstractDriveUrl: abstract } };
+   }),
+  ...[...legacyGroups.values()].flatMap(records => records.map(record => {
+   const view = publicLegacyAcademicView(record);
+   const process = legacyRepositoryProcess(view);
+   const directLink = (kind: 'TRABALHO_COMPLETO' | 'RESUMO_EXPANDIDO') => {
+    const file = view.publicFiles.find(item => item.kind === kind);
+    const original = file && record.attachments[file.index];
+    if (original && legacyFileIsPublic(record, original)) {
+     return canonicalDriveOriginalLinks(original.driveFileId, original.sha256)?.view;
+    }
+   };
+   return { ...process, acervo: { ...process.acervo,
+    repositoryFullWorkDriveUrl: directLink('TRABALHO_COMPLETO'),
+    repositoryExpandedAbstractDriveUrl: directLink('RESUMO_EXPANDIDO'),
+   } };
+  })),
  ];
 }

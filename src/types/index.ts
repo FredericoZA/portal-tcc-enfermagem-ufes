@@ -212,6 +212,9 @@ export interface ProcessAcervoInfo {
   trabalhoCompletoVersion?: number;
   isPublic?: boolean;
   publishFullWork?: boolean;
+  /** Native links confirmed by the public repository projection. */
+  repositoryFullWorkDriveUrl?: string;
+  repositoryExpandedAbstractDriveUrl?: string;
   publishExpandedAbstract?: boolean;
   publicationRequestedAt?: string;
   publicationWithdrawnAt?: string;

@@ -1005,27 +1005,34 @@ export async function readCriticalAuditPage(input:{revision:number;processId?:st
 }
 
 /** Read-only catalog projection; never install this as a write baseline. */
-let cachedRepositorySnapshot:CachedRuntimeReadProjection|undefined;
-let repositoryProjectionBackoff:{endpoint:string;retryAfter:number}|undefined;
-export async function loadPortalRepositorySnapshot(){
- const endpoint=stateEndpoint(),known=cachedRepositorySnapshot?.endpoint===endpoint?cachedRepositorySnapshot:undefined;
- const useConditional=process.env.PORTAL_RUNTIME_CONDITIONAL_READS!=='false'&&
-   !(repositoryProjectionBackoff?.endpoint===endpoint&&repositoryProjectionBackoff.retryAfter>Date.now());
- if(useConditional){
-  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_repository_projection_v1`,20_000,
+const conditionalRepositoryReaders: Partial<Record<1|2, {
+ snapshot?:CachedRuntimeReadProjection;
+ backoff?:{endpoint:string;retryAfter:number};
+}>> = {};
+
+export async function loadPortalRepositorySnapshot({includeSignatureEvidence=false}={}){
+ const endpoint=stateEndpoint();
+ const versions = includeSignatureEvidence ? [2,1] as const : [1] as const;
+ if(process.env.PORTAL_RUNTIME_CONDITIONAL_READS!=='false')for(const version of versions){
+  const reader=conditionalRepositoryReaders[version]??={};
+  if(reader.backoff?.endpoint===endpoint&&reader.backoff.retryAfter>Date.now())continue;
+  const known=reader.snapshot?.endpoint===endpoint?reader.snapshot:undefined;
+  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_repository_projection_v${version}`,20_000,
    JSON.stringify({known_fingerprint:known?.fingerprint??null}),true);
   const missing=response.status===404&&(await response.clone().json().catch(()=>null))?.code==='PGRST202';
-  if(!missing){
-   if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
-   const rows=await response.json();const row=Array.isArray(rows)&&rows.length===1?rows[0]:null;
-   if(!row||!Number.isSafeInteger(row.revision)||row.revision<1||typeof row.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(row.fingerprint))throw Error('Catálogo condicional inválido.');
-   const payload=row.payload===null&&known?.fingerprint===row.fingerprint?known.payload:row.payload;
-   if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).some(key=>!['processes','legacyAcademicRecords'].includes(key))
-    ||!Array.isArray(payload.processes)||!Array.isArray(payload.legacyAcademicRecords))throw Error('Catálogo condicional não confirmado.');
-   cachedRepositorySnapshot={endpoint,revision:row.revision,fingerprint:row.fingerprint,payload};
-   return {...structuredClone(payload),revision:row.revision};
+  if(missing){
+   reader.backoff={endpoint,retryAfter:Date.now()+60_000};
+   continue;
   }
-  repositoryProjectionBackoff={endpoint,retryAfter:Date.now()+60_000};
+  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
+  const rows=await response.json();const row=Array.isArray(rows)&&rows.length===1?rows[0]:null;
+  if(!row||!Number.isSafeInteger(row.revision)||row.revision<1||typeof row.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(row.fingerprint))throw Error('Catálogo condicional inválido.');
+  const payload=row.payload===null&&known?.fingerprint===row.fingerprint?known.payload:row.payload;
+  const keys=version===2?['processes','legacyAcademicRecords','repositorySignatures']:['processes','legacyAcademicRecords'];
+  if(!payload||typeof payload!=='object'||Array.isArray(payload)||Object.keys(payload).some(key=>!keys.includes(key))
+   ||keys.some(key=>!Array.isArray(payload[key])))throw Error('Catálogo condicional não confirmado.');
+  reader.snapshot={endpoint,revision:row.revision,fingerprint:row.fingerprint,payload};
+  return {...structuredClone(payload),revision:row.revision};
  }
  const response=await readSupabase(`${supabaseUrl()}/rest/v1/rpc/portal_read_repository_v1`,20_000,'{}');
  if(!response.ok)throw await runtimeReadFailure(response,'SNAPSHOT');
