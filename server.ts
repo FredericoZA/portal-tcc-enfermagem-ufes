@@ -2641,7 +2641,7 @@ export async function createPortalApp() {
       finishPreviousWrites?.();
       const finishHydration=registrationTiming?.measure('hydrate');
       let remote:PersistedPortalState|null;
-      const routeProjection=liteRuntimeReadsEnabled?(canReadPagedAudit(req.method,req.path,req.query)?'LEAN':runtimeReadProjection(req.method,req.path)):'FULL';
+      const routeProjection=liteRuntimeReadsEnabled?(canReadPagedAudit(req.method,req.path,req.query)?'LEAN':runtimeReadProjection(req.method,req.path,req.query.includeAudit!=='false')):'FULL';
       // A conta consultada pode ter acesso só pelo acervo histórico. Revalide
       // esse vínculo usando a revisão atual, inclusive nas leituras de assinatura.
       const readProjection=(routeProjection==='LEAN'||routeProjection==='SIGNATURES')&&hasAuthenticatedAccountView(req)
@@ -2697,7 +2697,7 @@ export async function createPortalApp() {
 
   // API Middleware / Logging
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api')) {
+    if ((!productionRuntime || process.env.PORTAL_HTTP_TRACE === '1') && req.path.startsWith('/api')) {
       console.log(`[API] ${req.method} ${safeApiLogPath(req.path)}`);
     }
     next();
@@ -6041,7 +6041,7 @@ export async function createPortalApp() {
       signatures:processSignaturesFor(process.id,true),
       reservationReceipts:reservationReceipts(process).map(item=>item.summary),
       verifications:isPortalFeatureEnabled(currentSettings,'PUBLIC_AUTHENTICITY')?processVerificationsFor(process.id):[],
-      auditLogs:processAuditFor(process.id),
+      auditLogs:req.query.includeAudit==='false'?[]:processAuditFor(process.id),
     });
   });
 

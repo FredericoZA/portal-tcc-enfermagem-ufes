@@ -76,7 +76,7 @@ test('o middleware preserva o catalogo carregado quando a projeção omite acerv
   const server=await readFile('server.ts','utf8');
   const projection=await readFile('server/runtimeReadProjection.ts','utf8');
   assert.match(server,/if \(Array\.isArray\(state\.legacyAcademicRecords\)\) legacyAcademicRecordsStore=/);
-  assert.ok(/runtimeReadProjection\(req\.method,req\.path\)/.test(server),'server hydration must use the reviewed route projection classifier');
+  assert.ok(/runtimeReadProjection\(req\.method,req\.path,req\.query\.includeAudit/.test(server),'server hydration must use the reviewed route projection classifier');
   assert.match(server,/const remote = liteRuntimeReadsEnabled\s*\? await loadPortalRuntimeLeanState/);
   assert.match(projection,/const LITE_PATHS = new Set/);
   assert.match(projection,/\'\/public\/repository\'/);

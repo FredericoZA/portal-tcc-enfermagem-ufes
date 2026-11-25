@@ -340,14 +340,14 @@ export const apiClient = {
   getPortalSyncVersion:()=>fetchApi<{revision:number}>('/api/sync/version'),
   getPublicSyncVersion:()=>fetchApi<{token:string}>('/api/public/sync/version',{credentials:'omit'}),
   getProcesses: (options: Pick<ApiRequestOptions, 'signal'> = {}) => fetchApi<ProcessData[]>('/api/processes', options),
-  getProcessDetail: (id: string) => requestAfterRuntimeBusy<{
+  getProcessDetail: (id: string, includeAudit = true) => requestAfterRuntimeBusy<{
     process: ProcessData;
     documents: ProcessDocument[];
     signatures: SignatureJob[];
     reservationReceipts?: import('../types/workflowOperations').ReservationReceiptSummary[];
     verifications: { documentType: string; version: number; code: string; url: string; sha256?: string; signedAt?: string }[];
     auditLogs: AuditLog[];
-  }>(`/api/processes/${encodeURIComponent(id)}/detail`,{},2),
+  }>(`/api/processes/${encodeURIComponent(id)}/detail${includeAudit ? '' : '?includeAudit=false'}`,{},2),
   getProcessById: (id: string, options: Pick<ApiRequestOptions, 'signal' | 'timeoutMs'> = {}) => fetchApi<ProcessData>(`/api/processes/${id}`, options),
   getRegistrationSuggestions:(field:string,q:string,options:Pick<ApiRequestOptions,'signal'>={})=>fetchApi<string[]>(`/api/forms/registration-suggestions?field=${encodeURIComponent(field)}&q=${encodeURIComponent(q)}`,options),
   getRegistrationSchema:()=>fetchApi<Partial<IntegrationStudioSettings> & {applicantName?: string}>('/api/forms/registration-schema'),
@@ -528,7 +528,8 @@ export const apiClient = {
     const staged=await stageFile(file,{purpose:kind==='trabalho-completo'?'PROCESS_FULL_WORK':'PROCESS_EXPANDED_ABSTRACT',processId:id});
     return fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,stagedUploadId:staged.uploadId,sha256:staged.sha256,size:file.size,mimeType:file.type,expectedPublicationRevision})});
   },async()=>fetchApi<{id:string;fileName:string;downloadUrl:string;sha256:string}>(`/api/processes/${id}/files/${kind}`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file),expectedPublicationRevision})})),
-  getProcessAuditLogs:(id:string)=>fetchApi<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`),
+  getProcessAuditLogs:(id:string, options:Pick<ApiRequestOptions,'signal'>={})=>
+    requestAfterRuntimeBusy<AuditLog[]>(`/api/processes/${encodeURIComponent(id)}/audit-logs`,options,2),
   downloadProcessAuditLogs:(id:string)=>downloadApiFile(`/api/processes/${encodeURIComponent(id)}/audit-logs/pdf`),
   getAuditLogs: () => fetchApi<AuditLog[]>('/api/admin/audit-logs'),
   getAuditLogPage: (filters: {q: string; kind: string; start: string; end: string; before?: string; focusId?: string;processId?:string}, signal?: AbortSignal) => {

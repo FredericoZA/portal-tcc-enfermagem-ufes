@@ -262,8 +262,29 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const [bancaForm, setBancaForm] = useState<any[]>([]);
 
-  // Local Session Audit Log
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditHistory, setAuditHistory] = useState<{
+    scope: string;
+    rows?: AuditLogEntry[];
+    failed?: boolean;
+  } | null>(null);
+  const visibleAuditHistory = auditHistory?.scope === legacyAccessKey ? auditHistory : null;
+  const auditProcessId = process?.id;
+  useEffect(() => {
+    if (!showAuditLogModal || readOnly || !auditProcessId) return;
+    const controller = new AbortController();
+    apiClient.getProcessAuditLogs(auditProcessId, { signal: controller.signal }).then(logs => {
+      if (controller.signal.aborted || legacyAccessScope.current !== legacyAccessKey) return;
+      const rows = logs.map(log => ({
+        id: log.id, timestamp: formatDateTimeWithWeekday(log.timestamp), user: log.actorEmail,
+        role: log.actorRoles.join(', '), action: log.action, details: auditChanges(log),
+      }));
+      setAuditHistory({ scope: legacyAccessKey, rows });
+    }).catch(() => {
+      if (!controller.signal.aborted && legacyAccessScope.current === legacyAccessKey)
+        setAuditHistory({ scope: legacyAccessKey, failed: true });
+    });
+    return () => controller.abort();
+  }, [showAuditLogModal, readOnly, auditProcessId, legacyAccessKey]);
 
   // Acervo Digital Form state
   const [acervoKeywords, setAcervoKeywords] = useState('');
@@ -322,11 +343,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
         setPrivateLegacyAcademic(academicAccess);
         setProcess(publicDetail.process); setDocuments(publicDetail.documents);setReceiptItems(data.reservationReceipts);
-        setSignatureJobs([]); setVerifications([]); setAuditLogs([]);
+        setSignatureJobs([]); setVerifications([]);
         return;
       }
-      const {process:pData,documents:docsData,signatures:signatureData,verifications:verificationData,auditLogs:recordedLogs,reservationReceipts:receiptData}
-        = await apiClient.getProcessDetail(processId);
+      const {process:pData,documents:docsData,signatures:signatureData,verifications:verificationData,reservationReceipts:receiptData}
+        = await apiClient.getProcessDetail(processId, false);
       if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
       if(lastProcessRevision.current&&(pData.dataRevision<lastProcessRevision.current.revision||(pData.dataRevision===lastProcessRevision.current.revision&&Date.parse(pData.updatedAt)<Date.parse(lastProcessRevision.current.updatedAt))))return;
       if(background&&repositorySubmitInFlight.current)return;
@@ -381,7 +402,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:formatDateTimeWithWeekday(log.timestamp),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
     } catch (err: any) {
       if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
@@ -998,7 +1018,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           <div className="relative flex shrink-0 items-center gap-1.5">
             <span role="status" aria-live="polite" aria-atomic="true" className={copyFeedback?'portal-copy-feedback pointer-events-none absolute right-0 top-full z-50 mt-2 w-max max-w-[min(300px,80vw)] whitespace-normal rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2 text-xs font-normal normal-case text-slate-800 shadow-sm':'sr-only'}>{copyFeedback?.text||''}</span>
           <button type="button" className="portal-toolbar-icon-button rounded-full bg-white text-slate-950" aria-label="Copiar link do trabalho" title="Copiar link do trabalho" onClick={()=>void copyProcessLink()}><LinkIcon className="h-4 w-4"/></button>
-            {!readOnly&&<button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-950" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>}
+            {!readOnly&&<button type="button" onClick={()=>{setAuditHistory(null);setShowAuditLogModal(true);}} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-950" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>}
             {isMasterAdmin&&!readOnly&&<button type="button" onClick={()=>{deletionScopeRef.current=deletionScope;deletionDialogRef.current=true;setDeletionTarget({id:process.id,protocol:process.protocolo,title:process.titulo||'',authors:formatStudentsString(process.aluno1,process.aluno2)});setShowDeleteModal(true);}} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
@@ -1390,7 +1410,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       <PortalModalShell zIndexClass="z-[1000002]" open={downloadPicker} onClose={()=>setDownloadPicker(false)} title="Baixar documentos" icon={Download} maxWidthClass="max-w-lg" bodyClassName="p-4" footer={<div className="flex justify-end gap-2"><button type="button" className="portal-action" onClick={()=>setDownloadPicker(false)}>Fechar</button><button type="button" disabled={isDownloadingDossier||!downloadSelection.length} className="portal-action" onClick={()=>void handleDownloadDossier()}>{isDownloadingDossier?'Preparando…':'Baixar selecionados'}</button></div>}>
         <div className="space-y-2">{documents.map(doc=><label key={doc.id} className="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" disabled={!['DISPONIVEL','ASSINADO'].includes(doc.status)} checked={downloadSelection.includes(doc.type)} onChange={event=>setDownloadSelection(current=>event.target.checked?[...current,doc.type]:current.filter(type=>type!==doc.type))}/><span>{doc.title}<small className="block">{doc.status==='DISPONIVEL'?'Disponível':doc.status==='ASSINADO'?'Assinado':'Não disponível'}</small></span></label>)}</div>
       </PortalModalShell>
-      {showAuditLogModal && (
+      {showAuditLogModal && !readOnly && (
         <div
           className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4"
           onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuditLogModal(false); }}
@@ -1407,8 +1427,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
             <div className="flex justify-end gap-2 p-3"><button type="button" className="portal-action" onClick={()=>void apiClient.downloadProcessAuditLogs(processId).then(({blob,fileName})=>{const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=fileName;anchor.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}).catch(error=>portalNotice(error.message))}><Download className="h-4 w-4"/>Baixar histórico em PDF</button><button type="button" className="portal-action" onClick={()=>setShowAuditLogModal(false)}>Fechar</button></div>
             <div className="max-h-[calc(85vh-140px)] overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
               <div className="space-y-3 p-3 sm:p-4">
-                {!auditLogs.length&&<p className="rounded-lg border border-slate-200 bg-white p-4 text-center text-sm text-slate-600">Nenhum evento registrado para este processo.</p>}
-                {auditLogs.map(log=><article key={log.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                {!visibleAuditHistory && <p role="status" className="p-4 text-center text-sm">Carregando histórico…</p>}
+                {visibleAuditHistory?.failed && <p role="alert" className="p-4 text-center text-sm">Não foi possível carregar o histórico. Feche e abra novamente para tentar.</p>}
+                {visibleAuditHistory?.rows?.length === 0 && <p className="rounded-lg border border-slate-200 bg-white p-4 text-center text-sm text-slate-600">Nenhum evento registrado para este processo.</p>}
+                {visibleAuditHistory?.rows?.map(log=><article key={log.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-bold text-slate-900">{log.action}</h3><time className="text-xs font-medium text-slate-600">{log.timestamp}</time></div>
                   <p className="mt-1 break-words text-xs text-slate-600">{log.user}{log.role&&<span> · {log.role}</span>}</p>
                   <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50"><summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--portal-brand-action)]">Ver alterações</summary><div className="space-y-1 border-t border-slate-200 px-3 py-2 text-xs leading-5 text-slate-700">{log.details.split('\n').filter(Boolean).map((line,index)=>{const separator=line.indexOf(': ');return <div key={index} className="break-words">{separator>0?<><strong>{line.slice(0,separator)}:</strong> {line.slice(separator+2)}</>:line}</div>;})}</div></details>

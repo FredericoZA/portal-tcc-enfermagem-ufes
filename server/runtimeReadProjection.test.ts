@@ -72,6 +72,13 @@ test('every mutation and unreviewed endpoint still requires canonical hydration'
   }
 });
 
+test('process details can skip audit hydration while older clients retain their response', () => {
+  assert.equal(runtimeReadProjection('GET', '/processes/proc-1/detail', false), 'LEAN');
+  assert.equal(runtimeReadProjection('GET', '/processes/proc-1/detail'), 'FULL');
+  assert.equal(runtimeReadProjection('POST', '/processes/proc-1/detail', false), 'FULL');
+  assert.equal(runtimeReadProjection('GET', '/processes/proc-1/audit-logs', false), 'FULL');
+});
+
 test('signature status reads use the reviewed signature projection only',()=>{
   for(const path of ['/processes/proc-1/signatures','/coordinator/signature-queue','/president/signature-queue','/signatures/jobs'])
     assert.equal(runtimeReadProjection('GET',path),'SIGNATURES',path);
