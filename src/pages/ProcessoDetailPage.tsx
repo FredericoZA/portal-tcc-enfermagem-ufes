@@ -605,7 +605,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const hasIssuedInvitation = Boolean(process.defesa.invitationDriveFileId || process.defesa.invitationSentAt);
   const canOpenRegistrationEdit = isAuthenticated && !readOnly && !process.legacyRecord &&
     !isEvaluationSubmitted && !isAcervoSubmitted && process.status !== 'CONCLUIDO' &&
-    (isMasterAdmin || isStudent || isAdvisor) &&
+    (isMasterAdmin || isAdvisor) &&
     !signatureJobs.some(job => job.status !== 'CANCELED' && Boolean(job.driveSignedFileId || job.driveUnsignedFileId));
   const confirmInvitationRevalidation = () => portalConfirm(
     'A correção altera dados de uma carta-convite já emitida. Ao salvar, a reserva anterior e o convite ficam no histórico. O responsável pelo local receberá uma nova solicitação de confirmação antes da emissão do convite atualizado.',
