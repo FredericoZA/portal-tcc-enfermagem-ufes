@@ -2209,6 +2209,8 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 }
 .portal-tcc-workspace-tabs .portal-tcc-tab-list > button {
   background: var(--portal-surface-card);
+  min-width: 0;
+  white-space: normal;
   border: 1px solid var(--portal-border);
   border-radius: 9px 9px 0 0;
   margin-bottom: -1px;
@@ -2242,7 +2244,7 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
     z-index: 1;
   }
   .portal-tcc-workspace-tabs .portal-tcc-tab-list > button {
-    flex: 1 0 114px;
+    flex: 1 0 132px;
     margin-bottom: 0;
   }
 }
@@ -2253,8 +2255,6 @@ button:has(svg[class*="lucide-trash"]) svg[class*="lucide-trash"] {
 .portal-tcc-record-title { padding: 8px 10px; background: var(--portal-surface-panel); }
 
 /* Compact record: process and participants occupy two medium-gray boxes. */
-.portal-tcc-workspace-tabs .portal-tcc-tab-list { padding: 0; }
-.portal-tcc-workspace-tabs .portal-tcc-tab-list > button { flex: 1 1 0; min-width: 0; white-space: normal; }
 .portal-tcc-cadastral { background: transparent; border: 0; box-shadow: none; }
 .portal-tcc-cadastral > div { padding: 0; }
 .portal-tcc-data-box, .portal-tcc-people-grid { padding: 14px; border: 1px solid var(--portal-border); border-radius: 9px; background: var(--portal-surface-card); }
