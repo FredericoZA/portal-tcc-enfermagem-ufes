@@ -5,6 +5,7 @@ import { runtimeReadProjection } from './runtimeReadProjection';
 test('public repository and legacy references retain the historical catalog', () => {
   for (const path of [
     '/public/repository',
+    '/account-view/accounts',
     '/processes/proc-1/publication-choice',
     '/processes/proc-1/files/trabalho-completo/download',
     '/processes/legado-0001/files/resumo-expandido/download',

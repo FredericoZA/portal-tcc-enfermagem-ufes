@@ -6,7 +6,7 @@ import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../ut
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
 import { SiteZoomControls } from './SiteZoomControls';
-import { apiClient } from '../services/apiClient';
+import { AccountViewControl } from './AccountViewControl';
 import { PORTAL_THEME } from '../theme/portalTheme';
 
 interface HeaderProps {
@@ -19,22 +19,7 @@ interface HeaderProps {
 const PUBLIC_VISITOR_SUFFIX = '@publico.local';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSidebarOpen, onGoHome }) => {
-  const { userEmail, globalRoles, settings, viewingAccount } = useAuth();
-  const [accounts, setAccounts] = useState<{ email: string; name: string }[] | null>(null);
-  const [accountError, setAccountError] = useState('');
-  const [accountBusy, setAccountBusy] = useState(false);
-  const changeAccount = async (email: string | null) => {
-    setAccountError('');
-    setAccountBusy(true);
-    try {
-      await apiClient.setAccountView(email);
-      sessionStorage.removeItem('portal_tcc_identity_cache_v1');
-      window.location.assign(window.location.pathname);
-    } catch (error) {
-      setAccountError(error instanceof Error ? error.message : 'Não foi possível trocar a visualização.');
-      setAccountBusy(false);
-    }
-  };
+  const { userEmail, globalRoles, settings, accountView } = useAuth();
   const installationProfile = resolveInstallationProfile(settings);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
 
@@ -56,13 +41,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSid
   const normalizedEmail = String(userEmail || '').trim().toLowerCase();
   const isPublicVisitor = !normalizedEmail || normalizedEmail.endsWith(PUBLIC_VISITOR_SUFFIX);
   const showAuthenticatedIdentity = !isPublicVisitor;
-  const isMaster = globalRoles.includes('MASTER_ADMIN');
+  const isMaster = globalRoles.includes('MASTER_ADMIN') || Boolean(accountView);
   const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
-  const accessLabel = isMaster
-    ? 'Usuário Master'
-    : isCommissionPresident
-      ? 'Presidente da Comissão'
-      : 'Acesso pelo e-mail';
+  const accessLabel = isCommissionPresident ? 'Presidente da Comissão' : 'Acesso pelo e-mail';
 
   return (
     <header id="portal-header" className="border-b border-slate-200 shadow-2xs sticky top-0 z-30 transition-colors" style={headerStyle}>
@@ -91,32 +72,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSid
             ) : null)}
             <SiteZoomControls />
 
-            <div id="user-profile-summary" className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5">
-              <User className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
-              {isMaster && !viewingAccount && accounts ? (
-                <select className="portal-input max-w-[250px]" aria-label="Conta para visualizar" value="" disabled={accountBusy} onChange={e => { if (e.target.value) void changeAccount(e.target.value); }}>
-                  <option value="">Selecionar conta para consulta</option>
-                  {[...accounts].sort((a,b) => a.name.localeCompare(b.name,'pt-BR')).map(account =>
-                    <option key={account.email} value={account.email}>{account.name} ({account.email})</option>)}
-                </select>
-              ) : isMaster && !viewingAccount ? (
-                <button type="button" className="text-left text-xs" aria-label="Visualizar outra conta do Portal" onClick={() => {
-                  setAccountError('');
-                  void apiClient.getAccountViewTargets().then(setAccounts).catch(() => setAccountError('Não foi possível carregar as contas.'));
-                }}>
-                  <span className="block max-w-[180px] truncate font-bold text-slate-900" title={userEmail}>{userEmail}</span>
-                  <span className="font-semibold text-emerald-700">Visualizar outra conta</span>
-                </button>
-              ) : <div className="text-xs">
-                <div className="max-w-[180px] truncate font-bold text-slate-900" title={userEmail}>{userEmail}</div>
-                <div className="text-[10px] font-bold normal-case tracking-wider text-emerald-700">{accessLabel}</div>
-              </div>}
-            </div>
-            {viewingAccount && <div className="flex flex-wrap items-center gap-2">
-              <span role="status" className="text-xs font-semibold">Consulta como {viewingAccount}</span>
-              <button type="button" className="portal-action" disabled={accountBusy} onClick={() => void changeAccount(null)}>Voltar à visão Master</button>
-            </div>}
-            {accountError && <span role="alert" className="text-xs text-red-800">{accountError}</span>}
+            {isMaster ? <AccountViewControl /> : (
+              <div id="user-profile-summary" className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5">
+                <User className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                <div className="min-w-0 text-xs">
+                  <div className="max-w-[180px] truncate font-bold text-slate-900" title={userEmail}>{userEmail}</div>
+                  <div className="text-[10px] font-bold normal-case tracking-wider text-emerald-700">{accessLabel}</div>
+                </div>
+              </div>
+            )}
             <NotificationBell key={normalizedEmail} />
           </div>
         )}

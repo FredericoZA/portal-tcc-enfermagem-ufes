@@ -239,3 +239,11 @@ export function readAccountViewCookie(req: Request, identity: PortalIdentity | n
     return data.email;
   } catch { return null; }
 }
+
+/** Only a signed view bound to a valid session can request the historical access projection. */
+export function hasAuthenticatedAccountView(req: Request): boolean {
+  const cookies = parseCookies(req);
+  if (!cookies[accountViewCookie()] || !cookies[cookieName()]) return false;
+  try { return Boolean(readAccountViewCookie(req, decodeSession(cookies[cookieName()]))); }
+  catch { return false; }
+}

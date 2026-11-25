@@ -15,6 +15,7 @@ const SIGNATURE_PATHS = new Set([
 ]);
 
 const LITE_PATHS = new Set([
+  '/account-view/accounts',
   '/me',
   '/settings',
   '/setup/status',

@@ -20,6 +20,8 @@ import {
 } from './secureStagedUpload';
 let activeUserEmail = '';
 let activeIdentityRevision = 0;
+let accountViewReadOnly = false;
+export function setAccountViewReadOnly(active: boolean) { accountViewReadOnly = active; }
 // Share only simultaneous default JSON reads. There is no response cache: once
 // a request settles, the next read goes back to the server for current data.
 const pendingReads = new Map<string, Promise<unknown>>();
@@ -140,6 +142,9 @@ export function getActiveUserEmail(): string {
 
 export async function fetchApiRequest<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
   const mutation=!['GET','HEAD'].includes((options.method||'GET').toUpperCase());
+  if (mutation && accountViewReadOnly && endpoint !== '/api/account-view' && endpoint !== '/api/auth/logout') {
+    throw new ApiRequestError('A visão de outra conta é somente para consulta.', 403, 'ACCOUNT_VIEW_READ_ONLY');
+  }
   if(mutation)invalidatePendingReads();
   const identityRevision=activeIdentityRevision;
   const { timeoutMs, ...requestOptions } = options;
@@ -306,7 +311,7 @@ export const apiClient = {
   setAccountView: (email: string | null) => fetchApi<{viewingAccount: string | null}>('/api/account-view', {
     method: 'POST', body: JSON.stringify({ email }),
   }),
-  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean; canRegisterProcess: boolean; viewingAccount?: string | null }>('/api/me'),
+  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean; canRegisterProcess: boolean; viewingAccount?: string | null; accountView?: { masterEmail: string; targetName: string } | null }>('/api/me'),
   getAuthStatus:()=>fetchApi<{otp:{configured:boolean};google:{oauthConfigured:boolean;connected:boolean};bootstrapMasterConfigured:boolean}>('/api/setup/status'),
   requestLoginCode:(email:string)=>fetchApi<{sent:boolean;expiresInMinutes:number;message:string}>('/api/auth/request-code',{method:'POST',body:JSON.stringify({email})}),
   verifyLoginCode:async(email:string,code:string)=>{

@@ -60,6 +60,8 @@ const labels: Record<string, string> = {
   VERIFICACAO_INTEGRIDADE_DRIVE: 'Arquivos do Drive conferidos', GERACAO_DOSSIE_INSTITUCIONAL: 'Dossiê do TCC gerado',
   DOWNLOAD_PUBLICO_AUTORIZADO: 'Documento público consultado', INICIO_TRANSFERENCIA_ADMINISTRACAO: 'Transferência da administração solicitada',
   CONCLUSAO_TRANSFERENCIA_ADMINISTRACAO: 'Transferência da administração concluída', CANCELAMENTO_TRANSFERENCIA_ADMINISTRACAO: 'Transferência da administração cancelada',
+  VISUALIZACAO_DE_CONTA: 'Master abriu a visão de outra conta',
+  RETORNO_VISAO_MASTER: 'Master voltou à própria visão',
   TROCA_DONO_EMERGENCIA_MASTER: 'Responsável Master alterado', SOBRESCRITA_CONFLITO_DEFESA: 'Conflito de agendamento autorizado pela administração',
 };
 const statuses: Record<string, string> = {
@@ -87,7 +89,7 @@ const entities: Record<string, string> = {
   integration: 'Integrações do Portal', authorized_access: 'Lista de acesso', authorized_student_batch: 'Lista de acesso',
   signature_job: 'Registro de assinatura', system_backup: 'Backup do Portal', installation_profile: 'Identificação do Portal',
   academic_cycle: 'Período acadêmico', feature_flag: 'Funções do Portal', security: 'Segurança do acesso',
-  administration_transfer: 'Administração do Portal', workflow_run: 'Fluxos do TCC', publication: 'Publicação dos arquivos',
+  account_view: 'Consulta de conta', administration_transfer: 'Administração do Portal', workflow_run: 'Fluxos do TCC', publication: 'Publicação dos arquivos',
   process_deletion: 'Exclusão de TCC', email_delivery: 'Envio de e-mail', form_submission: 'Formulários', spreadsheet: 'Padrão das planilhas',
 };
 const fields: Record<string, string> = {
@@ -106,7 +108,7 @@ const fields: Record<string, string> = {
   allowPublicFullText: 'Publicação do TCC autorizada', allowPublicExtendedAbstract: 'Publicação do resumo expandido autorizada',
   updatedBy: 'Alterado por', createdBy: 'Criado por', courseName: 'Nome do curso', institutionalName: 'Nome da instituição',
   portalName: 'Nome do Portal', masterEmail: 'E-mail do Master', commissionPresidentEmail: 'E-mail da presidência',
-  commissionPresidentName: 'Nome da presidência', contactEmail: 'E-mail de contato', title: 'Título', description: 'Descrição',
+  viewedAccountEmail: 'Conta consultada', commissionPresidentName: 'Nome da presidência', contactEmail: 'E-mail de contato', title: 'Título', description: 'Descrição',
   headerLogo: 'Imagem do cabeçalho', logoUrl: 'Imagem do cabeçalho', imageUrl: 'Imagem', image: 'Imagem', headerImage: 'Imagem do cabeçalho',
   body: 'Texto do modelo', name: 'Nome', text: 'Texto', enabled: 'Disponível', format: 'Formato', imageMimeType: 'Formato da imagem',
   checked: 'Itens verificados', failed: 'Pendências', cleanupStatus: 'Situação da limpeza', cleanupPending: 'Limpeza pendente', deleteFiles: 'Limpeza de arquivos solicitada',

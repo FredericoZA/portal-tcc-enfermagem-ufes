@@ -6,7 +6,7 @@ import {canonicalDriveOriginalLinks} from './server/driveOriginalLinks';
 import {processDriveReaderEmails} from './server/integrations/processDriveReaders';
 import {rateLimit} from 'express-rate-limit';
 import {restoreChangesPublicFiles,assertLegacyPrivateClassificationConsistency} from './server/workflow/publicationRestoreGuard';
-import {legacyEvaluationParticipantRole} from './server/legacyPrivateAccess';
+import {legacyEvaluationParticipantRole,verifiedLegacyParticipants} from './server/legacyPrivateAccess';
 import {installLegacyEvaluationDocumentRoutes} from './server/legacyEvaluationDocumentRoutes';
 import {installLegacyEvaluationParticipantRoutes,legacyEvaluationAccessRevision} from './server/legacyEvaluationParticipantRoutes';
 import {publicRepositoryDriveLinks} from './server/integrations/publicRepositoryDrive';
@@ -199,7 +199,7 @@ import {
   enrichProcessDocumentsWithDrive
 } from './src/services/serverDriveSync';
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
-import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie, readAccountViewCookie, writeAccountViewCookie } from './server/security/firebaseAuth';
+import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasAuthenticatedAccountView, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie, readAccountViewCookie, writeAccountViewCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
 import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, refreshPortalSignatureState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
@@ -2632,7 +2632,11 @@ export async function createPortalApp() {
       finishPreviousWrites?.();
       const finishHydration=registrationTiming?.measure('hydrate');
       let remote:PersistedPortalState|null;
-      const readProjection=liteRuntimeReadsEnabled?(canReadPagedAudit(req.method,req.path,req.query)?'LEAN':runtimeReadProjection(req.method,req.path)):'FULL';
+      const routeProjection=liteRuntimeReadsEnabled?(canReadPagedAudit(req.method,req.path,req.query)?'LEAN':runtimeReadProjection(req.method,req.path)):'FULL';
+      // A conta consultada pode ter acesso só pelo acervo histórico. Revalide
+      // esse vínculo usando a revisão atual, inclusive nas leituras de assinatura.
+      const readProjection=(routeProjection==='LEAN'||routeProjection==='SIGNATURES')&&hasAuthenticatedAccountView(req)
+        ? 'LITE' : routeProjection;
       try{remote=readProjection==='SIGNATURES'
         ?await refreshPortalSignatureState<PersistedPortalState>()
         :readProjection==='LEAN'
@@ -2692,65 +2696,107 @@ export async function createPortalApp() {
 
   app.use('/api', attachPortalIdentity);
   app.use('/api',(req,res,next)=>{const identity=getPortalIdentity(req);if(identity&&(identity.issuedAt<Number(currentSettings.sessionValidAfter||0)||revokedSessionIdsStore.has(identity.sessionId))){(req as any).portalIdentity=null;clearPortalSessionCookie(res);}next();});
-  const viewTargets = () => {
-    const accounts = new Map<string, string>();
-    for (const entry of authorizedStudentsStore) {
-      const email = normalizeEmail(entry.email);
-      if (entry.active && canRequestPortalAccess(email) && !hasFullAdministration(email)) accounts.set(email, entry.nome || email);
-    }
-    const president = normalizeEmail(currentSettings.commissionPresidentEmail || '');
-    if (president && !hasFullAdministration(president)) accounts.set(president, 'Presidência da Comissão');
-    return accounts;
-  };
-  app.get('/api/account-view/accounts', (req, res) => {
-    const actor = getPortalIdentity(req);
-    if (!actor || !hasFullAdministration(actor.email) || readAccountViewCookie(req, actor) !== undefined) return res.status(403).json({ error: 'Acesso exclusivo da visão Master.' });
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.json([...viewTargets()].map(([email, name]) => ({ email, name })));
+  const presidencyView = () => ({
+    email: normalizeEmail(currentSettings.commissionPresidentEmail || ''),
+    name: currentSettings.commissionPresidentName?.trim() || 'Presidência da Comissão',
   });
-  app.post('/api/account-view', async (req, res) => {
-    const actor = getPortalIdentity(req);
-    if (!actor || !hasFullAdministration(actor.email)) return res.status(403).json({ error: 'Acesso exclusivo do Master.' });
-    const target = req.body?.email === null ? null : normalizeEmail(String(req.body?.email || ''));
-    if (target !== null && !viewTargets().has(target)) return res.status(404).json({ error: 'Conta ativa não encontrada.' });
+  const legacyViewTarget = (email: string) => {
+    for (const record of legacyAcademicRecordsStore) {
+      if (!legacyEvaluationRole(record, email)) continue;
+      const binding = verifiedLegacyParticipants(record, hasFullAdministration)!;
+      const person = [...binding.authors, binding.advisor].find(contact => contact.email === email);
+      if (person) return { email, name: person.nome };
+    }
+  };
+  const viewTarget = (email: string) => {
+    if (!isValidPortalEmail(email) || hasFullAdministration(email)) return;
+    const president = presidencyView();
+    if (president.email === email) return president;
+    const entry = authorizedStudentsStore.find(row => row.active && normalizeEmail(row.email) === email);
+    if (entry) return { email, name: entry.nome?.trim() || email };
+    return legacyViewTarget(email);
+  };
+  const viewTargets = () => {
+    const candidates = new Set(authorizedStudentsStore.filter(entry => entry.active).map(entry => normalizeEmail(entry.email)));
+    candidates.add(presidencyView().email);
+    for (const record of legacyAcademicRecordsStore) {
+      const binding = verifiedLegacyParticipants(record, hasFullAdministration);
+      if (binding) for (const person of [...binding.authors, binding.advisor]) candidates.add(person.email);
+    }
+    return Array.from(candidates, viewTarget).filter(target => target !== undefined)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR') || a.email.localeCompare(b.email));
+  };
+  app.get('/api/account-view/accounts', requireAuthenticated, (req, res) => {
+    const actor = getPortalIdentity(req)!;
+    if (!hasFullAdministration(actor.email)) return res.status(403).json({ error: 'Acesso exclusivo do Master.' });
+    res.json(viewTargets());
+  });
+  app.post('/api/account-view', requireAuthenticated, async (req, res) => {
+    const actor = getPortalIdentity(req)!;
+    if (!hasFullAdministration(actor.email)) return res.status(403).json({ error: 'Acesso exclusivo do Master.' });
+    const requestedEmail = req.body?.email;
+    if (requestedEmail !== null && (typeof requestedEmail !== 'string' || !isValidPortalEmail(requestedEmail))) {
+      return res.status(400).json({ error: 'Selecione uma conta válida.' });
+    }
+    const target = requestedEmail === null ? null : viewTarget(normalizeEmail(requestedEmail));
+    if (requestedEmail !== null && !target) return res.status(404).json({ error: 'Conta ativa não encontrada.' });
     const previous = readAccountViewCookie(req, actor);
-    auditLogsStore.push({
-      id: `account-view-${randomBytes(12).toString('hex')}`,
-      actorEmail: actor.email, actorRoles: ['MASTER_ADMIN'], action: target ? 'VISUALIZACAO_DE_CONTA' : 'RETORNO_VISAO_MASTER',
-      entityType: 'account_view', entityId: target || previous || actor.email,
-      timestamp: new Date().toISOString(),
-    });
-    await persistPortalStateDurably();
-    writeAccountViewCookie(res, actor, target);
-    res.setHeader('Cache-Control', 'private, no-store');
-    res.json({ viewingAccount: target });
+    if (target?.email !== previous) {
+      const audit: AuditLog = {
+        id: `account-view-${randomBytes(12).toString('hex')}`,
+        actorEmail: actor.email,
+        actorRoles: ['MASTER_ADMIN'],
+        action: target ? 'VISUALIZACAO_DE_CONTA' : 'RETORNO_VISAO_MASTER',
+        entityType: 'account_view',
+        entityId: target?.email || previous || actor.email,
+        before: previous ? { viewedAccountEmail: previous } : undefined,
+        after: target ? { viewedAccountEmail: target.email } : undefined,
+        timestamp: new Date().toISOString(),
+      };
+      auditLogsStore.push(audit);
+      try { await persistPortalStateDurably(); }
+      catch (error) {
+        const index = auditLogsStore.indexOf(audit);
+        if (index !== -1) auditLogsStore.splice(index, 1);
+        throw error;
+      }
+    }
+    writeAccountViewCookie(res, actor, target?.email ?? null);
+    res.json({ viewingAccount: target?.email ?? null });
   });
   const accountViewReadPaths = [
-    /^\/(?:me|settings|processes|google-calendar-events|signatures\/jobs|notifications|notification-preferences|sync\/version)$/,
-    /^\/public\/(?:repository|calendar-data|calendar|indicators|installation-profile|sync\/version)$/,
-    /^\/public\/processes\/[^/]+(?:\/reservation-receipts)?$/,
-    /^\/processes\/[^/]+(?:\/(?:detail|documents|signatures|verifications|evaluation\/(?:schema|draft)|publication-choice|forms|form-submissions|data-review\/schema))?$/,
+    /^\/(?:me|settings|capabilities|academic-cycles|processes|google-calendar-events|notifications|notification-preferences|sync\/version)$/,
+    /^\/public\/(?:repository|calendar-data|calendar|calendar\.ics|indicators|installation-profile|sync\/version|attendance-declaration\.pdf)$/,
+    /^\/public\/processes\/[^/]+(?:\/reservation-receipts?)?$/,
+    /^\/(?:public\/)?processes\/[^/]+\/(?:documents\/[^/]+|files\/(?:trabalho-completo|resumo-expandido))\/download$/,
+    /^\/public\/legacy-academic-records\/[^/]+\/documents\/\d+\/download$/,
+    /^\/legacy-academic-records(?:\/[^/]+\/(?:files\/\d+\/download|evaluation-documents(?:\/\d+\/download)?))?$/,
+    /^\/processes\/[^/]+(?:\/(?:detail|documents|signatures|verifications|evaluation\/(?:schema|draft)|publication-choice|forms(?:\/[^/]+)?|form-submissions|data-review\/schema|audit-logs(?:\/pdf)?|location-proof\/download))?$/,
     /^\/(?:table-preferences|notifications)\/[^/]+$/,
     /^\/(?:president|coordinator)\/signature-queue$/,
+    /^\/signatures\/jobs\/[^/]+\/govbr\/download$/,
     /^\/integrations\/asten\/status$/,
     /^\/repository\/document-availability$/,
     /^\/registration\/(?:bootstrap|draft)$/,
     /^\/forms\/registration-(?:schema|suggestions)$/,
   ];
   app.use('/api', (req, res, next) => {
+    // Logout always revokes the actual authenticated session.
+    if (req.method === 'POST' && req.path === '/auth/logout') return next();
     const actor = getPortalIdentity(req);
-    const target = readAccountViewCookie(req, actor);
-    if (target === undefined) return next();
-    res.setHeader('Cache-Control', 'private, no-store');
-    if (!actor || !hasFullAdministration(actor.email) || !target || !viewTargets().has(target)) {
-      writeAccountViewCookie(res, actor, null);
-      return res.status(403).json({ error: 'A visualização de conta expirou. Atualize o Portal para voltar à sua sessão.' });
+    const selectedEmail = readAccountViewCookie(req, actor);
+    if (selectedEmail === undefined) return next();
+    const target = selectedEmail && actor && hasFullAdministration(actor.email) ? viewTarget(selectedEmail) : undefined;
+    if (!target || !actor) {
+      if (req.method === 'GET' && req.path === '/me') writeAccountViewCookie(res, actor, null);
+      return res.status(403).json({ error: 'A conta selecionada não está mais disponível para consulta.', code: 'ACCOUNT_VIEW_EXPIRED' });
     }
     if (req.method !== 'GET' || !accountViewReadPaths.some(path => path.test(req.path))) {
-      return res.status(403).json({ error: 'A visualização de conta é somente para consulta.', code: 'ACCOUNT_VIEW_READ_ONLY' });
+      return res.status(403).json({ error: 'A visão de outra conta é somente para consulta.', code: 'ACCOUNT_VIEW_READ_ONLY' });
     }
-    res.locals.viewingAccount = target;
-    const effective: typeof actor = { ...actor, email: target, uid: `account-view:${target}`, authTime: 0 };
+    res.locals.viewingAccount = target.email;
+    res.locals.accountView = { targetName: target.name, masterEmail: actor.email };
+    const effective = { ...actor, email: target.email, uid: `account-view:${target.email}`, authTime: 0 };
     (req as express.Request & { portalIdentity: typeof effective }).portalIdentity = effective;
     next();
   });
@@ -3270,7 +3316,7 @@ export async function createPortalApp() {
       userEmail: email,
       globalRoles,
       memberships,
-      isAuthenticated: Boolean(identity), canRegisterProcess:Boolean(identity&&canRegisterProcess(identity.email)), authenticationMode:identity?.method||'PUBLIC', viewingAccount: res.locals.viewingAccount || null
+      isAuthenticated: Boolean(identity), canRegisterProcess:Boolean(identity&&canRegisterProcess(identity.email)), authenticationMode:identity?.method||'PUBLIC', viewingAccount: res.locals.viewingAccount || null, accountView: res.locals.accountView || null
     });
   });
 
@@ -3316,7 +3362,7 @@ export async function createPortalApp() {
     }catch{await enforceMinimumResponseTime(startedAt);res.status(401).json({error:'Código inválido ou expirado.'});}
   });
 
-  app.post('/api/auth/logout',async(req,res)=>{const identity=getPortalIdentity(req);if(identity?.sessionId){revokedSessionIdsStore.add(identity.sessionId);await persistPortalStateDurably();}clearPortalSessionCookie(res);res.json({signedOut:true});});
+  app.post('/api/auth/logout',async(req,res)=>{const identity=getPortalIdentity(req);if(identity?.sessionId){revokedSessionIdsStore.add(identity.sessionId);await persistPortalStateDurably();}clearPortalSessionCookie(res);writeAccountViewCookie(res,identity,null);res.json({signedOut:true});});
 
   app.post('/api/auth/request-recovery-code',async(req,res)=>{
     const startedAt=Date.now();
@@ -6024,8 +6070,10 @@ export async function createPortalApp() {
     const processAccess=canAccessProcess(identity.email,process.id);
     if(!processAccess&&!canAccessPresidencyDeclaration(identity.email,process))return res.status(404).json({error:'Processo não encontrado.'});
     res.setHeader('Cache-Control','private, no-store');
-    if(processAccess)scheduleRepositorySignatureRecovery(process,identity.email);
-    scheduleCurrentAstenCheck(process,processAccess?['ATA','TERMO','DECLARACAO']:['DECLARACAO']);
+    if (!res.locals.viewingAccount) {
+      if(processAccess)scheduleRepositorySignatureRecovery(process,identity.email);
+      scheduleCurrentAstenCheck(process,processAccess?['ATA','TERMO','DECLARACAO']:['DECLARACAO']);
+    }
     res.json(processSignaturesFor(process.id,processAccess));
   });
 
