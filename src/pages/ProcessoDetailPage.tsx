@@ -47,7 +47,6 @@ import {ProcessDeletionDialog} from '../components/ProcessDeletionDialog';
 import type {DeletionDialogTarget} from '../utils/processDeletionDialog';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
-import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
 import {
@@ -216,7 +215,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     window.addEventListener('keydown', closeHistoryOnEscape);
     return () => window.removeEventListener('keydown', closeHistoryOnEscape);
   }, [showAuditLogModal]);
-  const [correctionDoc, setCorrectionDoc] = useState<ProcessDocument | null>(null);
   const [retryingDriveData,setRetryingDriveData]=useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletionTarget,setDeletionTarget]=useState<DeletionDialogTarget|null>(null);
@@ -1197,7 +1195,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   tone={termDeclined?'denied':pendingSignature?'progress':isDownloadable?'available':'pending'}
                   available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
                   onView={()=>void handleDocumentAccess(doc,'view')} onDownload={()=>void handleDocumentAccess(doc,'download')}>
-                  {!readOnly&&isDownloadable&&<button type="button" className="portal-action text-xs" onClick={()=>setCorrectionDoc(doc)}>Solicitar ajuste / correção</button>}
                   {(automaticStatus || canUseGovbr || canSendAsten) && <div className="portal-document-signature-actions flex flex-col gap-2">
                     {automaticStatus && !pendingSignature && <p role="status" className="text-center text-xs font-semibold">{automaticStatus}</p>}
                     {canSendAsten && <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
@@ -1421,16 +1418,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           </div>
         </div>
       )}
-
-      {/* Document correction keeps its own action; Ver opens the Drive original. */}
-      <CorrectionRequestModal
-        document={correctionDoc}
-        processId={process.id}
-        onClose={() => setCorrectionDoc(null)}
-        onSuccess={() => loadData()}
-      />
-
-
 
     </div>
   );

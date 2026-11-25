@@ -420,10 +420,6 @@ export const apiClient = {
     return fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify(staged)});
   },async()=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(job.id)}/govbr/complete`,{method:'POST',timeoutMs:LONG_REQUEST_TIMEOUT_MS,body:JSON.stringify({fileName:file.name,contentBase64:await fileToLegacyBase64(file)})})),
   approveGovbrPdf:(jobId:string,confirmation:{sha256:string;itiApproved:boolean;signerMatches:boolean;documentMatches:boolean})=>fetchApi<SignatureJob>(`/api/signatures/jobs/${encodeURIComponent(jobId)}/govbr/approve`,{method:'POST',body:JSON.stringify(confirmation)}),
-  requestCorrection: (id: string, docId: string, data: { description: string }) => fetchApi<DocumentCorrectionRequest>(`/api/processes/${id}/documents/${docId}/correction-request`, {
-    method: 'POST',
-    body: JSON.stringify(data)
-  }),
   getCoordinatorQueue: () => fetchApi<PresidencyQueueItem[]>('/api/coordinator/signature-queue'),
   uploadSignedDocument: (processId: string, fileName: string) => fetchApi<any>('/api/coordinator/upload-signed', {
     method: 'POST',

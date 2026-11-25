@@ -5074,7 +5074,7 @@ export async function createPortalApp() {
       req.body?.revalidateIssuedInvitation === true;
     if (revalidateInvitation && req.body.expectedDataRevision !== existing.dataRevision)
       return res.status(409).json({ error: 'Atualize o TCC antes de confirmar a revalidação da reserva.', code: 'STALE_DATA_REVISION' });
-    if(!dataReview&&!scheduleOnly&&((invitationIssued&&!revalidateInvitation)||hasIssuedSignature)&&Object.keys(req.body||{}).some(key=>['protocolo','titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca','defesa'].includes(key)))return res.status(409).json({error:'Já existe documento emitido com estes dados. Use a reabertura formal da etapa ou registre uma correção, preservando o histórico.',code:'ISSUED_DOCUMENT_LOCK'});
+    if(!dataReview&&!scheduleOnly&&((invitationIssued&&!revalidateInvitation)||hasIssuedSignature)&&Object.keys(req.body||{}).some(key=>['protocolo','titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca','defesa'].includes(key)))return res.status(409).json({error:'Já existe documento emitido com estes dados. Use a ação de revisão prevista para a etapa do TCC.',code:'ISSUED_DOCUMENT_LOCK'});
 
 
 
@@ -6115,64 +6115,12 @@ export async function createPortalApp() {
     }
   });
 
-  // POST /api/processes/:id/documents/:docId/correction-request
-  app.post('/api/processes/:id/documents/:docId/correction-request', requireAuthenticated, async (req, res) => {
-    const actorEmail=getPortalIdentity(req)!.email;if(!canAccessProcess(actorEmail,req.params.id))return res.status(404).json({error:'Processo não encontrado.'});
-    const process=processesStore.find(item=>item.id===req.params.id);
-    const document=process&&generateDefaultDocuments(process).find(item=>item.id===req.params.docId);
-    if(!document)return res.status(404).json({error:'Documento não encontrado.'});
-    const rawDescription=req.body?.description;
-    if(typeof rawDescription!=='string')return res.status(400).json({error:'Informe uma descrição textual válida para o ajuste.'});
-    if(rawDescription.length>4000)return res.status(413).json({error:'Descreva o ajuste em até 4.000 caracteres.',code:'CORRECTION_DESCRIPTION_TOO_LONG'});
-    const description=rawDescription.normalize('NFC').trim();
-    if(!description||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(description))return res.status(400).json({error:'Informe uma descrição textual válida para o ajuste.'});
-    if(description.length>4000)return res.status(413).json({error:'Descreva o ajuste em até 4.000 caracteres.',code:'CORRECTION_DESCRIPTION_TOO_LONG'});
-    const documentVersion=req.body?.documentVersion??document.currentVersion;
-    if(!Number.isSafeInteger(documentVersion)||documentVersion<1||documentVersion>document.currentVersion)return res.status(400).json({error:'Versão do documento inválida.'});
-    const requesterTickets=correctionRequestsStore.filter(ticket=>ticket.processId===process.id&&normalizeEmail(String(ticket.requestedByEmail||''))===actorEmail);
-    const isOpen=(ticket:DocumentCorrectionRequest)=>!['CORRIGIDO','RECUSADO'].includes(ticket.status);
-    const canonicalDescription=(value:string)=>value.normalize('NFC').trim().replace(/\s+/g,' ');
-    const duplicate=requesterTickets.find(ticket=>isOpen(ticket)&&ticket.documentId===document.id&&Number(ticket.documentVersion||1)===documentVersion&&typeof ticket.description==='string'&&canonicalDescription(ticket.description)===canonicalDescription(description));
-    if(duplicate)return res.json(duplicate);
-    // Count the durable history, including older rows. Never truncate existing tickets to make room.
-    if(requesterTickets.filter(isOpen).length>=5)return res.status(429).json({error:'Você já possui cinco solicitações abertas neste processo. Aguarde a análise antes de enviar outra.',code:'CORRECTION_OPEN_LIMIT'});
-    const recentTickets=requesterTickets.filter(ticket=>Date.parse(ticket.createdAt)>=Date.now()-24*60*60_000);
-    if(recentTickets.length>=10)return res.status(429).json({error:'O limite de dez solicitações por processo em 24 horas foi atingido. Tente novamente mais tarde.',code:'CORRECTION_DAILY_LIMIT'});
-
-    const newTicket: DocumentCorrectionRequest = {
-      id: `req-${randomBytes(12).toString('hex')}`,
-      processId: req.params.id,
-      documentId: req.params.docId,
-      documentVersion,
-      requestedByEmail: actorEmail,
-      requestedByRoles: [...getUserRolesForEmail(actorEmail).globalRoles,...getActiveProcessRoles(actorEmail,process.id)],
-      description,
-      status: 'ABERTO',
-      createdAt: new Date().toISOString()
-    };
-
-    correctionRequestsStore.push(newTicket);
-
-    const audit:AuditLog={
-      id: `log-${newTicket.id}`,
-      processId: req.params.id,
-      actorEmail,
-      actorRoles: newTicket.requestedByRoles,
-      action: 'SOLICITACAO_AJUSTE_DOCUMENTO',
-      entityType: 'ticket_correcao',
-      entityId: newTicket.id,
-      after: {documentId:document.id,documentVersion,descriptionLength:description.length,descriptionSha256:createHash('sha256').update(description).digest('hex'),status:newTicket.status},
-      timestamp: new Date().toISOString()
-    };
-    auditLogsStore.push(audit);
-
-    try{await persistPortalStateDurably();}
-    catch{
-      correctionRequestsStore=correctionRequestsStore.filter(ticket=>ticket!==newTicket);
-      auditLogsStore=auditLogsStore.filter(item=>item!==audit);
-      return res.status(503).json({error:'Não foi possível confirmar o registro da solicitação. Tente novamente.'});
-    }
-    res.status(201).json(newTicket);
+  // Browsers with an older Portal build still receive guidance from the retired route.
+  app.post('/api/processes/:id/documents/:docId/correction-request', requireAuthenticated, (_req, res) => {
+    res.status(410).json({
+      error: 'As correções são feitas pelas ações da etapa correspondente do TCC.',
+      code: 'DOCUMENT_CORRECTION_REQUEST_RETIRED',
+    });
   });
 
   app.get(['/api/president/signature-queue','/api/coordinator/signature-queue'],requireAuthenticated,requirePresidencyOperator,(_req,res)=>{
