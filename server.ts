@@ -2722,10 +2722,12 @@ export async function createPortalApp() {
     res.json({ viewingAccount: target });
   });
   const accountViewReadPaths = [
-    /^\/(?:me|settings|processes|google-calendar-events|signatures\/jobs|notifications|sync\/version)$/,
+    /^\/(?:me|settings|processes|google-calendar-events|signatures\/jobs|notifications|notification-preferences|sync\/version)$/,
     /^\/public\/(?:repository|calendar-data|calendar|indicators|installation-profile|sync\/version)$/,
     /^\/public\/processes\/[^/]+(?:\/reservation-receipts)?$/,
-    /^\/processes\/[^/]+(?:\/(?:documents|signatures|verifications|evaluation\/(?:schema|draft)|publication-choice|forms|form-submissions|data-review\/schema))?$/,
+    /^\/processes\/[^/]+(?:\/(?:detail|documents|signatures|verifications|evaluation\/(?:schema|draft)|publication-choice|forms|form-submissions|data-review\/schema))?$/,
+    /^\/(?:table-preferences|notifications)\/[^/]+$/,
+    /^\/(?:president|coordinator)\/signature-queue$/,
     /^\/repository\/document-availability$/,
     /^\/registration\/(?:bootstrap|draft)$/,
     /^\/forms\/registration-(?:schema|suggestions)$/,
@@ -5970,7 +5972,7 @@ export async function createPortalApp() {
     const process=findProcessByReference(req.params.id);
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     res.json({
-      process:processWithPendingAtaStage(process,signatureJobsStore),
+      process:processWithPendingAtaStage(advisorInstitutionResolver(processesStore)(process),signatureJobsStore),
       documents:processDocumentsFor(process,identity.email),
       signatures:processSignaturesFor(process.id,true),
       reservationReceipts:reservationReceipts(process).map(item=>item.summary),
