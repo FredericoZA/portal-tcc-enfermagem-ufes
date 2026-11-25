@@ -355,7 +355,7 @@ export const apiClient = {
   getRegistrationAttempt: (attempt: string) => fetchApi<{id:string}>(`/api/registration/attempts/${encodeURIComponent(attempt)}`, {
     cache: 'no-store', timeoutMs: 5_000
   }),
-  updateProcess: (id: string, data: Omit<Partial<ProcessData>, 'aluno1' | 'aluno2'> & { aluno1?: Partial<ProcessData['aluno1']>; aluno2?: Partial<NonNullable<ProcessData['aluno2']>> | null; expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
+  updateProcess: (id: string, data: Omit<Partial<ProcessData>, 'aluno1' | 'aluno2'> & { revalidateIssuedInvitation?: true; aluno1?: Partial<ProcessData['aluno1']>; aluno2?: Partial<NonNullable<ProcessData['aluno2']>> | null; expectedDataRevision?: number }) => fetchApi<WorkflowProcessResponse&{reservationRestarted?:boolean}>(`/api/processes/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data)
   }),

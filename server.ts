@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { finalDeliveryBlocker } from './src/utils/finalDeliveryGate';
 import { advisorInstitutionResolver } from './server/ufesFacultyInstitution';
 import type { Server as HttpServer } from 'node:http';
@@ -5013,7 +5014,13 @@ export async function createPortalApp() {
     if(dataReview&&(existing.avaliacao.reviewedAta||signatureJobsStore.some(job=>job.processId===existing.id&&job.documentType==='ATA'&&job.status!=='CANCELED')))return res.status(409).json({error:'Já existe ata registrada ou em preparação para assinatura. Use Reabrir conceito e ata antes de corrigir os dados.',code:'ATA_REOPEN_REQUIRED'});
     if(signatureJobsStore.some(job=>job.processId===existing.id&&['SENDING','SENT','PARTIALLY_SIGNED','SIGNED','DRIVE_SYNC_PENDING'].includes(job.status)))return res.status(409).json({error:'Há documento em assinatura. Cancele ou conclua o envelope antes de alterar os dados do TCC.',code:'ACTIVE_SIGNATURE_ENVELOPE'});
     const invitationIssued = Boolean(existing.defesa.invitationDriveFileId || existing.defesa.invitationSentAt);
-    if(!dataReview&&!scheduleOnly&&(invitationIssued||signatureJobsStore.some(job=>job.processId===existing.id&&job.status!=='CANCELED'&&(job.driveUnsignedFileId||job.driveSignedFileId)))&&Object.keys(req.body||{}).some(key=>['protocolo','titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca','defesa'].includes(key)))return res.status(409).json({error:'Já existe documento emitido com estes dados. Use a reabertura formal da etapa ou registre uma correção, preservando o histórico.',code:'ISSUED_DOCUMENT_LOCK'});
+    const hasIssuedSignature = signatureJobsStore.some(job => job.processId === existing.id &&
+      job.status !== 'CANCELED' && (job.driveUnsignedFileId || job.driveSignedFileId));
+    const revalidateInvitation = invitationIssued && !dataReview && !scheduleOnly && !hasIssuedSignature &&
+      req.body?.revalidateIssuedInvitation === true;
+    if (revalidateInvitation && req.body.expectedDataRevision !== existing.dataRevision)
+      return res.status(409).json({ error: 'Atualize o TCC antes de confirmar a revalidação da reserva.', code: 'STALE_DATA_REVISION' });
+    if(!dataReview&&!scheduleOnly&&((invitationIssued&&!revalidateInvitation)||hasIssuedSignature)&&Object.keys(req.body||{}).some(key=>['protocolo','titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca','defesa'].includes(key)))return res.status(409).json({error:'Já existe documento emitido com estes dados. Use a reabertura formal da etapa ou registre uma correção, preservando o histórico.',code:'ISSUED_DOCUMENT_LOCK'});
 
 
 
@@ -5033,7 +5040,7 @@ export async function createPortalApp() {
     if(req.body?.authorOrder!==undefined&&!['ALUNO_1_FIRST','ALUNO_2_FIRST'].includes(req.body.authorOrder))return res.status(400).json({error:'Escolha uma ordem válida para os autores.'});
     const before = JSON.parse(JSON.stringify(existing));
     const {globalRoles}=getUserRolesForEmail(actorEmail),isAdministrative=isFullAdministrator;
-    const canCorrectBeforeInvitation=!invitationIssued&&activeRoles.some(role=>role==='STUDENT'||role==='ADVISOR');
+    const canCorrectBeforeInvitation=(!invitationIssued||revalidateInvitation)&&activeRoles.some(role=>role==='STUDENT'||role==='ADVISOR');
     const allowedKeys=scheduleOnly?[]:dataReview||isAdministrative||canCorrectBeforeInvitation?['titulo','authorOrder','aluno1','aluno2','orientador','coorientador','banca',...(dataReview?['registrationAnswers']:[])]:['titulo'];
     const forbiddenKeys=Object.keys(req.body||{}).filter(key=>['avaliacao','acervo','etapaAtual','status','driveFolderId','driveFolderUrl','driveSyncedAt','driveDataSync'].includes(key));
     if(forbiddenKeys.length)return res.status(400).json({error:'Conceito e ata, entrega final, estado e vínculos do Drive só podem mudar pelas ações próprias do fluxo.',code:'PROTECTED_WORKFLOW_FIELDS'});
@@ -5092,7 +5099,11 @@ export async function createPortalApp() {
       overriddenConflicts=conflicts;
     }
 
-    const reservationRestarted=!dataReview&&scheduleChanged&&canRestartReservation(existing)&&!signatureJobsStore.some(job=>job.processId===existing.id&&job.status!=='CANCELED'&&(job.driveUnsignedFileId||job.driveSignedFileId));
+    if (revalidateInvitation && Object.keys(acceptedUpdates).every(key => isDeepStrictEqual(
+      existing[key as keyof ProcessData], updated[key as keyof ProcessData],
+    ))) return res.json(existing);
+    const reservationRestarted = !dataReview && (scheduleChanged || revalidateInvitation) &&
+      canRestartReservation(existing) && !hasIssuedSignature;
     if(reservationRestarted)updated=restartReservation(existing,updated,actorEmail,updated.updatedAt);
     const renamedFolder=updated.protocolo!==existing.protocolo&&Boolean(existing.driveFolderId);
     if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:existing.protocolo,protocol:updated.protocolo,rootFolderId:currentSettings.driveRootFolderId||'',processId:existing.id,studentNames:[updated.aluno1.nome,updated.aluno2?.nome].filter(Boolean) as string[]});

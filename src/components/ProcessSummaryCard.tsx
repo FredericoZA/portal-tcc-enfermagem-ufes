@@ -17,6 +17,7 @@ import type { IntegrationStudioSettings } from '../types/integrationStudio';
 type ProcessSummaryProps = {
   process: ProcessData;
   canEdit: boolean;
+  confirmInvitationRevalidation?: () => Promise<boolean>;
   canEditReservation?: boolean;
   advisorViewerEmail?: string;
   isAuthenticated?: boolean;
@@ -52,7 +53,7 @@ const fieldLabel = 'text-[10px] font-semibold text-slate-600';
 const fieldValue = 'text-[11px] font-semibold leading-4 text-slate-900';
 
 export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
-  process, canEdit, canEditReservation=false, advisorViewerEmail, isAuthenticated=false, onEditingChange, studio, onUpdated,onReservationSaved,
+  process, canEdit, confirmInvitationRevalidation, canEditReservation=false, advisorViewerEmail, isAuthenticated=false, onEditingChange, studio, onUpdated,onReservationSaved,
 }) => {
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
@@ -103,11 +104,15 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const saveTitle = async () => {
     const normalized = formatTccTitle(title);
     if (!normalized.trim()) { setError('Informe o título completo do trabalho.'); return; }
+    if (confirmInvitationRevalidation && !await confirmInvitationRevalidation()) return;
     setTitleSaving(true); setError('');
     try {
-      await apiClient.updateProcess(process.id, { titulo: normalized, expectedDataRevision:titleBaseRevision });
+      const result = await apiClient.updateProcess(process.id, {
+        titulo: normalized, expectedDataRevision: titleBaseRevision,
+        ...(confirmInvitationRevalidation ? { revalidateIssuedInvitation: true } : {}),
+      });
       setTitleEditing(false);
-      setNotice('Título atualizado.');
+      setNotice(result.reservationRestarted ? 'Título atualizado. A confirmação da reserva foi reiniciada.' : 'Título atualizado.');
       await onUpdated();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível alterar o título.');
