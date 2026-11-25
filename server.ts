@@ -197,7 +197,7 @@ import {
   enrichProcessDocumentsWithDrive
 } from './src/services/serverDriveSync';
 import { updateRuntimeDocumentTemplates } from './src/utils/documentTemplateEngine';
-import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie } from './server/security/firebaseAuth';
+import { assertPortalSessionConfigured, attachPortalIdentity, clearPortalSessionCookie, getPortalIdentity, hasRecentAuthentication, requireAuthenticated, setPortalSessionCookie, readAccountViewCookie, writeAccountViewCookie } from './server/security/firebaseAuth';
 import {astenStatusCheckDue,ASTEN_STATUS_CHECK_INTERVAL_MS} from './server/workflow/astenAtaStatus';
 import { assertAstenEnvelopeAuthentication, assertAstenEnvelopeDestination, assertAstenEnvelopeSigners, buildAstenEnvelopeParams, callAsten, connectPersistentAsten, extractAstenEnvelopeIdentity, getAstenSigningProfile, getPersistentAstenConnection, getAstenSignerPhones, getPersistentAstenStatus, inferAstenJobStatus, safeCompareWebhookSecret } from './server/integrations/asten';
 import { persistStudioRuntimeImage, appendSupabaseAuditEvent, claimAstenEnvelopeDispatch, startPreparedAstenEnvelopeDispatch, currentPortalRuntimeRevision, portalRuntimeSnapshotRevision, readCachedPortalRuntimeState, readPortalRuntimeRevision, publicPortalRevisionToken, getSupabaseRuntimeStatus, getSupabaseRuntimeConnectionStatus, loadPortalCalendarSnapshot, loadPortalRuntimeState, loadPortalRuntimeLiteState, refreshPortalRuntimeState, refreshPortalRuntimeLiteState, loadPortalRuntimeLeanState, refreshPortalRuntimeLeanState, refreshPortalSignatureState, readArchivedSettingsBefore, savePortalRuntimeState, testSupabaseRuntimeConnection, updateAstenEnvelopeDispatch } from './server/integrations/supabase';
@@ -2686,6 +2686,65 @@ export async function createPortalApp() {
 
   app.use('/api', attachPortalIdentity);
   app.use('/api',(req,res,next)=>{const identity=getPortalIdentity(req);if(identity&&(identity.issuedAt<Number(currentSettings.sessionValidAfter||0)||revokedSessionIdsStore.has(identity.sessionId))){(req as any).portalIdentity=null;clearPortalSessionCookie(res);}next();});
+  const viewTargets = () => {
+    const accounts = new Map<string, string>();
+    for (const entry of authorizedStudentsStore) {
+      const email = normalizeEmail(entry.email);
+      if (entry.active && canRequestPortalAccess(email) && !hasFullAdministration(email)) accounts.set(email, entry.nome || email);
+    }
+    const president = normalizeEmail(currentSettings.commissionPresidentEmail || '');
+    if (president && !hasFullAdministration(president)) accounts.set(president, 'Presidência da Comissão');
+    return accounts;
+  };
+  app.get('/api/account-view/accounts', (req, res) => {
+    const actor = getPortalIdentity(req);
+    if (!actor || !hasFullAdministration(actor.email) || readAccountViewCookie(req, actor) !== undefined) return res.status(403).json({ error: 'Acesso exclusivo da visão Master.' });
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json([...viewTargets()].map(([email, name]) => ({ email, name })));
+  });
+  app.post('/api/account-view', async (req, res) => {
+    const actor = getPortalIdentity(req);
+    if (!actor || !hasFullAdministration(actor.email)) return res.status(403).json({ error: 'Acesso exclusivo do Master.' });
+    const target = req.body?.email === null ? null : normalizeEmail(String(req.body?.email || ''));
+    if (target !== null && !viewTargets().has(target)) return res.status(404).json({ error: 'Conta ativa não encontrada.' });
+    const previous = readAccountViewCookie(req, actor);
+    auditLogsStore.push({
+      id: `account-view-${randomBytes(12).toString('hex')}`,
+      actorEmail: actor.email, actorRoles: ['MASTER_ADMIN'], action: target ? 'VISUALIZACAO_DE_CONTA' : 'RETORNO_VISAO_MASTER',
+      entityType: 'account_view', entityId: target || previous || actor.email,
+      timestamp: new Date().toISOString(),
+    });
+    await persistPortalStateDurably();
+    writeAccountViewCookie(res, actor, target);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ viewingAccount: target });
+  });
+  const accountViewReadPaths = [
+    /^\/(?:me|settings|processes|google-calendar-events|signatures\/jobs|notifications|sync\/version)$/,
+    /^\/public\/(?:repository|calendar-data|calendar|indicators|installation-profile|sync\/version)$/,
+    /^\/public\/processes\/[^/]+(?:\/reservation-receipts)?$/,
+    /^\/processes\/[^/]+(?:\/(?:documents|signatures|verifications|evaluation\/(?:schema|draft)|publication-choice|forms|form-submissions|data-review\/schema))?$/,
+    /^\/repository\/document-availability$/,
+    /^\/registration\/(?:bootstrap|draft)$/,
+    /^\/forms\/registration-(?:schema|suggestions)$/,
+  ];
+  app.use('/api', (req, res, next) => {
+    const actor = getPortalIdentity(req);
+    const target = readAccountViewCookie(req, actor);
+    if (target === undefined) return next();
+    res.setHeader('Cache-Control', 'private, no-store');
+    if (!actor || !hasFullAdministration(actor.email) || !target || !viewTargets().has(target)) {
+      writeAccountViewCookie(res, actor, null);
+      return res.status(403).json({ error: 'A visualização de conta expirou. Atualize o Portal para voltar à sua sessão.' });
+    }
+    if (req.method !== 'GET' || !accountViewReadPaths.some(path => path.test(req.path))) {
+      return res.status(403).json({ error: 'A visualização de conta é somente para consulta.', code: 'ACCOUNT_VIEW_READ_ONLY' });
+    }
+    res.locals.viewingAccount = target;
+    const effective: typeof actor = { ...actor, email: target, uid: `account-view:${target}`, authTime: 0 };
+    (req as express.Request & { portalIdentity: typeof effective }).portalIdentity = effective;
+    next();
+  });
   const requireGlobalRoles=(...roles:GlobalRole[])=>(req:express.Request,res:express.Response,next:express.NextFunction)=>{const identity=getPortalIdentity(req);if(!identity)return res.status(401).json({error:'Autenticação institucional obrigatória.'});const userRoles=getUserRolesForEmail(identity.email).globalRoles;if(!roles.some(role=>userRoles.includes(role)))return res.status(403).json({error:'Seu perfil não tem permissão para esta operação.'});next();};
   const requireAdministrator=requireGlobalRoles('MASTER_ADMIN');
   const requirePresidencyOperator=requireGlobalRoles('MASTER_ADMIN','COMMISSION_PRESIDENT');
@@ -3200,7 +3259,7 @@ export async function createPortalApp() {
       userEmail: email,
       globalRoles,
       memberships,
-      isAuthenticated: Boolean(identity), canRegisterProcess:Boolean(identity&&canRegisterProcess(identity.email)), authenticationMode:identity?.method||'PUBLIC'
+      isAuthenticated: Boolean(identity), canRegisterProcess:Boolean(identity&&canRegisterProcess(identity.email)), authenticationMode:identity?.method||'PUBLIC', viewingAccount: res.locals.viewingAccount || null
     });
   });
 

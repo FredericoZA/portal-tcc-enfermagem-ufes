@@ -6,6 +6,7 @@ import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../ut
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
 import { SiteZoomControls } from './SiteZoomControls';
+import { apiClient } from '../services/apiClient';
 import { PORTAL_THEME } from '../theme/portalTheme';
 
 interface HeaderProps {
@@ -18,7 +19,22 @@ interface HeaderProps {
 const PUBLIC_VISITOR_SUFFIX = '@publico.local';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSidebarOpen, onGoHome }) => {
-  const { userEmail, globalRoles, settings } = useAuth();
+  const { userEmail, globalRoles, settings, viewingAccount } = useAuth();
+  const [accounts, setAccounts] = useState<{ email: string; name: string }[] | null>(null);
+  const [accountError, setAccountError] = useState('');
+  const [accountBusy, setAccountBusy] = useState(false);
+  const changeAccount = async (email: string | null) => {
+    setAccountError('');
+    setAccountBusy(true);
+    try {
+      await apiClient.setAccountView(email);
+      sessionStorage.removeItem('portal_tcc_identity_cache_v1');
+      window.location.assign(window.location.pathname);
+    } catch (error) {
+      setAccountError(error instanceof Error ? error.message : 'Não foi possível trocar a visualização.');
+      setAccountBusy(false);
+    }
+  };
   const installationProfile = resolveInstallationProfile(settings);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
 
@@ -82,6 +98,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSid
                 <div className="text-[10px] text-emerald-700 font-bold normal-case tracking-wider">{accessLabel}</div>
               </div>
             </div>
+            {isMaster && !viewingAccount && (accounts
+              ? <select className="portal-input max-w-[250px]" aria-label="Conta para visualizar" value="" disabled={accountBusy} onChange={e => { if (e.target.value) void changeAccount(e.target.value); }}>
+                  <option value="">Selecionar conta para consulta</option>
+                  {[...accounts].sort((a,b) => a.name.localeCompare(b.name,'pt-BR')).map(account =>
+                    <option key={account.email} value={account.email}>{account.name} ({account.email})</option>)}
+                </select>
+              : <button type="button" className="portal-action" onClick={() => {
+                  setAccountError('');
+                  void apiClient.getAccountViewTargets().then(setAccounts).catch(() => setAccountError('Não foi possível carregar as contas.'));
+                }}>Visualizar conta</button>)}
+            {viewingAccount && <div className="flex flex-wrap items-center gap-2">
+              <span role="status" className="text-xs font-semibold">Consulta como {viewingAccount}</span>
+              <button type="button" className="portal-action" disabled={accountBusy} onClick={() => void changeAccount(null)}>Voltar à visão Master</button>
+            </div>}
+            {accountError && <span role="alert" className="text-xs text-red-800">{accountError}</span>}
             <NotificationBell key={normalizedEmail} />
           </div>
         )}

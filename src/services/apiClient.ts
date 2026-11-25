@@ -302,7 +302,11 @@ export const apiClient = {
   getRegistrationDraft:()=>fetchApi<import('../types/workflowOperations').RegistrationDraft|null>('/api/registration/draft'),
   saveRegistrationDraft:(data:unknown)=>fetchApiRequest<import('../types/workflowOperations').RegistrationDraft>('/api/registration/draft',{method:'PUT',body:JSON.stringify(data)}),
   deleteRegistrationDraft:()=>fetchApi<{deleted:boolean}>('/api/registration/draft',{method:'DELETE'}),
-  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean; canRegisterProcess: boolean }>('/api/me'),
+  getAccountViewTargets: () => fetchApi<{email: string; name: string}[]>('/api/account-view/accounts'),
+  setAccountView: (email: string | null) => fetchApi<{viewingAccount: string | null}>('/api/account-view', {
+    method: 'POST', body: JSON.stringify({ email }),
+  }),
+  getMe: () => fetchApi<{ userEmail: string; globalRoles: any[]; memberships: any[]; isAuthenticated: boolean; canRegisterProcess: boolean; viewingAccount?: string | null }>('/api/me'),
   getAuthStatus:()=>fetchApi<{otp:{configured:boolean};google:{oauthConfigured:boolean;connected:boolean};bootstrapMasterConfigured:boolean}>('/api/setup/status'),
   requestLoginCode:(email:string)=>fetchApi<{sent:boolean;expiresInMinutes:number;message:string}>('/api/auth/request-code',{method:'POST',body:JSON.stringify({email})}),
   verifyLoginCode:async(email:string,code:string)=>{

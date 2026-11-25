@@ -9,6 +9,7 @@ type PortalSettings = Awaited<ReturnType<typeof apiClient.getSettings>>;
 
 interface AuthContextType {
   userEmail: string;
+  viewingAccount: string | null;
   globalRoles: GlobalRole[];
   memberships: ProcessMembership[];
   settings: PortalSettings | null;
@@ -108,6 +109,7 @@ function syncPortalFavicon(siteConfig: any) {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userEmail, setUserEmailState] = useState<string>(getActiveUserEmail());
+  const [viewingAccount, setViewingAccount] = useState<string | null>(null);
   const [globalRoles, setGlobalRoles] = useState<GlobalRole[]>([]);
   const [memberships, setMemberships] = useState<ProcessMembership[]>([]);
   const [settings, setSettings] = useState<PortalSettings | null>(null);
@@ -137,12 +139,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const applyIdentity = (meRes: Awaited<ReturnType<typeof apiClient.getMe>>) => {
+    setViewingAccount(meRes.viewingAccount || null);
     setUserEmailState(meRes.userEmail);
     setIsAuthenticated(meRes.isAuthenticated);
     setCanRegisterProcess(meRes.canRegisterProcess===true);
     setGlobalRoles(meRes.globalRoles);
     setMemberships(meRes.memberships);
-    if (meRes.isAuthenticated) saveCachedIdentity({
+    if (meRes.viewingAccount) clearCachedIdentity();
+    else if (meRes.isAuthenticated) saveCachedIdentity({
       userEmail: meRes.userEmail,
       globalRoles: meRes.globalRoles,
       memberships: meRes.memberships,
@@ -284,7 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider
       value={{
-        userEmail,
+        userEmail, viewingAccount,
         globalRoles,
         memberships,
         settings,
