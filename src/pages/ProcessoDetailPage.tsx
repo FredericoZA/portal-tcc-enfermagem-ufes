@@ -1,3 +1,4 @@
+import { finalDeliveryBlocker } from '../utils/finalDeliveryGate';
 import {PublicRepositoryFileActions} from '../components/PublicRepositoryFileActions';
 import {openDriveDocument} from '../utils/driveDocumentAccess';
 import { displayParticipantInstitution } from '../utils/institutionName';
@@ -548,7 +549,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const hasReservationReceipt = Boolean(process.defesa.departmentResponse || process.defesa.reservationHistory?.some(item=>item.departmentResponse||item.localConfirmedAt) || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
   const canSubmitAcervo = isAuthenticated && isStudent;
   const canChangePublication=isAuthenticated&&(isMasterAdmin||(!process.legacyRecord&&isStudent))&&(process.legacyRecord||process.status==='CONCLUIDO');
-  const acervoFieldsLocked = publicationEditing ? (!canChangePublication||publicationBusy||isSubmittingAcervo||Boolean(acervoUploading)) : !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
+  const deliveryBlocker = finalDeliveryBlocker(process, ataIsArchived);
+  const acervoFieldsLocked = publicationEditing ? (!canChangePublication||publicationBusy||isSubmittingAcervo||Boolean(acervoUploading)) : !canSubmitAcervo || isAcervoSubmitted || Boolean(deliveryBlocker) || isSubmittingAcervo || Boolean(acervoUploading);
   const openPublicationEditing=async()=>{
     if(!canChangePublication||publicationBusy)return;
     setPublicationBusy(true);
@@ -805,8 +807,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       return;
     }
     if (!canSubmitAcervo || isAcervoSubmitted || isSubmittingAcervo || repositorySubmitInFlight.current || acervoUploading) return;
-    if (!ataIsArchived) {
-      portalNotice('Aguarde o arquivamento da Ata assinada para salvar a entrega final.');
+    if (deliveryBlocker) {
+      portalNotice(deliveryBlocker.error);
       return;
     }
 
@@ -1228,7 +1230,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               <>
               <form id="repository-delivery-form" data-delivery-locked={acervoFieldsLocked} onSubmit={handleSubmitAcervo} className="space-y-2">
                 {repositoryReopenNotice&&<aside role="status" className="portal-instruction p-3 text-sm"><p>{repositoryReopenNotice}</p><button type="button" disabled={isSubmittingAcervo} className="portal-action mt-2" onClick={()=>void retryRepositoryDocuments()}>Atualizar documentos</button></aside>}
-                {!isAcervoSubmitted&&!publicationEditing&&<aside role="status" className="portal-instruction mx-auto w-fit max-w-[calc(100%_-_1rem)] p-3 text-left text-sm sm:max-w-[calc(100%_-_2rem)]"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
+                {!isAcervoSubmitted&&!publicationEditing&&deliveryBlocker&&<p role="status" className="portal-instruction p-3 text-sm">{deliveryBlocker.error}</p>}
+                {!isAcervoSubmitted&&!publicationEditing&&!deliveryBlocker&&<aside role="status" className="portal-instruction mx-auto w-fit max-w-[calc(100%_-_1rem)] p-3 text-left text-sm sm:max-w-[calc(100%_-_2rem)]"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
                 <fieldset disabled={acervoFieldsLocked} className={`portal-repository-grid ${acervoFieldsLocked?'portal-repository-locked':''}`}>
                                   {/* Card 2: Resumo Síntese */}
                   <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">

@@ -1,3 +1,4 @@
+import { finalDeliveryBlocker } from './src/utils/finalDeliveryGate';
 import { advisorInstitutionResolver } from './server/ufesFacultyInstitution';
 import type { Server as HttpServer } from 'node:http';
 import {canonicalDriveOriginalLinks} from './server/driveOriginalLinks';
@@ -2895,7 +2896,8 @@ export async function createPortalApp() {
       if(!publicationEditing&&(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore)))return res.status(409).json({error:'Reabra a entrega antes de enviar novos arquivos finais.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
       const roles=getActiveProcessRoles(identity.email,process.id);
       if(!roles.includes('STUDENT')&&!(master&&publicationEditing))return res.status(403).json({error:'Apenas o Master ou um dos autores pode anexar os arquivos finais.'});
-      if(!process.legacyRecord&&!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
+      const blocker = finalDeliveryBlocker(process, ataArchived(process, signatureJobsStore));
+      if (blocker) return res.status(409).json(blocker);
       requesterBinding=sessionUploadBinding(identity);
     }else return res.status(400).json({error:'Finalidade de upload inválida.'});
     try{
@@ -5593,8 +5595,8 @@ export async function createPortalApp() {
     };
     if(publicationEditing&&req.body?.expectedPublicationRevision!==process.dataRevision)return res.status(409).json({error:'O arquivo mudou. Reabra a edição antes de enviar outra versão.'});
     if(!roles.includes('STUDENT')&&!(master&&publicationEditing))return res.status(403).json({error:'Apenas o Master ou um dos autores pode anexar os arquivos finais.'});
-    if(!process.legacyRecord&&process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes do envio dos arquivos finais.'});
-    if(!process.legacyRecord&&!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'A entrega final será liberada após o recebimento, a validação e o arquivamento da ata assinada.',code:'ATA_SIGNATURE_REQUIRED'});
+    const blocker = finalDeliveryBlocker(process, ataArchived(process, signatureJobsStore));
+    if (blocker) return res.status(409).json(blocker);
     if(!publicationEditing&&(process.acervo?.submittedAt||finalDocumentFilesLocked(process,signatureJobsStore)))return res.status(409).json({error:'Os arquivos finais ficam bloqueados após a preparação do Termo ou da Declaração. Use o fluxo administrativo de nova versão.',code:'FINAL_FILES_LOCKED_BY_SIGNATURE'});
     const artifactType=req.params.kind==='trabalho-completo'?'TRABALHO_COMPLETO':req.params.kind==='resumo-expandido'?'RESUMO_EXPANDIDO':null;
     if(!artifactType)return res.status(404).json({error:'Tipo de arquivo não reconhecido.'});
@@ -5773,8 +5775,8 @@ export async function createPortalApp() {
     if(!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     const finalDataRoles=getActiveProcessRoles(identity.email,process.id);
     if(!finalDataRoles.includes('STUDENT'))return res.status(403).json({error:'Somente um dos autores pode confirmar a entrega final.'});
-    if(process.avaliacao.status!=='CONCLUIDO')return res.status(409).json({error:'O conceito e a ata precisam ser registrados antes dos dados finais.'});
-    if(!ataArchived(process,signatureJobsStore))return res.status(409).json({error:'Aguarde a ata assinada pelo orientador e pelos dois examinadores e arquivada no Drive.',code:'ATA_SIGNATURE_REQUIRED'});
+    const blocker = finalDeliveryBlocker(process, ataArchived(process, signatureJobsStore));
+    if (blocker) return res.status(409).json(blocker);
     if(process.status==='CONCLUIDO'||process.acervo?.submittedAt||signatureJobsStore.some(job=>job.processId===process.id&&job.documentType!=='ATA'&&job.sourceDataRevision===process.dataRevision&&job.status!=='CANCELED'))return res.status(409).json({error:'Os dados finais ficam bloqueados após a criação do Termo ou da Declaração. Use o fluxo administrativo de retirada ou gere uma nova versão formal.',code:'FINAL_DATA_LOCKED_BY_SIGNATURE'});
     const rawKeywords:unknown=req.body?.palavrasChave;
     const palavrasChave=Array.isArray(rawKeywords)&&rawKeywords.every(value=>typeof value==='string')?rawKeywords.map(value=>value.trim()).filter(Boolean):[];
