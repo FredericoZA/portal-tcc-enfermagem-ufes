@@ -5,6 +5,7 @@ import { runtimeReadProjection } from './runtimeReadProjection';
 test('public repository and legacy references retain the historical catalog', () => {
   for (const path of [
     '/public/repository',
+    '/account-view/accounts',
     '/processes/proc-1/publication-choice',
     '/processes/proc-1/files/trabalho-completo/download',
     '/processes/legado-0001/files/resumo-expandido/download',
@@ -69,6 +70,13 @@ test('every mutation and unreviewed endpoint still requires canonical hydration'
   ]) {
     assert.equal(runtimeReadProjection('GET', path), 'FULL', path);
   }
+});
+
+test('process details can skip audit hydration while older clients retain their response', () => {
+  assert.equal(runtimeReadProjection('GET', '/processes/proc-1/detail', false), 'LEAN');
+  assert.equal(runtimeReadProjection('GET', '/processes/proc-1/detail'), 'FULL');
+  assert.equal(runtimeReadProjection('POST', '/processes/proc-1/detail', false), 'FULL');
+  assert.equal(runtimeReadProjection('GET', '/processes/proc-1/audit-logs', false), 'FULL');
 });
 
 test('signature status reads use the reviewed signature projection only',()=>{

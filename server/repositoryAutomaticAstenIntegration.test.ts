@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
 import {executeWorkflowEvent,normalizeWorkflowEventCode} from './workflow/runtime';
 import {ataArchived,declarationReady} from './workflow/gates';
+import { finalDeliveryBlocker } from '../src/utils/finalDeliveryGate';
 import {deriveSignatureSigners,assertSignatureEligibility,publicationRequested,signatureJobMatchesCurrentRevision} from './workflow/signaturePolicy';
 import {signatureDocumentRevision} from '../src/utils/documentSignatureState';
 import {operationalDocumentType} from '../src/utils/courseStudioValidator';
@@ -17,14 +18,14 @@ function fn(name:string){const start=source.search(new RegExp(`(?:async )?functi
 const routeStart=source.indexOf("  app.post('/api/processes/:id/final-data'");
 const route=source.slice(routeStart,source.indexOf("  app.post('/api/admin/processes/:id/publication/withdraw'",routeStart));
 function harness(options:{paired?:boolean;rejectDispatch?:boolean}={}){
- const p:any={id:'integration-unit',protocolo:'TCC - 00002',titulo:'Trabalho sintético',dataRevision:10,status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO',defesa:{},banca:[],aluno1:{nome:'Autora fictícia',email:'author@example.invalid'},aluno2:options.paired?{nome:'Segundo autor',email:'second@example.invalid'}:undefined,orientador:{nome:'Orientador fictício',email:'advisor@example.invalid'},avaliacao:{status:'CONCLUIDO',documentRevision:9},acervo:{trabalhoCompletoFileId:'work-unit',trabalhoCompletoFileUrl:'/api/private-unit'}};
+ const p:any={id:'integration-unit',protocolo:'TCC - 00002',titulo:'Trabalho sintético',dataRevision:10,status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO',defesa:{startAt:'2026-10-02T13:00:00Z'},banca:[],aluno1:{nome:'Autora fictícia',email:'author@example.invalid'},aluno2:options.paired?{nome:'Segundo autor',email:'second@example.invalid'}:undefined,orientador:{nome:'Orientador fictício',email:'advisor@example.invalid'},avaliacao:{status:'CONCLUIDO',documentRevision:9},acervo:{trabalhoCompletoFileId:'work-unit',trabalhoCompletoFileUrl:'/api/private-unit'}};
  const jobs:any[]=[{id:'signed-ata',processId:p.id,documentType:'ATA',sourceDataRevision:9,documentVersion:1,status:'ARCHIVED',driveSignedFileId:'signed-ata-unit',signers:[{email:p.orientador.email,role:'ADVISOR',status:'SIGNED'},{email:'one@example.invalid',role:'EXAMINER',status:'SIGNED'},{email:'two@example.invalid',role:'EXAMINER',status:'SIGNED'}]}];
  const studio:any={revision:7,emailTemplates:[],formTemplates:[],docTemplates:[{id:'tmpl-termo',type:'TERMO'},{id:'tmpl-declaracao',type:'DECLARACAO'}],variables:[],workflowStages:[{id:'repository',triggerEvent:'REPOSITORY_SUBMITTED',actions:[{id:'generate-term',type:'DOCUMENT',refId:'tmpl-termo'}]},{id:'publication',triggerEvent:'PUBLICATION_CLEARED',actions:[{id:'generate-declaration',type:'DOCUMENT',refId:'tmpl-declaracao'}]}]};
  const settings:any={driveRootFolderId:'private-unit-root',commissionPresidentName:'Presidência fictícia',commissionPresidentEmail:'president@example.invalid',integrationStudio:studio};
  const snapshots:any[]=[];const dispatches:any[]=[];const events:any[]=[];const scheduled:Array<()=>void>=[];const background:Promise<void>[]=[];let handler:any;
  const context:any={Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture',ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
   app:{post:(_path:any,_auth:any,callback:any)=>{handler=callback;}},requireAuthenticated:()=>{},processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],currentSettings:settings,
-  getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],ataArchived,declarationReady,signatureDocumentRevision,signatureJobMatchesCurrentRevision,publicationRequested,safeRepositorySignatureError,normalizeWorkflowEventCode,operationalDocumentType,
+  getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],finalDeliveryBlocker,ataArchived,declarationReady,signatureDocumentRevision,signatureJobMatchesCurrentRevision,publicationRequested,safeRepositorySignatureError,normalizeWorkflowEventCode,operationalDocumentType,
   assertSignatureEligibility:(process:any,type:any)=>assertSignatureEligibility(process,type,jobs),inspectAstenDelivery,
   getPersistentAstenStatus:async()=>({dispatchEnabled:true,securityMessage:''}),astenWebhookInboxReady:async()=>true,resolveAstenDocumentFolder:async()=>10,getGoogleWorkspaceStatus:async()=>({connected:true}),
   persistPortalStateDurably:async()=>{snapshots.push(structuredClone({processes:context.processesStore,jobs}));},

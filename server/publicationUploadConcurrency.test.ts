@@ -1,3 +1,4 @@
+import {finalDeliveryBlocker} from '../src/utils/finalDeliveryGate';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,7 +10,7 @@ import { beginPublicationChoice } from './workflow/publicationChoice';
 function harness() {
   const pdf = Buffer.from('%PDF-fixture-only');
   const p: any = { id: 'upload-fixture', titulo: 'Fixture', protocolo: 'TCC - 99999', dataRevision: 4,
-    status: 'CONCLUIDO', aluno1: {nome:'Author'}, orientador:{}, avaliacao:{status:'CONCLUIDO'},
+    status: 'CONCLUIDO', aluno1: {nome:'Author'}, orientador:{}, defesa:{startAt:'2025-02-20T17:00:00.000Z'}, avaliacao:{status:'CONCLUIDO'},
     driveFolderId:'private-folder', acervo:{submittedAt:'2026-11-16',trabalhoCompletoFileId:'old-pdf',trabalhoCompletoSha256:'a'.repeat(64),
       publicationChange:{id:'editing-fixture',status:'EDITING',revision:4,publishFullWork:true,publishExpandedAbstract:false,requestedBy:'author@example.invalid',previousTermJobIds:[],revokeFileIds:[]}} };
   let release!:()=>void, started!:()=>void;
@@ -17,7 +18,7 @@ function harness() {
   const upload=new Promise<void>(resolve=>{release=resolve;});
   let handler:any, persists=0;
   const context:any={Buffer,Date,Error,Boolean,String,Number,Math,createHash,
-    processesStore:[p],signatureJobsStore:[],auditLogsStore:[],currentSettings:{driveRootFolderId:'private-root'},
+    finalDeliveryBlocker,processesStore:[p],signatureJobsStore:[],auditLogsStore:[],currentSettings:{driveRootFolderId:'private-root'},
     requireAuthenticated:'auth',app:{post:(_path:string,_auth:any,fn:any)=>{handler=fn;}},
     publicationProcessById:(id:string)=>context.processesStore.find((row:any)=>row.id===id),
     getPortalIdentity:()=>({email:'author@example.invalid'}),hasFullAdministration:()=>false,canAccessProcess:()=>true,

@@ -48,7 +48,6 @@ test('estúdio operacional não conserva backdrops e botões X dos antigos modai
 
 test('popups principais abandonam superfícies estruturais escuras',()=>{
   const paths=[
-    'src/components/CorrectionRequestModal.tsx',
     'src/components/DocumentPreviewModal.tsx',
     'src/components/EmergencyRecoveryModal.tsx',
     'src/components/NewFileModal.tsx',

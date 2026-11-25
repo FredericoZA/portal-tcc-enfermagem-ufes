@@ -202,6 +202,7 @@ const SETTINGS_GROUPS = [
       { id: 'models-documents', title: 'Documentos e Variáveis', text: 'Modelos oficiais, versões, variáveis detectadas, mescla e propagação em um único espaço.', icon: FileText },
       { id: 'emails', title: 'E-mails', text: 'Mensagens institucionais, destinatários, variáveis, anexos e prévia final.', icon: Mail },
       { id: 'forms', title: 'Formulários', text: 'Formulários, campos, regras, variáveis e prévia.', icon: ClipboardList },
+      { id: 'operation', title: 'Regras do processo', text: 'Locais, classificações, prazos e apresentação dos documentos.', icon: Sliders },
       { id: 'workflow', title: 'Fluxos', text: 'Etapas, eventos e ações do processo de TCC.', icon: Layers },
     ],
   },
@@ -536,7 +537,7 @@ export const ConfiguracoesPage: React.FC = () => {
         label: BASE_DOCUMENT_TEMPLATES.CONVITE.label,
         fileName: BASE_DOCUMENT_TEMPLATES.CONVITE.fileName,
         description: 'Cadastre o modelo próprio do Master para a carta-convite.',
-        variables: ['<<Alunos>>', '<<Título do Trabalho>>', '<<Orientador (1)>>', '<<Examinador (2)>>', '<<Examinador (3)>>', '<<Data da Defesa (por extenso total)>>', '<<Hora de Início da Defesa (por extenso)>>', '<<Local da Defesa>>'],
+        variables: ['<<Alunos>>', '<<Título do Trabalho>>', '<<Orientador (1)>>', '<<Examinador (2)>>', '<<Examinador (3)>>', '<<Data da Defesa (por extenso total)>>', '<<Hora de Início da Defesa>>', '<<Local da Defesa>>'],
         fields: [],
         templateContentText: BASE_DOCUMENT_TEMPLATES.CONVITE.templateContentText,
         lastUpdated: '',
@@ -954,6 +955,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 : activeSettingsPanel === 'models-documents' ? 'Documentos e Variáveis'
                 : activeSettingsPanel === 'emails' ? 'E-mails'
                 : activeSettingsPanel === 'forms' ? 'Formulários'
+                : activeSettingsPanel === 'operation' ? 'Regras do processo'
                 : activeSettingsPanel === 'workflow' ? 'Fluxos'
                 : activeSettingsPanel === 'variables' ? 'Variáveis'
                 : activeSettingsPanel === 'access' ? 'Acesso'
@@ -967,6 +969,7 @@ export const ConfiguracoesPage: React.FC = () => {
                 : activeSettingsPanel === 'models-documents' ? FileText
                 : activeSettingsPanel === 'emails' ? Mail
                 : activeSettingsPanel === 'forms' ? ClipboardList
+                : activeSettingsPanel === 'operation' ? Sliders
                 : activeSettingsPanel === 'workflow' ? Layers
                 : activeSettingsPanel === 'variables' ? Sliders
                 : activeSettingsPanel === 'access' ? Lock
@@ -986,8 +989,8 @@ export const ConfiguracoesPage: React.FC = () => {
                   { id: 'emails', fullBleed: true, label: 'E-mails', description: 'Modelos, variáveis, anexos e pré-visualização.', icon: Mail, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-emails" initialTab="emails" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'forms' ? [
                   { id: 'forms', fullBleed: true, label: 'Formulários', description: 'Criação, exclusão, campos e regras dos formulários.', icon: ClipboardList, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-forms" initialTab="forms" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
-                ] : activeSettingsPanel === 'workflow' ? [
-                  { id: 'workflow', fullBleed: true, label: 'Fluxos', description: 'Etapas e ações do fluxo operacional.', icon: Layers, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-workflow" initialTab="workflow" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
+                ] : activeSettingsPanel === 'workflow' || activeSettingsPanel === 'operation' ? [
+                  { id: 'workflow', fullBleed: true, label: 'Fluxos', description: 'Etapas e ações do fluxo operacional.', icon: Layers, content: <div id="portal-models-workspace"><IntegrationStudioPanel key={activeSettingsPanel} initialTab={activeSettingsPanel} hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'variables' ? [
                   { id: 'variables', fullBleed: true, label: 'Variáveis', description: 'Definições canônicas, usos, mescla e propagação.', icon: Sliders, content: <div id="portal-models-workspace"><IntegrationStudioPanel key="studio-variables" initialTab="variables" hideTabs actorEmail={userEmail || ''} initialStudio={settings?.integrationStudioDraft||settings?.integrationStudio} reservationDepartmentEmail={settings?.emailConfig?.roomReservationDepartmentEmail} matrixColumns={matrixColumns} setMatrixColumns={setMatrixColumns} matrixRows={matrixRows} setMatrixRows={setMatrixRows} emailTemplates={emailTemplates} setEmailTemplates={setEmailTemplates} formTemplates={formTemplates} setFormTemplates={setFormTemplates} docTemplates={docTemplates} setDocTemplates={setDocTemplates} workflowStages={workflowStages} setWorkflowStages={setWorkflowStages} driveModelosFolderUrl={driveModelosFolderUrl} setDriveModelosFolderUrl={setDriveModelosFolderUrl} onConnectDrive={handleConnectGoogleDrive} onScanDrive={handleUpdateAllDocumentsAndFields} isScanningDrive={isUpdatingAllDocs} notify={showNotification} /></div> },
                 ] : activeSettingsPanel === 'access' ? [

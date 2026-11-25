@@ -8,6 +8,15 @@ interface TccAbstractPopoverProps {
   unavailableLabel?: string;
 }
 
+export function DocumentEnvelope({ status }: { status: 'available' | 'absent' | 'restricted' }) {
+  return (
+    <span className="portal-document-envelope" data-document-state={status} aria-hidden="true">
+      <FileText size={16} />
+      <span className="portal-document-envelope-dot" />
+    </span>
+  );
+}
+
 const ABSTRACT_OPEN_EVENT = 'portal:abstract-open';
 
 /** Reads only the abstract already authorized by the list's API response. */
@@ -118,7 +127,7 @@ export const TccAbstractPopover: React.FC<TccAbstractPopoverProps> = ({
 
   if (!text) {
     return <span className="portal-abstract-unavailable" role="img" aria-label={unavailableLabel} title={unavailableLabel}>
-      <FileText size={16} aria-hidden="true" />
+      <DocumentEnvelope status="absent" />
     </span>;
   }
 
@@ -149,7 +158,7 @@ export const TccAbstractPopover: React.FC<TccAbstractPopoverProps> = ({
         show();
       }}
     >
-      <FileText size={17} aria-hidden="true" />
+      <DocumentEnvelope status="available" />
     </button>
     {open && createPortal(
       <div

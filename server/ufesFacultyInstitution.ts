@@ -1,4 +1,6 @@
 import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
+import type { ProcessData } from '../src/types';
+import { plainPersonName } from '../src/utils/personPresentation';
 
 // Exact name AND email pairs checked on the department's public directory on 2026-11-07.
 // https://enfermagem.vitoria.ufes.br/pt-br/docentes
@@ -38,6 +40,12 @@ const faculty = [
 ] as const;
 
 const normalizeName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLowerCase();
+const departmentFacultyNames = new Set(faculty.map(([name]) => normalizeName(name)));
+
+export function isDepartmentFacultyName(name: string): boolean {
+  return departmentFacultyNames.has(normalizeName(plainPersonName({nome:name})));
+}
+
 const identities = new Set(faculty.map(([name, email]) => `${normalizeName(name)}|${email}`));
 
 /** Resolve a missing current affiliation only from an exact documented identity. */
@@ -45,4 +53,33 @@ export function ufesFacultyInstitution(person: { nome?: string; email?: string; 
   if (person.instituicao?.trim()) return person.instituicao;
   const identity = `${normalizeName(person.nome || '')}|${(person.email || '').trim().toLowerCase()}`;
   return identities.has(identity) ? DEFAULT_INSTALLATION_PROFILE.institutionName : person.instituicao;
+}
+
+const facultyKey = (person: { nome: string; email?: string }) =>
+  `${normalizeName(plainPersonName(person))}|${person.email?.trim().toLowerCase() || ''}`;
+
+export function advisorInstitutionResolver(processes: readonly ProcessData[]) {
+  const advisors = new Map<string, Set<string>>();
+  for (const process of processes) {
+    if (process.status === 'EM_RASCUNHO' || !process.orientador.email) continue;
+    const key = facultyKey(process.orientador);
+    const institutions = advisors.get(key) ?? new Set<string>();
+    institutions.add(process.orientador.instituicao?.trim() || DEFAULT_INSTALLATION_PROFILE.institutionName);
+    advisors.set(key, institutions);
+  }
+
+  return (process: ProcessData): ProcessData => {
+    const withInstitution = <T extends { nome: string; email: string; instituicao?: string }>(person: T): T => {
+      if (person.instituicao?.trim()) return person;
+      const known = advisors.get(facultyKey(person));
+      const institution = ufesFacultyInstitution(person) || (known?.size === 1 ? [...known][0] : undefined);
+      return institution ? { ...person, instituicao: institution } : person;
+    };
+    return {
+      ...process,
+      orientador: withInstitution(process.orientador),
+      coorientador: process.coorientador && withInstitution(process.coorientador),
+      banca: process.banca.map(withInstitution),
+    };
+  };
 }

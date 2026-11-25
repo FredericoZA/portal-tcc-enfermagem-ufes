@@ -15,6 +15,7 @@ const SIGNATURE_PATHS = new Set([
 ]);
 
 const LITE_PATHS = new Set([
+  '/account-view/accounts',
   '/me',
   '/settings',
   '/setup/status',
@@ -85,10 +86,13 @@ const CURRENT_PROCESS_READS = [
 export function runtimeReadProjection(
   method: string,
   requestPath: string,
+  includeProcessAudit = true,
 ): RuntimeReadProjection {
   // Mutations, audit feeds, exports and every unreviewed endpoint fail closed
   // to the canonical state, including new routes added in future changes.
   if (method !== 'GET') return 'FULL';
+  if (!includeProcessAudit && /^\/processes\/[^/?#]+\/detail$/.test(requestPath))
+    return 'LEAN';
   if (SIGNATURE_PATHS.has(requestPath) || /^\/processes\/[^/?#]+\/signatures$/.test(requestPath))
     return 'SIGNATURES';
   if (

@@ -209,3 +209,41 @@ export function requireAuthenticated(req: Request, res: Response, next: NextFunc
 export function hasRecentAuthentication(identity: PortalIdentity, maxAgeSeconds = 600): boolean {
   return identity.isDemo || Math.floor(Date.now() / 1000) - identity.authTime <= maxAgeSeconds;
 }
+
+const accountViewCookie = () => secureRuntime() ? '__Host-portal_tcc_view' : 'portal_tcc_view';
+const accountViewSession = (identity: PortalIdentity) => identity.isDemo ? identity.uid : identity.sessionId;
+const accountViewMac = (payload: string) => createHmac('sha256', sessionSecret()).update('account-view:').update(payload).digest();
+
+export function writeAccountViewCookie(res: Response, identity: PortalIdentity | null, email: string | null) {
+  const name = accountViewCookie();
+  const common = { httpOnly: true, secure: secureRuntime(), sameSite: 'strict' as const, path: '/' };
+  if (!email) { res.clearCookie(name, common); return; }
+  if (!identity || sessionSecret().length < 32) throw new Error('A visualização de contas exige uma sessão segura.');
+  const ttl = SESSION_ABSOLUTE_TTL_SECONDS * 1000;
+  const payload = Buffer.from(JSON.stringify({ email, session: accountViewSession(identity), expires: Date.now() + ttl })).toString('base64url');
+  res.cookie(name, `${payload}.${accountViewMac(payload).toString('base64url')}`, { ...common, maxAge: ttl });
+}
+
+/** undefined means normal session. null means a present token that must fail closed. */
+export function readAccountViewCookie(req: Request, identity: PortalIdentity | null): string | null | undefined {
+  const token = parseCookies(req)[accountViewCookie()];
+  if (!token) return undefined;
+  if (!identity || sessionSecret().length < 32 || token.length > 1024) return null;
+  try {
+    const [payload, proof, extra] = token.split('.');
+    if (!payload || !proof || extra !== undefined) return null;
+    const mac = Buffer.from(proof, 'base64url'), expected = accountViewMac(payload);
+    if (mac.length !== expected.length || !timingSafeEqual(mac, expected)) return null;
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (data.session !== accountViewSession(identity) || data.expires <= Date.now() || typeof data.email !== 'string') return null;
+    return data.email;
+  } catch { return null; }
+}
+
+/** Only a signed view bound to a valid session can request the historical access projection. */
+export function hasAuthenticatedAccountView(req: Request): boolean {
+  const cookies = parseCookies(req);
+  if (!cookies[accountViewCookie()] || !cookies[cookieName()]) return false;
+  try { return Boolean(readAccountViewCookie(req, decodeSession(cookies[cookieName()]))); }
+  catch { return false; }
+}

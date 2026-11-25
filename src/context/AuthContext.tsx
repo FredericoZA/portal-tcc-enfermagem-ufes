@@ -2,13 +2,16 @@ import {sanitizeTablePreference,validTableKey,TABLE_DEFAULTS_EVENT} from '../uti
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
 import { GlobalRole, ProcessMembership } from '../types';
-import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail, invalidateIdentityRequests, PORTAL_SESSION_EXPIRED_EVENT } from '../services/apiClient';
+import { apiClient, ApiRequestError, setActiveUserEmail, getActiveUserEmail, invalidateIdentityRequests, setAccountViewReadOnly, PORTAL_SESSION_EXPIRED_EVENT } from '../services/apiClient';
 import { loadSiteLayoutConfig } from '../utils/siteLayoutConfig';
 
 type PortalSettings = Awaited<ReturnType<typeof apiClient.getSettings>>;
 
 interface AuthContextType {
   userEmail: string;
+  viewingAccount: string | null;
+  accountView: { masterEmail: string; targetName: string } | null;
+  changeAccountView: (email: string | null) => Promise<void>;
   globalRoles: GlobalRole[];
   memberships: ProcessMembership[];
   settings: PortalSettings | null;
@@ -34,6 +37,7 @@ interface CachedPortalIdentity {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AUTH_CACHE_KEY = 'portal_tcc_identity_cache_v1';
+const ACCOUNT_VIEW_CHANGED_KEY = 'portal_tcc_account_view_changed';
 const AUTH_CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000;
 const SESSION_ACTIVITY_TOUCH_INTERVAL_MS = 60 * 1000;
 
@@ -58,10 +62,17 @@ function clearCachedIdentity() {
 
 export async function getIdentityWithRetry() {
   let lastError: unknown;
+  let expiredViewRecovered = false;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try { return await apiClient.getMe(); }
     catch (error) {
       lastError = error;
+      if (!expiredViewRecovered && error instanceof ApiRequestError && error.code === 'ACCOUNT_VIEW_EXPIRED') {
+        // /me removes the expired view cookie. Confirm the underlying session afresh.
+        expiredViewRecovered = true;
+        clearCachedIdentity();
+        continue;
+      }
       if (error instanceof ApiRequestError && error.status >= 400 && error.status < 500 && error.status !== 429) throw error;
       const requestedWait=error instanceof ApiRequestError?error.retryAfterSeconds:undefined;
       // Respect admission/rate-limit backoff instead of immediately returning
@@ -83,7 +94,7 @@ export async function getPublicSettingsWithRetry(isCurrent:()=>boolean=()=>true)
     if(requestedWait!==undefined&&(!Number.isFinite(requestedWait)||requestedWait<0||requestedWait>30))throw error;
     // getSettings already retries this exact admission failure once internally.
     if(error.status===503&&error.code==='RUNTIME_BUSY'&&requestedWait!==undefined)throw error;
-    if(![0,429,502,503,504].includes(error.status))throw error;
+    if(![0,429,502,503,504].includes(error.status)&&error.code!=='ACCOUNT_VIEW_EXPIRED')throw error;
     await new Promise(resolve=>setTimeout(resolve,requestedWait===undefined?500:requestedWait*1000));
     if(!isCurrent())throw error;
     return apiClient.getSettings();
@@ -108,6 +119,8 @@ function syncPortalFavicon(siteConfig: any) {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [userEmail, setUserEmailState] = useState<string>(getActiveUserEmail());
+  const [viewingAccount, setViewingAccount] = useState<string | null>(null);
+  const [accountView, setAccountView] = useState<AuthContextType['accountView']>(null);
   const [globalRoles, setGlobalRoles] = useState<GlobalRole[]>([]);
   const [memberships, setMemberships] = useState<ProcessMembership[]>([]);
   const [settings, setSettings] = useState<PortalSettings | null>(null);
@@ -137,12 +150,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const applyIdentity = (meRes: Awaited<ReturnType<typeof apiClient.getMe>>) => {
+    setAccountViewReadOnly(Boolean(meRes.viewingAccount));
+    setViewingAccount(meRes.viewingAccount || null);
+    setAccountView(meRes.accountView || null);
     setUserEmailState(meRes.userEmail);
     setIsAuthenticated(meRes.isAuthenticated);
     setCanRegisterProcess(meRes.canRegisterProcess===true);
     setGlobalRoles(meRes.globalRoles);
     setMemberships(meRes.memberships);
-    if (meRes.isAuthenticated) saveCachedIdentity({
+    if (meRes.viewingAccount) clearCachedIdentity();
+    else if (meRes.isAuthenticated) saveCachedIdentity({
       userEmail: meRes.userEmail,
       globalRoles: meRes.globalRoles,
       memberships: meRes.memberships,
@@ -153,6 +170,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearIdentity = () => {
     clearCachedIdentity();
+    setAccountViewReadOnly(false);
+    setViewingAccount(null);
+    setAccountView(null);
     setUserEmailState('');
     setIsAuthenticated(false);
     setCanRegisterProcess(false);
@@ -219,6 +239,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (typeof window === 'undefined') return;
     const recoverAfterReconnect = () => { void refreshAuth(); };
     const synchronizeTabs = (event: StorageEvent) => {
+      if (event.key === ACCOUNT_VIEW_CHANGED_KEY) {
+        clearCachedIdentity();
+        window.location.reload();
+        return;
+      }
       if (event.key !== 'portal_tcc_active_email') return;
       invalidateIdentityRequests();
       identityRevision.current+=1;
@@ -251,7 +276,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const isCurrent=()=>active&&revision===identityRevision.current&&identitySequence===identityReadSequence.current;
       void apiClient.getMe()
         .then(value=>{if(isCurrent())applyIdentity(value);})
-        .catch(error => {if(isCurrent()&&error instanceof ApiRequestError&&error.status===401)clearIdentity();})
+        .catch(error => {
+          if (!isCurrent() || !(error instanceof ApiRequestError)) return;
+          if (error.code === 'ACCOUNT_VIEW_EXPIRED') {
+            clearCachedIdentity();
+            window.location.replace(window.location.pathname);
+          } else if (error.status === 401) clearIdentity();
+        })
         .finally(() => { touchInFlight = false; });
     };
 
@@ -266,6 +297,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSettings(null);
     setActiveUserEmail(email);
     await refreshAuth();
+  };
+
+  const changeAccountView = async (email: string | null) => {
+    await apiClient.setAccountView(email);
+    clearCachedIdentity();
+    try { localStorage.setItem(ACCOUNT_VIEW_CHANGED_KEY, String(Date.now())); }
+    catch { /* A sessão do servidor não depende do armazenamento local. */ }
+    // Recria as telas e descarta dados ou rascunhos em memória do perfil anterior.
+    window.location.replace(window.location.pathname);
   };
 
   const hasAdvisorRole = memberships.some((m) => m.roles.includes('ADVISOR'));
@@ -284,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider
       value={{
-        userEmail,
+        userEmail, viewingAccount, accountView, changeAccountView,
         globalRoles,
         memberships,
         settings,

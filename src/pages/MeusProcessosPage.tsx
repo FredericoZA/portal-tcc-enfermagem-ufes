@@ -9,7 +9,7 @@ import { apiClient } from '../services/apiClient';
 import {
   formatDateWithWeekday,
   formatDateNumericWithWeekday,
-  formatTimeExtenso,
+  formatTime24h,
   cleanPersonName,
   formatProfessorName,
   formatTccTitle,
@@ -364,15 +364,15 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         const row = activeCols.map((k) => {
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
-            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
+            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTime24h(p.defesa.startAt)}` : 'A definir'}"`;
             case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
             case 'aluno2': return `"${cleanPersonName(p.aluno2?.nome || '').replace(/"/g, '""')}"`;
-            case 'orientador': return `"${formatProfessorName(p.orientador?.nome || '').replace(/"/g, '""')}"`;
+            case 'orientador': return `"${academicName(p.orientador, 'abbreviated').replace(/"/g, '""')}"`;
             case 'membro1': return `"${(ev1?.nome ? academicName(ev1, 'abbreviated') : 'A definir').replace(/"/g, '""')}"`;
             case 'membro2': return `"${(ev2?.nome ? academicName(ev2, 'abbreviated') : 'A definir').replace(/"/g, '""')}"`;
-            case 'coorientador': return `"${(p.coorientador?.nome ? formatProfessorName(p.coorientador.nome) : 'Nenhum').replace(/"/g, '""')}"`;
+            case 'coorientador': return `"${(p.coorientador?.nome ? academicName(p.coorientador, 'abbreviated') : 'Nenhum').replace(/"/g, '""')}"`;
             case 'resumo': return `"${(p.acervo?.resumoSintese || '').replace(/"/g, '""')}"`;
             case 'palavrasChave': return `"${(p.acervo?.palavrasChave?.join('; ') || '').replace(/"/g, '""')}"`;
             case 'defesaLocal': return `"${(p.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`;
@@ -472,7 +472,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
               <span className="font-normal text-black">{formatDateNumericWithWeekday(proc.defesa?.startAt)}</span>
             </div>
-            <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+            <div className="text-[9.5px] font-mono font-normal text-black">{formatTime24h(proc.defesa?.startAt)}</div>
           </td>
         );
       case 'progresso': {
@@ -524,7 +524,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
           <td key="orientador" className={`${styles.cellPadClass} ${widthClass} ${alignClass} ${styles.borderClass} align-middle`}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), meusProcessosTextFormat, '')}
+                {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), meusProcessosTextFormat, '')}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
@@ -577,7 +577,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
               {proc.coorientador?.nome ? (
                 <div>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass} ${alignClass}`}>
-                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), meusProcessosTextFormat, '')}
+                    {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), meusProcessosTextFormat, '')}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(proc.coorientador.instituicao || 'Instituição Externa')}

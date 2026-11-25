@@ -6,7 +6,7 @@ import type { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { isManagedDefenseLocation } from '../utils/reservationLocation';
@@ -17,6 +17,7 @@ import type { IntegrationStudioSettings } from '../types/integrationStudio';
 type ProcessSummaryProps = {
   process: ProcessData;
   canEdit: boolean;
+  confirmInvitationRevalidation?: () => Promise<boolean>;
   canEditReservation?: boolean;
   advisorViewerEmail?: string;
   isAuthenticated?: boolean;
@@ -52,7 +53,7 @@ const fieldLabel = 'text-[10px] font-semibold text-slate-600';
 const fieldValue = 'text-[11px] font-semibold leading-4 text-slate-900';
 
 export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
-  process, canEdit, canEditReservation=false, advisorViewerEmail, isAuthenticated=false, onEditingChange, studio, onUpdated,onReservationSaved,
+  process, canEdit, confirmInvitationRevalidation, canEditReservation=false, advisorViewerEmail, isAuthenticated=false, onEditingChange, studio, onUpdated,onReservationSaved,
 }) => {
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
@@ -103,11 +104,15 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const saveTitle = async () => {
     const normalized = formatTccTitle(title);
     if (!normalized.trim()) { setError('Informe o título completo do trabalho.'); return; }
+    if (confirmInvitationRevalidation && !await confirmInvitationRevalidation()) return;
     setTitleSaving(true); setError('');
     try {
-      await apiClient.updateProcess(process.id, { titulo: normalized, expectedDataRevision:titleBaseRevision });
+      const result = await apiClient.updateProcess(process.id, {
+        titulo: normalized, expectedDataRevision: titleBaseRevision,
+        ...(confirmInvitationRevalidation ? { revalidateIssuedInvitation: true } : {}),
+      });
       setTitleEditing(false);
-      setNotice('Título atualizado.');
+      setNotice(result.reservationRestarted ? 'Título atualizado. A confirmação da reserva foi reiniciada.' : 'Título atualizado.');
       await onUpdated();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível alterar o título.');
@@ -239,7 +244,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Horário</span>
-            <span className={fieldValue}>{process.defesa?.startAt && !/^\d{4}-\d{2}-\d{2}$/.test(process.defesa.startAt) ? formatTimeExtenso(process.defesa.startAt) : 'A definir'}</span>
+            <span className={fieldValue}>{process.defesa?.startAt && !/^\d{4}-\d{2}-\d{2}$/.test(process.defesa.startAt) ? formatTime24h(process.defesa.startAt) : 'A definir'}</span>
           </div>
           <div className={`${compactField} ${webmailUrl && canEditReservation ? 'sm:col-span-3' : 'sm:col-span-5'}`}>
             <span className={fieldLabel}>Local da defesa</span>

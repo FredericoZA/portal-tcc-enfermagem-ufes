@@ -10,7 +10,7 @@ test('default public progress matches the real detail phases and aliases',()=>{
   assert.match(getProcessProgress({status:'AGUARDANDO_DEFESA',etapaAtual:'CONFIRMACAO_LOCAL'}).label,/Etapa 2\/8: Confirmação/);
   assert.match(getProcessProgress({status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO'}).label,/Etapa 7\/8: Repositório/);
 });
-import { formatDateExtensoTotal, formatDateNumeric, formatDatePt, formatWeekdayPt, formatDateWithWeekday, formatDateNumericWithWeekday, formatDateExtensoWithWeekday, formatTimeExtenso, getProcessProgress, getWorkflowStagesCount, getStepNumberLabel } from '../src/utils/formatters';
+import { formatDateExtensoTotal, formatDateNumeric, formatDatePt, formatWeekdayPt, formatDateWithWeekday, formatDateNumericWithWeekday, formatDateExtensoWithWeekday, formatTimeExtenso, formatTime24h, getProcessProgress, getWorkflowStagesCount, getStepNumberLabel } from '../src/utils/formatters';
 
 test('formatadores preservam valores civis informados no horário institucional', () => {
   assert.equal(formatDatePt('2026-09-11T14:30:00'), '11 de setembro de 2026');
@@ -119,4 +119,12 @@ test('registros administrativos começam pela data e respeitam a virada civil em
   assert.equal(formatAuditTimestamp('2027-01-01T02:59:59Z'), '31/12/2026, 23:59 (quinta-feira)');
   assert.equal(formatAuditTimestamp('2027-01-01T03:00:00Z'), '01/01/2027, 00:00 (sexta-feira)');
   assert.equal(formatAuditTimestamp('a confirmar'), 'a confirmar');
+});
+
+test('numeric defense times preserve civil values and do not fabricate missing times', () => {
+  assert.equal(formatTime24h('9:00'), '09:00');
+  assert.equal(formatTime24h('2026-11-25T10:30:00'), '10:30');
+  assert.equal(formatTime24h('2026-11-26T01:30:00Z'), '22:30');
+  assert.equal(formatTime24h('2026-11-25'), '');
+  assert.equal(formatTime24h(undefined), '');
 });

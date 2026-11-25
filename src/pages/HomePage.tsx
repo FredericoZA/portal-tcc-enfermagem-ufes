@@ -19,7 +19,7 @@ import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_REPOSITORY_CHANGED_EVENT } from '../ut
 import { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -27,7 +27,7 @@ import { getTableStyles, getActionPillStyles, formatColumnLabel, formatCellText,
 import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
-import { TccAbstractPopover } from '../components/TccAbstractPopover';
+import { DocumentEnvelope, TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { StudentNames, GcalStudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
@@ -83,6 +83,8 @@ import { resolveInstallationProfile } from '../utils/installationProfile';
 import { DEFENSE_PENDING_CONFIRMATION_LABEL, DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
+import { PortalModalShell } from '../components/PortalModalShell';
+import { confirmedReservations, formatReservationPeriod, reservationPeriodError, type ReservationPeriod } from '../utils/confirmedReservations';
 
 interface HomePageProps {
   onNavigate: (tab: string) => void;
@@ -906,13 +908,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             const name = proc.aluno2?.nome ? cleanPersonName(proc.aluno2.nome) : '';
             return name ? name : '';
           }
-          case 'orientador': return proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
-          case 'membro1': return evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
-          case 'membro2': return evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
-          case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
+          case 'orientador': return proc.orientador?.nome ? `${academicName(proc.orientador, 'abbreviated')} (${displayParticipantInstitution(proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
+          case 'membro1': return evalMembers[0] ? `${academicName(evalMembers[0],'abbreviated')} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
+          case 'membro2': return evalMembers[1] ? `${academicName(evalMembers[1],'abbreviated')} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
+          case 'coorientador': return proc.coorientador?.nome ? `${academicName(proc.coorientador, 'abbreviated')} (${displayParticipantInstitution(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
-          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
           case 'defesaLocal': return proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar';
           default: return '';
         }
@@ -969,19 +971,19 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${name ? (name).replace(/"/g, '""') : ''}"`);
       }
       if (visibleColumns.orientador) {
-        const orient = proc.orientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.orientador.nome):formatProfessorName(proc.orientador.nome))} (${installationProfile.institutionName})` : 'A definir';
+        const orient = proc.orientador?.nome ? `${academicName(proc.orientador, 'abbreviated')} (${displayParticipantInstitution(installationProfile.institutionName)})` : 'A definir';
         row.push(`"${orient.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.membro1) {
-        const ev1 = evalMembers[0] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[0].nome):academicName(evalMembers[0],'abbreviated'))} (${evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})` : 'A definir';
+        const ev1 = evalMembers[0] ? `${academicName(evalMembers[0],'abbreviated')} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
         row.push(`"${ev1.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.membro2) {
-        const ev2 = evalMembers[1] ? `${(proc.legacyRecord?cleanPersonName(evalMembers[1].nome):academicName(evalMembers[1],'abbreviated'))} (${evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : 'A definir';
+        const ev2 = evalMembers[1] ? `${academicName(evalMembers[1],'abbreviated')} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
         row.push(`"${ev2.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.coorientador) {
-        const coorient = proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
+        const coorient = proc.coorientador?.nome ? `${academicName(proc.coorientador, 'abbreviated')} (${displayParticipantInstitution(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : '';
         row.push(`"${coorient.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.resumo) {
@@ -993,7 +995,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${kw.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.defesaDataHora) {
-        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
         row.push(`"${dt}"`);
       }
       if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
@@ -1087,6 +1089,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     }
   };
 
+  const [isPreparingReservationsPdf, setIsPreparingReservationsPdf] = useState(false);
+  const [reservationPeriod, setReservationPeriod] = useState<ReservationPeriod | null>(null);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const refreshData = async () => {
@@ -1290,6 +1294,42 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     };
   };
 
+  const openConfirmedReservationsPdf = () => {
+    if (!ownsCalendarData || isLoading || loadError || isPreparingReservationsPdf) return;
+    const monthKey = `${year}-${String(month + 1).padStart(2,'0')}`;
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    setReservationPeriod({startDate:`${monthKey}-01`,endDate:`${monthKey}-${lastDay}`});
+  };
+
+  const periodError = reservationPeriod ? reservationPeriodError(reservationPeriod) : '';
+  const reservationRows = reservationPeriod && !periodError && ownsCalendarData && !loadError
+    ? confirmedReservations(
+        processes.filter(p=>matchesCalendarLocation(p.defesa.local,calendarLocations)), reservationPeriod,
+        settings?.integrationStudio?.operationsPolicy?.timezone || settings?.timezone,
+      )
+    : [];
+
+  const downloadConfirmedReservationsPdf = async () => {
+    if (!reservationPeriod || periodError || !ownsCalendarData || loadError || isPreparingReservationsPdf) return;
+    setIsPreparingReservationsPdf(true);
+    try {
+      const {buildConfirmedReservationsPdf} = await import('../utils/confirmedReservationsPdf');
+      const data = await buildConfirmedReservationsPdf({
+        rows:reservationRows,period:formatReservationPeriod(reservationPeriod),courseName:installationProfile.courseName,
+      });
+      const url = URL.createObjectURL(new Blob([new Uint8Array(data)],{type:'application/pdf'}));
+      const link = document.createElement('a');
+      link.href=url;
+      link.download=`reservas-confirmadas-${reservationPeriod.startDate}-a-${reservationPeriod.endDate}.pdf`;
+      link.click();
+      window.setTimeout(()=>URL.revokeObjectURL(url),60_000);
+    } catch {
+      portalNotice('Não foi possível gerar o PDF das reservas confirmadas. Tente novamente.');
+    } finally {
+      setIsPreparingReservationsPdf(false);
+    }
+  };
+
   const handleGoogleCalendarSync = async () => {
     setIsSyncingCalendar(true);
     setSyncStatus('Sincronizando pelo servidor seguro...');
@@ -1308,6 +1348,57 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
   return (
     <div id="home-page-container" className="space-y-4 max-w-7xl mx-auto py-1 sm:py-2">
+      <PortalModalShell
+        open={reservationPeriod!==null}
+        title="Reservas confirmadas"
+        subtitle={reservationPeriod && !periodError ? formatReservationPeriod(reservationPeriod) : undefined}
+        icon={CalendarIcon}
+        maxWidthClass="max-w-5xl"
+        className="max-h-[90dvh]"
+        onClose={()=>setReservationPeriod(null)}
+        footer={<div className="flex flex-wrap justify-end gap-2">
+          <button type="button" className="portal-action" onClick={()=>setReservationPeriod(null)}>Fechar</button>
+          <button type="button" className="portal-action portal-action-primary" disabled={isPreparingReservationsPdf || Boolean(periodError) || !ownsCalendarData || Boolean(loadError)} onClick={()=>void downloadConfirmedReservationsPdf()}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {isPreparingReservationsPdf ? 'Preparando PDF…' : 'Baixar PDF'}
+          </button>
+        </div>}
+      >
+        {reservationPeriod && <fieldset className="mb-4">
+          <legend className="mb-2 text-sm font-bold">Período do PDF</legend>
+          <div className="flex flex-wrap gap-3">
+            <label className="space-y-1 text-xs font-semibold">
+              <span className="block">Data inicial</span>
+              <input type="date" className="portal-input" required value={reservationPeriod.startDate}
+                aria-invalid={Boolean(periodError)} aria-describedby={periodError ? 'reservation-period-error' : undefined}
+                onInput={event=>setReservationPeriod({...reservationPeriod,startDate:event.currentTarget.value})} />
+            </label>
+            <label className="space-y-1 text-xs font-semibold">
+              <span className="block">Data final</span>
+              <input type="date" className="portal-input" required min={reservationPeriod.startDate} value={reservationPeriod.endDate}
+                aria-invalid={Boolean(periodError)} aria-describedby={periodError ? 'reservation-period-error' : undefined}
+                onInput={event=>setReservationPeriod({...reservationPeriod,endDate:event.currentTarget.value})} />
+            </label>
+          </div>
+        </fieldset>}
+        {periodError
+          ? <p id="reservation-period-error" role="alert" className="text-sm text-red-700">{periodError}</p>
+          : reservationRows.length
+          ? <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-center align-middle text-xs">
+                <caption className="sr-only">Horários e locais das reservas confirmadas no período selecionado</caption>
+                <thead className="bg-slate-200 text-slate-900"><tr>
+                  {['Dia','Horário','Local','Processo','Título'].map(label=><th key={label} scope="col" className="border border-slate-300 px-3 py-2">{label}</th>)}
+                </tr></thead>
+                <tbody>
+                  {reservationRows.map((row,index)=><tr key={`${row[3]}-${index}`} className="odd:bg-white even:bg-slate-50">
+                    {row.map((value,column)=><td key={column} className={`border border-slate-300 px-3 py-2 ${column===0||column===1||column===3?'whitespace-nowrap':''}`}>{value}</td>)}
+                  </tr>)}
+                </tbody>
+              </table>
+            </div>
+          : <p>Nenhuma reserva confirmada no período selecionado.</p>}
+      </PortalModalShell>
       {activeLoadError && <div role="alert" className="portal-card flex flex-wrap items-center justify-between gap-3 p-4"><p>{activeLoadError}</p><button type="button" className="portal-action portal-action-primary" onClick={()=>setLoadAttempt(value=>value+1)}>Tentar novamente</button></div>}
       {/* PUBLIC TAB 1: CALENDÁRIO */}
       {publicTab === 'calendario' && (
@@ -1330,7 +1421,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             Calendário de Defesas — {monthNamesPt[month]} de {year}
                           </h1>
                         </div>
-                        <CalendarLocationFilter key={calendarIdentity} options={calendarLocationOptions} value={calendarLocations} onChange={selection=>{setCalendarLocationSelection({identity:calendarIdentity,value:selection});setSelectedDayDefenses(null);setSelectedDayGcalEvents(null);}}/>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <CalendarLocationFilter key={calendarIdentity} options={calendarLocationOptions} value={calendarLocations} onChange={selection=>{setCalendarLocationSelection({identity:calendarIdentity,value:selection});setSelectedDayDefenses(null);setSelectedDayGcalEvents(null);}}/>
+                          <button
+                            type="button"
+                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} font-bold normal-case`}
+                            disabled={!ownsCalendarData || isLoading || Boolean(loadError) || isPreparingReservationsPdf}
+                            onClick={openConfirmedReservationsPdf}
+                          >
+                            <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            PDF das reservas confirmadas
+                          </button>
+                        </div>
                       </div>
 
                       {/* Month Navigation: Popup Calendar / Seta Esquerda / Hoje / Seta Direita */}
@@ -1789,9 +1891,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.advisorLabel || 'Orientador(a):'}
                                           </span>
-                                          <span className="font-normal text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome))}</span>
+                                          <span className="font-normal text-slate-900">{academicName(proc.orientador, 'abbreviated')}</span>
                                           {calendarPopupFormat.showAdvisorInstitution !== false && (
-                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)})</span>
+                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({displayParticipantInstitution(proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})</span>
                                           )}
                                         </div>
                                       )}
@@ -1800,9 +1902,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <span className="font-black text-slate-500 text-[10px] normal-case tracking-wider block">
                                             {calendarPopupFormat.coAdvisorLabel || 'Coorientador(a):'}
                                           </span>
-                                          <span className="font-normal text-slate-900">{(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))}</span>
+                                          <span className="font-normal text-slate-900">{academicName(proc.coorientador, 'abbreviated')}</span>
                                           {calendarPopupFormat.showAdvisorInstitution !== false && (
-                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({proc.coorientador.instituicao || installationProfile.defaultInstitutionName})</span>
+                                            <span className="text-[10px] text-slate-500 font-mono font-normal ml-1">({displayParticipantInstitution(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)})</span>
                                           )}
                                         </div>
                                       )}
@@ -1814,8 +1916,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                                           <div className="space-y-0.5 mt-0.5">
                                             {proc.banca.filter(b => b.funcao !== 'ORIENTADOR').map((b, idx) => (
                                               <div key={idx} className="text-[11px] text-slate-800">
-                                                • {proc.legacyRecord ? cleanPersonName(b.nome) : academicName(b, 'abbreviated')} {calendarPopupFormat.showCommitteeInstitution !== false && (
-                                                  <span className="text-[10px] text-slate-500 font-mono">({b.instituicao || (b.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName)})</span>
+                                                • {academicName(b, 'abbreviated')} {calendarPopupFormat.showCommitteeInstitution !== false && (
+                                                  <span className="text-[10px] text-slate-500 font-mono">({displayParticipantInstitution(b.instituicao || (b.membroTipo === 'EXTERNO' ? 'Instituição externa' : installationProfile.defaultInstitutionName))})</span>
                                                 )}
                                               </div>
                                             ))}
@@ -2210,7 +2312,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <PendingDefenseConfirmationNote process={proc} />
                         <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
-                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
                     </td>
                   );
                 case 'progresso':
@@ -2258,7 +2360,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <td key="orientador" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
                       <div className="w-full mx-auto">
                         <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                          {formatCellText('orientador', (proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome)), defensesTextFormat, '')}
+                          {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), defensesTextFormat, '')}
                         </div>
                         <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
                           {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
@@ -2273,7 +2375,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {ev1 ? (
                           <div>
                             <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro1', (proc.legacyRecord?cleanPersonName(ev1.nome):academicName(ev1,'abbreviated')), defensesTextFormat, '')}
+                              {formatCellText('membro1', academicName(ev1,'abbreviated'), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                               {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
@@ -2292,7 +2394,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {ev2 ? (
                           <div>
                             <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro2', (proc.legacyRecord?cleanPersonName(ev2.nome):academicName(ev2,'abbreviated')), defensesTextFormat, '')}
+                              {formatCellText('membro2', academicName(ev2,'abbreviated'), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                               {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
@@ -2311,7 +2413,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         {proc.coorientador?.nome ? (
                           <div>
                             <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('coorientador', (proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome)), defensesTextFormat, '')}
+                              {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), defensesTextFormat, '')}
                             </div>
                             <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
                               {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
@@ -2559,8 +2661,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key={colKey} data-portal-filter-value={status} className={`${acervoStyles.cellPadClass} ${acervoStyles.borderClass} ${acervoStyles.cellFontSizeClass} ${widthClass} text-center align-middle normal-case`}>
                       {typeof value === 'string'
-                        ? <button type="button" className="font-semibold underline underline-offset-2" aria-label={`Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`} onClick={() => openRepositoryDocument(value)}>{status}</button>
-                        : status}
+                        ? <button type="button" className="portal-abstract-trigger" title={`${label} · ${status}`}
+                            aria-label={`Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`}
+                            onClick={() => openRepositoryDocument(value)}>
+                            <DocumentEnvelope status="available" />
+                          </button>
+                        : <span className="portal-abstract-unavailable" role="img" title={`${label} · ${status}`}
+                            aria-label={`${label}. ${status}`}>
+                            <DocumentEnvelope status={status === 'Presente' ? 'available' : status === 'Ausente' ? 'absent' : 'restricted'} />
+                          </span>}
                     </td>
                   );
                 }
@@ -2631,10 +2740,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                       <td key="orientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
                         <div className="w-full mx-auto">
                           <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                            {formatCellText('orientador', (proc.legacyRecord?cleanPersonName(proc.orientador?.nome):formatProfessorName(proc.orientador?.nome)), acervoTextFormat, '')}
+                            {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), acervoTextFormat, '')}
                           </div>
                           <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                            {formatCellText('orientador', installationProfile.institutionName, acervoTextFormat, '')}
+                            {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.institutionName), acervoTextFormat, '')}
                           </div>
                         </div>
                       </td>
@@ -2646,7 +2755,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {ev1 ? (
                             <div>
                               <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro1', (proc.legacyRecord?cleanPersonName(ev1.nome):academicName(ev1,'abbreviated')), acervoTextFormat, '')}
+                                {formatCellText('membro1', academicName(ev1,'abbreviated'), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                                 {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), acervoTextFormat, '')}
@@ -2665,7 +2774,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {ev2 ? (
                             <div>
                               <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro2', (proc.legacyRecord?cleanPersonName(ev2.nome):academicName(ev2,'abbreviated')), acervoTextFormat, '')}
+                                {formatCellText('membro2', academicName(ev2,'abbreviated'), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
                                 {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
@@ -2684,7 +2793,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           {proc.coorientador?.nome ? (
                             <div>
                               <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('coorientador', (proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome)), acervoTextFormat, '')}
+                                {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), acervoTextFormat, '')}
                               </div>
                               <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
                                 {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
@@ -2716,7 +2825,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
                           {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
                         </div>
-                        <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+                        <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
                       </td>
                     );
                   case 'defesaLocal':
@@ -2808,7 +2917,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 </div>
                 <div>
                   <span className="font-bold text-slate-500 normal-case text-[10px] block">Orientador(a):</span>
-                  <p className="font-bold text-slate-900">{formatProfessorName(selectedLibDoc.orientador?.nome)}</p>
+                  <p className="font-bold text-slate-900">{academicName(selectedLibDoc.orientador, 'abbreviated')}</p>
                 </div>
               </div>
 

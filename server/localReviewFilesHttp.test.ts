@@ -33,12 +33,21 @@ test('HTTP local uploads persist real PDF bytes, enforce roles, version replacem
   const presentationPatch={aluno1:{...p.aluno1,tratamento:'Aluna'},orientador:{...p.orientador,tratamento:'Professora',titulacao:'Doutora'}};
   const editPresentation=async(email:string,patch= presentationPatch)=>fetch(`${base}/api/processes/${p.id}`,{method:'PATCH',headers:{'content-type':'application/json',...(email?{'x-demo-user-email':email}:{})},body:JSON.stringify(patch)});
   assert.equal((await editPresentation('')).status,401);
-  assert.equal((await editPresentation(p.aluno1.email)).status,200);
+  const studentPresentation=await editPresentation(p.aluno1.email,{
+   ...presentationPatch,orientador:{...presentationPatch.orientador,titulacao:'Mestra'},
+  });
+  assert.equal(studentPresentation.status,200);
+  assert.equal((await studentPresentation.json()).orientador.titulacao,'Mestra');
   const presented=await editPresentation('master@portal.local');assert.equal(presented.status,200,await presented.clone().text());
   const invalidTreatment=await editPresentation('master@portal.local',{...presentationPatch,aluno1:{...p.aluno1,tratamento:'Professor'}});assert.equal(invalidTreatment.status,400);
   const presentationState=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
   assert.equal(presentationState.processes[0].aluno1.tratamento,'Aluna');assert.equal(presentationState.processes[0].orientador.titulacao,'Doutora');
   assert.ok(presentationState.auditLogs.some((log:any)=>log.processId===p.id&&log.actorEmail==='master@portal.local'&&JSON.stringify(log.after).includes('Professora')));
+  const unchanged=await editPresentation('master@portal.local');
+  assert.equal(unchanged.status,200);
+  assert.equal((await unchanged.json()).dataRevision,presentationState.processes[0].dataRevision);
+  const unchangedState=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));
+  assert.deepEqual(unchangedState.auditLogs,presentationState.auditLogs);
   const order=await fetch(`${base}/api/processes/${p.id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':'master@portal.local'},body:JSON.stringify({authorOrder:'ALUNO_2_FIRST'})});assert.equal(order.status,200,await order.clone().text());
   const invalidOrder=await fetch(`${base}/api/processes/${p.id}`,{method:'PATCH',headers:{'content-type':'application/json','x-demo-user-email':'master@portal.local'},body:JSON.stringify({authorOrder:'DROP'})});assert.equal(invalidOrder.status,400);
   const orderState=JSON.parse(await readFile(path.join(directory,'portal-state.json'),'utf8'));assert.equal(orderState.processes[0].authorOrder,'ALUNO_2_FIRST');assert.equal(orderState.processes[0].aluno1.email,p.aluno1.email);assert.ok(orderState.auditLogs.some((log:any)=>log.processId===p.id&&log.after?.authorOrder==='ALUNO_2_FIRST'));

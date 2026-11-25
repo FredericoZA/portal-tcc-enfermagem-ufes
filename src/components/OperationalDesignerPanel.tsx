@@ -4,11 +4,17 @@ import type { CatalogEntry, OperationalConfig, VariablePresentation } from '../t
 import { formatVariable, registrationQuestions } from '../utils/operationalConfig';
 import { variableLineage } from '../utils/variableLineage';
 import { WorkflowWorkbenchPanel } from './WorkflowWorkbenchPanel';
+const parseLocations = (value: string) => value.split('\n').map(location => location.trim()).filter(Boolean);
 const labels = { AREA_TEMATICA: 'Área temática', TEMA_PRINCIPAL: 'Tema', TIPO_DE_ESTUDO: 'Tipo de estudo', FINALIDADE_DO_TRABALHO: 'Finalidade' };
-const formats = { original: 'Original', date: 'Data numérica', date_long: 'Data por extenso', time: 'Hora numérica', time_long: 'Hora por extenso', datetime: 'Data e hora numéricas', datetime_long: 'Data e hora por extenso' };
+const formats = { original: 'Original', date: 'Data numérica', date_long: 'Data por extenso', time: 'Hora numérica', time_long: 'Hora numérica (modelo antigo)', datetime: 'Data e hora numéricas', datetime_long: 'Data por extenso e hora numérica' };
 export function OperationalDesignerPanel({ studio, config, onChange, onInitialForm }: { studio: IntegrationStudioSettings; config: OperationalConfig; onChange: (value: OperationalConfig)=>void; onInitialForm: (questions: any[])=>void }) {
   const [artifact, setArtifact] = useState('tmpl-convite');
   const [search, setSearch] = useState('');
+  const configuredLocations = config.reservation.locations.join('\n');
+  const [locationDraft, setLocationDraft] = useState(configuredLocations);
+  const locations = parseLocations(locationDraft).join('\n') === configuredLocations
+    ? locationDraft
+    : configuredLocations;
   const rules = config.presentations[artifact] || [];
   const lineage = variableLineage(studio);
   const changeRules = (value: VariablePresentation[]) => onChange({ ...config, presentations: { ...config.presentations, [artifact]: value } });
@@ -22,7 +28,10 @@ export function OperationalDesignerPanel({ studio, config, onChange, onInitialFo
         <div><strong className="text-sm">Contato para reservas</strong><p className="mt-2 text-sm">Defina o endereço único em Integrações e Plataforma → Contatos do Portal. Esta rotina usa o mesmo contato.</p></div>
         <label className="md:col-span-2">Assunto do e-mail<input className="portal-input mt-2" value={config.reservation.emailSubject || ''} onChange={e=>changeReservation({emailSubject:e.target.value})} placeholder="Solicitação de reserva de local — {{TITULO}}"/></label>
         <label className="md:col-span-2">Texto do e-mail<textarea rows={8} className="portal-input mt-2" value={config.reservation.emailBody || ''} onChange={e=>changeReservation({emailBody:e.target.value})} placeholder="Escreva o texto do pedido. Variáveis como {{TITULO}}, {{DEFESA_DATA_HORA}} e {{DEFESA_LOCAL}} serão preenchidas automaticamente."/></label>
-        <label className="md:col-span-2">Locais disponíveis — um por linha<textarea rows={4} className="portal-input mt-2" value={config.reservation.locations.join('\n')} onChange={e=>changeReservation({locations:e.target.value.split('\n').map(value=>value.trim()).filter(Boolean)})}/></label>
+        <label className="md:col-span-2">Locais disponíveis — um por linha<textarea rows={4} className="portal-input mt-2" value={locations} onChange={e => {
+          setLocationDraft(e.target.value);
+          changeReservation({ locations: parseLocations(e.target.value) });
+        }}/></label>
       </div>
       <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700"><strong>Variáveis úteis no e-mail:</strong> <code>{'{{TITULO}}'}</code>, <code>{'{{ALUNOS_NOMES}}'}</code>, <code>{'{{ORIENTADOR_NOME}}'}</code>, <code>{'{{DEFESA_DATA_HORA}}'}</code>, <code>{'{{DEFESA_LOCAL}}'}</code> e <code>{'{{LOCAL_ALTERNATIVO}}'}</code>. O endereço do destinatário fica restrito à administração e não é enviado ao formulário do aluno.</div>
       <p className="my-3 text-sm">As classificações do trabalho são apresentadas ao aluno como campos de seleção, com exemplos e opções administráveis abaixo. Os campos essenciais de autoria e assinatura continuam preservados.</p>

@@ -13,8 +13,10 @@ const event=(id:string,local:string):any=>({id,summary:`Evento ${id}`,descriptio
 
 function calendarDay(processes:any[],events:any[],selection:readonly string[]|null,ownsCalendarData=true){
   const source=readFileSync('src/pages/HomePage.tsx','utf8');
-  const start=source.indexOf('  const getEventsForDate =');const end=source.indexOf('  const handleGoogleCalendarSync =',start);
-  const code=ts.transpileModule(`(function(){${source.slice(start,end)};return getEventsForDate;})()`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+  const start=source.indexOf('  const getEventsForDate =');
+  const end=source.indexOf('\n  };', start);
+  assert.ok(start >= 0 && end > start, 'calendar-day selector exists');
+  const code=ts.transpileModule(`(function(){${source.slice(start,end + 5)};return getEventsForDate;})()`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
   return vm.runInNewContext(code,{filteredProcesses:processes,processes,googleEvents:events,standaloneGoogleEvents:calendarStandaloneGoogleEvents(processes,events),calendarLocations:selection,ownsCalendarData,isDefenseOnCalendar,calendarEventMatchesProcess,matchesCalendarLocation,calendarGoogleEventLocation,formatStudentsString,year:2026,month:10,Date})(6);
 }
 

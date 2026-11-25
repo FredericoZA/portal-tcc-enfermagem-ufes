@@ -135,7 +135,7 @@ interface IntegrationStudioPanelProps {
   onScanDrive: () => Promise<void>;
   isScanningDrive: boolean;
   notify: (message: string) => void;
-  initialTab?: 'documents' | 'emails' | 'receipts' | 'forms' | 'workflow' | 'variables';
+  initialTab?: 'operation' | 'documents' | 'emails' | 'receipts' | 'forms' | 'workflow' | 'variables';
   hideTabs?: boolean;
 }
 

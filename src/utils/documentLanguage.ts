@@ -5,7 +5,7 @@ import {publicationAuthorizationVariables} from './publicationAuthorization';
 import type {ProcessData} from '../types';
 import {academicName,plainPersonName,facultyRole,authorGrammar,personPresentationVariables} from './personPresentation';
 import {ataClosingTime} from './ataClosingTime';
-import {formatTimeExtenso,formatDateNumericWithWeekday,formatTime24h} from './formatters';
+import {formatDateNumericWithWeekday,formatTime24h} from './formatters';
 const matchCase=(sample:string,value:string)=>sample.split('(')[0].trim()===sample.split('(')[0].trim().toLocaleUpperCase('pt-BR')?value.toLocaleUpperCase('pt-BR'):/^[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ]/.test(sample)?value[0].toLocaleUpperCase('pt-BR')+value.slice(1):value;
 const escape=(value:string)=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 /** Compatibility with old academic wording; never infer a person's gender from a name. */
@@ -111,7 +111,7 @@ export function adaptDocumentLanguage(text:string,p:ProcessData,type:string):str
    out=out.replace(new RegExp(`Participou também\\s+(?:a|o)\\s+coorientador(?:a)?\\s+${escape(coName)}\\.\\s*`,'giu'),'');
   }
   out=removeAtaLocationTime(out);
-  const time=formatTimeExtenso(ataClosingTime(p.defesa.startAt).iso);
+  const time=formatTime24h(ataClosingTime(p.defesa.startAt).iso);
   const closing=`Nada mais havendo a tratar, às ${time} foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada.`;
   out=out.replace(/Nada mais havendo a tratar,\s*(?:às [^,]+?\s)?foi encerrada a sessão e lavrada a presente ata,?\s*que (?:será assinada(?: por quem de direito)?|segue para ser assinada)\.?/gi,closing);
   out=out.replace(/(?<=[.!?])\.?[ \t\r\n\u000b]+(?=Nada mais havendo a tratar,)/giu,' ');

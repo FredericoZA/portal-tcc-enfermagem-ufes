@@ -2,7 +2,7 @@ import {downloadPortalDocument, fetchPortalDocument, savePortalDocument} from '.
 import { portalNotice } from '../services/portalDialogs';
 import React from 'react';
 import { ProcessDocument, DocumentVersion } from '../types';
-import { Download, AlertCircle, FileText, CheckCircle2, ShieldCheck, MessageSquarePlus, HardDrive, ExternalLink } from 'lucide-react';
+import { Download, AlertCircle, FileText, CheckCircle2, ShieldCheck, HardDrive, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import {documentHeaderLines} from '../utils/institutionalIdentity';
@@ -13,16 +13,12 @@ interface DocumentPreviewModalProps {
   document: ProcessDocument | null;
   processProtocol: string;
   onClose: () => void;
-  onRequestCorrection: (doc: ProcessDocument) => void;
-  readOnly?: boolean;
 }
 
 export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   document,
   processProtocol,
   onClose,
-  onRequestCorrection,
-  readOnly = false
 }) => {
   const { settings } = useAuth();
   const profile = resolveInstallationProfile(settings);
@@ -109,12 +105,9 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         </div>
       </section>}
 
-      <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        {!readOnly&&<button id="modal-request-correction-btn" onClick={() => onRequestCorrection(document)} className="portal-action"><MessageSquarePlus className="h-4 w-4 text-amber-700" />Solicitar ajuste / correção</button>}
-        <div className="flex flex-wrap items-center gap-2">
-          {driveUrl && <a href={driveUrl} target="_blank" rel="noopener noreferrer" className="portal-action"><HardDrive className="h-4 w-4 text-[var(--portal-brand-action)]" />Abrir no Google Drive<ExternalLink className="h-3.5 w-3.5" /></a>}
-          <button id="modal-download-pdf-btn" onClick={handleDownload} disabled={!isDownloadable || Boolean(driveDownloadUrl && !loadedPreview && !previewFailed)} className="portal-action portal-action-primary disabled:cursor-not-allowed disabled:opacity-45"><Download className="h-4 w-4" />Baixar documento</button>
-        </div>
+      <div className="mt-3 flex shrink-0 flex-wrap items-center justify-end gap-2">
+        {driveUrl && <a href={driveUrl} target="_blank" rel="noopener noreferrer" className="portal-action"><HardDrive className="h-4 w-4 text-[var(--portal-brand-action)]" />Abrir no Google Drive<ExternalLink className="h-3.5 w-3.5" /></a>}
+        <button id="modal-download-pdf-btn" onClick={handleDownload} disabled={!isDownloadable || Boolean(driveDownloadUrl && !loadedPreview && !previewFailed)} className="portal-action portal-action-primary disabled:cursor-not-allowed disabled:opacity-45"><Download className="h-4 w-4" />Baixar documento</button>
       </div>
     </PortalModalShell>
   );

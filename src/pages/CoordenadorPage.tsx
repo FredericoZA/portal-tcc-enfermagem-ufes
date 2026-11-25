@@ -1,3 +1,4 @@
+import {displayParticipantInstitution} from '../utils/institutionName';
 import {ASTEN_AUTOMATIC_GUIDANCE, ASTEN_SIGNATURE_GUIDANCE} from '../utils/signatureGuidance';
 import {documentSignatureCompleted} from '../utils/documentSignatureState';
 import React, { useState, useEffect, useRef } from 'react';
@@ -7,7 +8,7 @@ import { apiClient } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTimeExtenso } from '../utils/formatters';
+import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTime24h } from '../utils/formatters';
 import {academicName} from '../utils/personPresentation';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
@@ -433,7 +434,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
 
     const cleanInst = (str?: string) => {
       if (!str) return '';
-      return str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim();
+      return displayParticipantInstitution(str.replace(/^\s*\(\s*/, '').replace(/\s*\)\s*$/, '').trim());
     };
 
     switch (colKey) {
@@ -472,7 +473,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumericWithWeekday(proc.defesa.startAt) : 'N/A'}</span>
             </div>
             {proc.defesa?.startAt && (
-              <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>
+              <div className="text-[9.5px] font-mono font-normal text-black">{formatTime24h(proc.defesa.startAt)}</div>
             )}
           </td>
         );
@@ -519,7 +520,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
           <td key={colKey} className={cellClass}>
             <div className="w-full mx-auto">
               <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                {formatCellText('orientador', formatProfessorName(proc.orientador?.nome), coordTextFormat)}
+                {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), coordTextFormat)}
               </div>
               <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                 {cleanInst(proc.orientador?.instituicao || installationProfile.defaultInstitutionName)}
@@ -581,7 +582,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               {proc.coorientador?.nome ? (
                 <>
                   <div className={`${styles.cellWeightClass} ${styles.cellTextColorClass} ${styles.cellFontSizeClass} ${styles.cellWrapClass}`}>
-                    {formatCellText('coorientador', formatProfessorName(proc.coorientador.nome), coordTextFormat)}
+                    {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), coordTextFormat)}
                   </div>
                   <div className="text-[9px] text-slate-600 font-mono font-medium mt-0.5 leading-tight break-words">
                     {cleanInst(proc.coorientador.instituicao || installationProfile.defaultInstitutionName)}

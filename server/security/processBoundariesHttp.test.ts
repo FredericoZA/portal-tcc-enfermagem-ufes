@@ -144,7 +144,12 @@ test('HTTP: authors and the advisor cannot override a reservation conflict; Mast
   try {
     const edited=await f.request(`/api/processes/${process.id}`, student, 'PATCH', { titulo: 'Correção permitida antes do convite' });
     assert.equal(edited.status, 200);
-    const {dataRevision}=await edited.json();
+    const {dataRevision,titulo}=await edited.json();
+    const beforeRepeat = await f.state();
+    const repeat = await f.request(`/api/processes/${process.id}`, student, 'PATCH', { titulo, expectedDataRevision: dataRevision });
+    assert.equal(repeat.status, 200);
+    assert.equal((await repeat.json()).dataRevision, dataRevision);
+    assert.deepEqual(await f.state(), beforeRepeat, 'saving identical data leaves the Drive and audit state alone');
     const raw = await f.request(`/api/processes/${process.id}`, student, 'PATCH', { defesa: { startAt: '2000-01-01T14:00:00Z' } });
     assert.equal(raw.status, 400);
     assert.equal((await raw.json()).code, 'RESERVATION_CHANGE_REQUIRED');
@@ -264,6 +269,16 @@ test('HTTP: advisor can correct registration before invitation and stages lock s
       assert.equal(response.status, 409, item.id);
       assert.equal((await response.json()).code, code);
     }
+    const approved = await f.request(endpoint(invited.id), advisor, 'PATCH', {
+      ...correction, expectedDataRevision: invited.dataRevision, revalidateIssuedInvitation: true,
+    });
+    assert.equal(approved.status,202,await approved.clone().text());
+    const restarted = await approved.json();
+    assert.equal(restarted.titulo,correction.titulo);
+    assert.equal(restarted.reservationRestarted,true);
+    assert.equal(restarted.defesa.invitationSentAt,undefined);
+    assert.equal(restarted.defesa.localStatus,'PENDENTE');
+    assert.equal(restarted.defesa.reservationHistory[0].invitationSentAt,invited.defesa.invitationSentAt);
     const reopen = await f.request(endpoint(concluded.id) + '/repository/reopen', student, 'POST', {});
     assert.equal(reopen.status, 409);
     assert.equal((await reopen.json()).code, 'REPOSITORY_CLOSED');
@@ -297,6 +312,7 @@ test('HTTP: final delivery requires the deposit, protects closed records and kee
     const process = processFixture(id);
     process.status = 'AGUARDANDO_DADOS_FINAIS';
     process.etapaAtual = 'REPOSITORIO';
+    process.defesa.startAt = '2025-02-20T17:00:00.000Z';
     process.avaliacao = { status: 'CONCLUIDO' };
     process.acervo = {
       trabalhoCompletoFileId: 'fixture-pdf',
@@ -365,69 +381,33 @@ test('HTTP: final delivery requires the deposit, protects closed records and kee
   }
 });
 
-test('HTTP: correction descriptions are typed and bounded before creating tickets', { timeout: 45_000 }, async () => {
-  const process = processFixture();
-  const f = await fixture(initialState([process]));
-  const send = (description: unknown) => f.request(`/api/processes/${process.id}/documents/doc-ata/correction-request`, student, 'POST', { description });
+test('HTTP: the retired document correction route rejects new requests and preserves history', { timeout: 45_000 }, async () => {
+  const open = processFixture();
+  const finished = processFixture('closed-correction-process');
+  finished.status = 'CONCLUIDO';
+  finished.etapaAtual = 'CONCLUIDO';
+  finished.avaliacao = { status: 'CONCLUIDO' };
+  const historicalTicket = {
+    id: 'historical-correction', processId: open.id, documentId: 'doc-ata', documentVersion: 1,
+    requestedByEmail: student, requestedByRoles: ['STUDENT'], description: 'Registro histórico da solicitação.',
+    status: 'CORRIGIDO', createdAt: now(),
+  };
+  const f = await fixture(initialState([open, finished], [historicalTicket]));
+  const path = (id: string, doc: string) => `/api/processes/${id}/documents/${doc}/correction-request`;
   try {
-    for (const description of [{ text: 'Objeto não é descrição' }, ['Descrição em uma lista'], 123, true, '', '   ', 'Texto com controle\u0000inválido']) assert.equal((await send(description)).status, 400);
-    assert.equal((await send('X'.repeat(4001))).status, 413);
-    assert.equal((await send('\u0344'.repeat(3000))).status, 413, 'normalization may expand the text');
-    assert.equal((await send('X'.repeat(1_000_000))).status, 413);
-    assert.equal((await f.request(`/api/processes/${process.id}/documents/doc-ata/correction-request`, student, 'POST', { description: 'Pedido com versão tipada inválida.', documentVersion: { version: 1 } })).status, 400);
-    assert.equal((await f.request(`/api/processes/${process.id}/documents/nonexistent/correction-request`, student, 'POST', { description: 'Documento sem vínculo com o processo.' })).status, 404);
-    const valid = await send('A'.repeat(4000));
-    assert.equal(valid.status, 201);
-    assert.equal((await valid.json()).description.length, 4000);
-    const saved = await f.state();
-    assert.equal(saved.correctionRequests.length, 1);
-    const audit = saved.auditLogs.find((item: { action: string }) => item.action === 'SOLICITACAO_AJUSTE_DOCUMENTO');
-    assert.equal(audit.after.description, undefined);
-    assert.equal(audit.after.descriptionLength, 4000);
-    assert.match(audit.after.descriptionSha256, /^[a-f0-9]{64}$/);
-    assert.ok(!JSON.stringify(audit).includes('A'.repeat(100)));
-  } finally { await f.close(); }
-});
-
-test('HTTP: open correction duplicates reuse the ticket and durable requester/process quotas survive restart', { timeout: 45_000 }, async () => {
-  const process = processFixture();
-  const legacy = { id: 'legacy-resolved', processId: process.id, documentId: 'doc-ata', documentVersion: 1, requestedByEmail: student, requestedByRoles: ['STUDENT'], description: 'Conteúdo histórico preservado. '.repeat(400), status: 'CORRIGIDO', createdAt: new Date(Date.now() - 25 * 3600_000).toISOString() };
-  const f = await fixture(initialState([process], [legacy]));
-  const send = (description: string, email = student, documentId = 'doc-ata') => f.request(`/api/processes/${process.id}/documents/${documentId}/correction-request`, email, 'POST', { description });
-  try {
-    const first = await send('Corrigir a data apresentada no documento.');
-    assert.equal(first.status, 201);
-    const ticket = await first.json();
-    const duplicate = await send('  Corrigir a data apresentada no documento.  ');
-    assert.equal(duplicate.status, 200);
-    assert.equal((await duplicate.json()).id, ticket.id);
-    for (let index = 0; index < 4; index++) assert.equal((await send(`Correção distinta de número ${index}.`, student, index % 2 ? 'doc-termo' : 'doc-ata')).status, 201);
-    await f.restart();
-    const duplicateAtLimit = await send('Corrigir a data apresentada no documento.');
-    assert.equal(duplicateAtLimit.status, 200, 'retries do not consume quota after restart');
-    assert.equal((await duplicateAtLimit.json()).id, ticket.id);
-    assert.equal((await send('Tentativa de ultrapassar a quota de solicitações abertas.')).status, 429);
-    assert.equal((await send('O orientador possui uma quota independente.', advisor)).status, 201);
-    const saved = await f.state();
-    assert.deepEqual(saved.correctionRequests.find((item: { id: string }) => item.id === legacy.id), legacy);
-    assert.equal(saved.correctionRequests.filter((item: { requestedByEmail: string }) => item.requestedByEmail === student).length, 6);
-    assert.equal(saved.auditLogs.filter((item: { action: string; actorEmail: string }) => item.action === 'SOLICITACAO_AJUSTE_DOCUMENTO' && item.actorEmail === student).length, 5);
-  } finally { await f.close(); }
-});
-
-test('HTTP: historical open tickets and recent resolved tickets count toward quotas without being truncated', { timeout: 45_000 }, async () => {
-  const process = processFixture();
-  const other = processFixture('recent-process');
-  const makeTicket = (id: number, target = process.id) => ({ id: `historical-${target}-${id}`, processId: target, documentId: 'doc-ata', documentVersion: 1, requestedByEmail: student, requestedByRoles: ['STUDENT'], description: 'Histórico original não pode ser truncado. '.repeat(200), status: target === process.id ? 'ABERTO' : 'CORRIGIDO', createdAt: target === process.id ? '2025-01-01T00:00:00Z' : now() });
-  const tickets = [...Array.from({ length: 6 }, (_, index) => makeTicket(index)), ...Array.from({ length: 10 }, (_, index) => makeTicket(index, other.id))];
-  const f = await fixture(initialState([process, other], tickets));
-  try {
-    await f.restart();
-    for (const target of [process.id, other.id]) {
-      const denied = await f.request(`/api/processes/${target}/documents/doc-ata/correction-request`, student, 'POST', { description: 'Nova solicitação que deve respeitar os registros já existentes.' });
-      assert.equal(denied.status, 429, target);
+    assert.equal((await f.request(path(open.id, 'doc-ata'), '', 'POST', {}, '')).status, 401);
+    const before = await f.state();
+    for (const process of [open, finished]) {
+      for (const [role, doc] of [[student, 'doc-convite'], [advisor, 'doc-ata'], [student, 'doc-termo'], [master, 'doc-declaracao']]) {
+        const result = await f.request(path(process.id, doc), role, 'POST', { description: 'Pedido da versão anterior do Portal.' });
+        assert.equal(result.status, 410);
+        assert.equal((await result.json()).code, 'DOCUMENT_CORRECTION_REQUEST_RETIRED');
+      }
     }
-    assert.deepEqual((await f.state()).correctionRequests, tickets);
+    const history = await f.request('/api/admin/correction-requests', master);
+    assert.equal(history.status, 200);
+    assert.deepEqual(await history.json(), [historicalTicket]);
+    assert.deepEqual(await f.state(), before, 'retired requests never change documents, tickets or audit records');
   } finally { await f.close(); }
 });
 

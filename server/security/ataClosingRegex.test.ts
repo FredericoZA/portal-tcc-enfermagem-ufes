@@ -4,7 +4,7 @@ import test from 'node:test';
 import {DEMO_PROCESSES} from '../../src/services/demoSeed';
 import {adaptDocumentLanguage} from '../../src/utils/documentLanguage';
 
-const closing = 'Nada mais havendo a tratar, às quinze horas foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada.';
+const closing = 'Nada mais havendo a tratar, às 15:00 foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada.';
 const prefix = 'Nada mais havendo a tratar,';
 const body = 'foi encerrada a sessão e lavrada a presente ata';
 const processFixture = () => {

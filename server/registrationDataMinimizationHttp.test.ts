@@ -96,6 +96,14 @@ test('HTTP: novo cadastro não coleta registros; edição preserva apenas identi
   assert.equal(detailResponse.headers.get('cache-control'),'private, no-store');
   const detail=await detailResponse.json();
   assert.doesNotMatch(JSON.stringify(detail),/HISTORICO-/);
+  assert.ok(detail.auditLogs.length > 0, 'o cliente anterior continua recebendo o histórico');
+  const leanPath = detailPath + '?includeAudit=false';
+  assert.equal((await fetch(base + leanPath)).status, 401);
+  const leanResponse = await fetch(base + leanPath, { headers });
+  assert.equal(leanResponse.status, 200);
+  assert.equal(leanResponse.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual(await leanResponse.json(), { ...detail, auditLogs: [] });
+  assert.equal((await fetch(base + leanPath, { headers: { 'x-demo-user-email': 'nova@example.invalid' } })).status, 404);
   const outsider=await fetch(base+detailPath,{headers:{'x-demo-user-email':'nova@example.invalid'}});
   assert.equal(outsider.status,404);
   for(const [field,suffix] of [['process',''],['documents','/documents'],['signatures','/signatures'],['verifications','/verifications'],['auditLogs','/audit-logs']]){

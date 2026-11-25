@@ -15,7 +15,7 @@ test('academic name uses declared choices, removes duplicate prefixes and never 
  assert.equal(academicName({nome:'João da Silva',tratamento:'Professor',titulacao:'Mestre'}),'Professor Mestre João da Silva');
  assert.equal(academicName({nome:'Maria da Silva',tratamento:'Professora',titulacao:'Doutora'},'abbreviated'),'Prof.ª Dr.ª Maria da Silva');
  assert.equal(academicName({nome:'Maria da Silva'}),'Maria da Silva');
- assert.equal(academicName({nome:'Prof. Dr. Carlos Silva',titulacao:'Doutor'}),'Prof. Dr. Carlos Silva');
+ assert.equal(academicName({nome:'Prof. Dr. Carlos Silva',titulacao:'Doutor'},'abbreviated'),'Prof. Dr. Carlos Silva');
 });
 test('document variables and legacy models use civil treatment without an academic degree',()=>{
  const p=fixture();
@@ -49,13 +49,13 @@ test('agreement distinguishes one woman, two women, mixed authors and unclassifi
  const p=fixture();assert.equal(personPresentationVariables(p).RESULTADO_CONCORDANTE,'Aprovada');p.aluno2={...p.aluno1,nome:'Ana Ferreira'};let vars=personPresentationVariables(p);assert.equal(vars.ALUNOS_REFERENCIA,'as graduandas');assert.equal(vars.RESULTADO_CONCORDANTE,'Aprovadas');p.aluno2.tratamento='Aluno';vars=personPresentationVariables(p);assert.equal(vars.ALUNOS_REFERENCIA,'os graduandos');assert.equal(vars.ALUNOS_VERBO_APRESENTAR,'expuseram');p.aluno2=null;p.aluno1.tratamento=undefined;assert.equal(personPresentationVariables(p).ALUNOS_REFERENCIA,'a pessoa autora');
 });
 test('ata closing includes defense plus one hour, removes old formula and handles midnight',()=>{
- const p=fixture(),text='Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';const out=adaptDocumentLanguage(text,p,'ATA');assert.match(out,/às quinze horas/);assert.match(out,/que segue para ser assinada\./);assert.doesNotMatch(out,/por quem de direito/);assert.equal(adaptDocumentLanguage(out,p,'ATA'),out);
- p.defesa.startAt='2026-10-15T23:30:00-03:00';assert.match(adaptDocumentLanguage(text,p,'ATA'),/zero horas e trinta minutos|meia-noite e trinta minutos/);
+ const p=fixture(),text='Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada por quem de direito.';const out=adaptDocumentLanguage(text,p,'ATA');assert.match(out,/às 15:00/);assert.match(out,/que segue para ser assinada\./);assert.doesNotMatch(out,/por quem de direito/);assert.equal(adaptDocumentLanguage(out,p,'ATA'),out);
+ p.defesa.startAt='2026-10-15T23:30:00-03:00';assert.match(adaptDocumentLanguage(text,p,'ATA'),/às 00:30/);
 });
 test('ata continues the opinion without a paragraph break and removes a duplicated period',()=>{
  const p=fixture(),text='A banca registrou o parecer.. Nada mais havendo a tratar, foi encerrada a sessão e lavrada a presente ata que será assinada.';
  const output=adaptDocumentLanguage(text,p,'ATA');
- assert.match(output,/parecer\. Nada mais havendo a tratar, às quinze horas foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada\./);
+ assert.match(output,/parecer\. Nada mais havendo a tratar, às 15:00 foi encerrada a sessão e lavrada a presente ata, que segue para ser assinada\./);
  assert.equal(adaptDocumentLanguage(output,p,'ATA'),output);
 });
 test('new native fields precede names, preserve choices and validate a complete new payload',()=>{
@@ -106,7 +106,7 @@ test('temporary Google copy receives grammar and body formatting corrections for
     assert.equal(effective?.textStyle.bold,false,`${documentType}: ${value} uses normal weight`);
    }
   }
-  if(documentType==='ATA'){assert.match(text,/às quinze horas/);assert.doesNotMatch(text,/por quem de direito/);}
+  if(documentType==='ATA'){assert.match(text,/às 15:00/);assert.doesNotMatch(text,/por quem de direito/);}
  }
 });
 

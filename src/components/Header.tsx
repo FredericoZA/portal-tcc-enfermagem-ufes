@@ -6,6 +6,7 @@ import { loadSiteLayoutConfig, SITE_LAYOUT_EVENT, SiteLayoutConfig } from '../ut
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { NotificationBell } from './NotificationBell';
 import { SiteZoomControls } from './SiteZoomControls';
+import { AccountViewControl } from './AccountViewControl';
 import { PORTAL_THEME } from '../theme/portalTheme';
 
 interface HeaderProps {
@@ -18,7 +19,7 @@ interface HeaderProps {
 const PUBLIC_VISITOR_SUFFIX = '@publico.local';
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSidebarOpen, onGoHome }) => {
-  const { userEmail, globalRoles, settings } = useAuth();
+  const { userEmail, globalRoles, settings, accountView } = useAuth();
   const installationProfile = resolveInstallationProfile(settings);
   const [layoutConfig, setLayoutConfig] = useState<SiteLayoutConfig>(loadSiteLayoutConfig());
 
@@ -40,13 +41,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSid
   const normalizedEmail = String(userEmail || '').trim().toLowerCase();
   const isPublicVisitor = !normalizedEmail || normalizedEmail.endsWith(PUBLIC_VISITOR_SUFFIX);
   const showAuthenticatedIdentity = !isPublicVisitor;
-  const isMaster = globalRoles.includes('MASTER_ADMIN');
+  const isMaster = globalRoles.includes('MASTER_ADMIN') || Boolean(accountView);
   const isCommissionPresident = globalRoles.includes('COMMISSION_PRESIDENT');
-  const accessLabel = isMaster
-    ? 'Usuário Master'
-    : isCommissionPresident
-      ? 'Presidente da Comissão'
-      : 'Acesso pelo e-mail';
+  const accessLabel = isCommissionPresident ? 'Presidente da Comissão' : 'Acesso pelo e-mail';
 
   return (
     <header id="portal-header" className="border-b border-slate-200 shadow-2xs sticky top-0 z-30 transition-colors" style={headerStyle}>
@@ -75,13 +72,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSid
             ) : null)}
             <SiteZoomControls />
 
-            <div id="user-profile-summary" className="hidden md:flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-full border border-slate-200">
-              <User className="w-4 h-4 text-slate-500" />
-              <div className="text-xs">
-                <div className="font-bold text-slate-900 truncate max-w-[180px]" title={userEmail}>{userEmail}</div>
-                <div className="text-[10px] text-emerald-700 font-bold normal-case tracking-wider">{accessLabel}</div>
+            {isMaster ? <AccountViewControl /> : (
+              <div id="user-profile-summary" className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5">
+                <User className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                <div className="min-w-0 text-xs">
+                  <div className="max-w-[180px] truncate font-bold text-slate-900" title={userEmail}>{userEmail}</div>
+                  <div className="text-[10px] font-bold normal-case tracking-wider text-emerald-700">{accessLabel}</div>
+                </div>
               </div>
-            </div>
+            )}
             <NotificationBell key={normalizedEmail} />
           </div>
         )}

@@ -1,3 +1,4 @@
+import { finalDeliveryBlocker } from '../utils/finalDeliveryGate';
 import {PublicRepositoryFileActions} from '../components/PublicRepositoryFileActions';
 import {openDriveDocument} from '../utils/driveDocumentAccess';
 import { displayParticipantInstitution } from '../utils/institutionName';
@@ -36,7 +37,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
-import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
+import { formatDatePt, formatDateExtensoTotal, formatTime24h, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
 import { reservationStatusAlert } from '../utils/reservationStatusAlert';
 import { effectiveDefenseReservationStatus } from '../utils/defenseReservationState';
@@ -46,7 +47,6 @@ import {ProcessDeletionDialog} from '../components/ProcessDeletionDialog';
 import type {DeletionDialogTarget} from '../utils/processDeletionDialog';
 import { EtapaProgressBar } from '../components/EtapaProgressBar';
 import { StudentNames } from '../components/StudentNames';
-import { CorrectionRequestModal } from '../components/CorrectionRequestModal';
 import { resolveInstallationProfile } from '../utils/installationProfile';
 import { RegistrationFieldPreview } from '../components/RegistrationFieldPreview';
 import {
@@ -135,6 +135,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const [signatureNotice,setSignatureNotice]=useState<{ok:boolean;text:string;documentType?:string}|null>(null);
   const [verifications,setVerifications]=useState<Array<{documentType:string;version:number;code:string;url:string;sha256?:string;signedAt?:string}>>([]);
   const [isDownloadingDossier,setIsDownloadingDossier]=useState(false);
+  const [editingRegistration, setEditingRegistration] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [canRetryLoad, setCanRetryLoad] = useState(false);
@@ -214,7 +215,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
     window.addEventListener('keydown', closeHistoryOnEscape);
     return () => window.removeEventListener('keydown', closeHistoryOnEscape);
   }, [showAuditLogModal]);
-  const [correctionDoc, setCorrectionDoc] = useState<ProcessDocument | null>(null);
   const [retryingDriveData,setRetryingDriveData]=useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletionTarget,setDeletionTarget]=useState<DeletionDialogTarget|null>(null);
@@ -262,8 +262,29 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const [bancaForm, setBancaForm] = useState<any[]>([]);
 
-  // Local Session Audit Log
-  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditHistory, setAuditHistory] = useState<{
+    scope: string;
+    rows?: AuditLogEntry[];
+    failed?: boolean;
+  } | null>(null);
+  const visibleAuditHistory = auditHistory?.scope === legacyAccessKey ? auditHistory : null;
+  const auditProcessId = process?.id;
+  useEffect(() => {
+    if (!showAuditLogModal || readOnly || !auditProcessId) return;
+    const controller = new AbortController();
+    apiClient.getProcessAuditLogs(auditProcessId, { signal: controller.signal }).then(logs => {
+      if (controller.signal.aborted || legacyAccessScope.current !== legacyAccessKey) return;
+      const rows = logs.map(log => ({
+        id: log.id, timestamp: formatDateTimeWithWeekday(log.timestamp), user: log.actorEmail,
+        role: log.actorRoles.join(', '), action: log.action, details: auditChanges(log),
+      }));
+      setAuditHistory({ scope: legacyAccessKey, rows });
+    }).catch(() => {
+      if (!controller.signal.aborted && legacyAccessScope.current === legacyAccessKey)
+        setAuditHistory({ scope: legacyAccessKey, failed: true });
+    });
+    return () => controller.abort();
+  }, [showAuditLogModal, readOnly, auditProcessId, legacyAccessKey]);
 
   // Acervo Digital Form state
   const [acervoKeywords, setAcervoKeywords] = useState('');
@@ -322,11 +343,11 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
         setPrivateLegacyAcademic(academicAccess);
         setProcess(publicDetail.process); setDocuments(publicDetail.documents);setReceiptItems(data.reservationReceipts);
-        setSignatureJobs([]); setVerifications([]); setAuditLogs([]);
+        setSignatureJobs([]); setVerifications([]);
         return;
       }
-      const {process:pData,documents:docsData,signatures:signatureData,verifications:verificationData,auditLogs:recordedLogs,reservationReceipts:receiptData}
-        = await apiClient.getProcessDetail(processId);
+      const {process:pData,documents:docsData,signatures:signatureData,verifications:verificationData,reservationReceipts:receiptData}
+        = await apiClient.getProcessDetail(processId, false);
       if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
       if(lastProcessRevision.current&&(pData.dataRevision<lastProcessRevision.current.revision||(pData.dataRevision===lastProcessRevision.current.revision&&Date.parse(pData.updatedAt)<Date.parse(lastProcessRevision.current.updatedAt))))return;
       if(background&&repositorySubmitInFlight.current)return;
@@ -381,7 +402,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
         }
       }
 
-      setAuditLogs(recordedLogs.map(log=>({id:log.id,timestamp:formatDateTimeWithWeekday(log.timestamp),user:log.actorEmail,role:log.actorRoles.join(', '),action:log.action,details:auditChanges(log)})));
 
     } catch (err: any) {
       if (requestScope !== legacyAccessScope.current || deletionDialogRef.current) return;
@@ -547,7 +567,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const hasReservationReceipt = Boolean(process.defesa.departmentResponse || process.defesa.reservationHistory?.some(item=>item.departmentResponse||item.localConfirmedAt) || (process.defesa as { hasReservationReceipt?: boolean }).hasReservationReceipt);
   const canSubmitAcervo = isAuthenticated && isStudent;
   const canChangePublication=isAuthenticated&&(isMasterAdmin||(!process.legacyRecord&&isStudent))&&(process.legacyRecord||process.status==='CONCLUIDO');
-  const acervoFieldsLocked = publicationEditing ? (!canChangePublication||publicationBusy||isSubmittingAcervo||Boolean(acervoUploading)) : !canSubmitAcervo || isAcervoSubmitted || !ataIsArchived || isSubmittingAcervo || Boolean(acervoUploading);
+  const deliveryBlocker = finalDeliveryBlocker(process, ataIsArchived);
+  const acervoFieldsLocked = publicationEditing ? (!canChangePublication||publicationBusy||isSubmittingAcervo||Boolean(acervoUploading)) : !canSubmitAcervo || isAcervoSubmitted || Boolean(deliveryBlocker) || isSubmittingAcervo || Boolean(acervoUploading);
   const openPublicationEditing=async()=>{
     if(!canChangePublication||publicationBusy)return;
     setPublicationBusy(true);
@@ -601,14 +622,22 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
   const canStudentEdit = isStudent && !isEvaluationSubmitted && !isAcervoSubmitted && !readOnly;
   const canAdvisorEdit = (isAdvisor || isCoAdvisor) && !isAcervoSubmitted && !readOnly;
-  const canCoordinatorEdit = isMasterAdmin && !readOnly && !isEvaluationSubmitted && !isAcervoSubmitted;
+  const hasIssuedInvitation = Boolean(process.defesa.invitationDriveFileId || process.defesa.invitationSentAt);
+  const canToggleRegistrationEdit = isMasterAdmin || isAdvisor;
+  const canOpenRegistrationEdit = isAuthenticated && !readOnly && !process.legacyRecord &&
+    !isEvaluationSubmitted && !isAcervoSubmitted && process.status !== 'CONCLUIDO' &&
+    (canToggleRegistrationEdit || isStudent) &&
+    !signatureJobs.some(job => job.status !== 'CANCELED' && Boolean(job.driveSignedFileId || job.driveUnsignedFileId));
+  const confirmInvitationRevalidation = () => portalConfirm(
+    'A correção altera dados de uma carta-convite já emitida. Ao salvar, a reserva anterior e o convite ficam no histórico. O responsável pelo local receberá uma nova solicitação de confirmação antes da emissão do convite atualizado.',
+    { title: 'Revalidar reserva e carta-convite', confirmLabel: 'Salvar e revalidar', cancelLabel: 'Cancelar', tone: 'warning' },
+  );
+  const canEditData = canOpenRegistrationEdit && (canToggleRegistrationEdit ? editingRegistration : isStudent);
 
-  const canEditData = canCoordinatorEdit || Boolean((isStudent || isAdvisor) && !isEvaluationSubmitted && !readOnly && !process.defesa.invitationDriveFileId && !process.defesa.invitationSentAt);
-
-  const canEditDefense=isAuthenticated&&(canStudentEdit||canAdvisorEdit&&!isEvaluationSubmitted&&isAdvisor)&&!process.legacyRecord&&process.status!=='CONCLUIDO';
+  const canEditDefense=isAuthenticated&&(canStudentEdit||(canAdvisorEdit&&isAdvisor)&&!isEvaluationSubmitted&&!isAcervoSubmitted)&&!process.legacyRecord&&process.status!=='CONCLUIDO';
   const defenseDate=new Date(process.defesa.startAt);
   const defenseLocal=Number.isFinite(defenseDate.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(defenseDate).replace(' ','T'):'';
-  const inlineField=(label:string,value:string,patch:(value:string)=>Record<string,unknown>,type='text',display=value,editable=canEditData,confirmDefenseChange=false,options?:readonly string[])=><InlineProcessField onEditingChange={setSummaryEditing} options={options} label={label} value={value} display={display} type={type} editable={!readOnly && editable} beforeEdit={confirmDefenseChange?()=>portalConfirm(`Tem certeza de que deseja alterar ${label==='Data da defesa'?'a data da defesa':label==='Horário da defesa'?'o horário da defesa':'o local da defesa'}? ${!process.defesa.invitationDriveFileId&&!process.defesa.invitationSentAt&&process.avaliacao.status!=='CONCLUIDO'?'Ao salvar, a solicitação de reserva será reenviada ao responsável pelo local e a etapa de confirmação será reiniciada. A confirmação e o comprovante anteriores deixarão de valer. O responsável receberá um novo pedido e deverá confirmar o agendamento novamente.':'Essa mudança afeta o calendário da defesa. Confirme o novo agendamento com o departamento e preserve os documentos já emitidos.'} Ao salvar, o histórico registrará quem realizou a alteração, a data e hora do registro e os valores anteriores e novos.`,{title:'Atenção: alterar agendamento da defesa',tone:'warning',confirmLabel:'Sim, quero alterar',cancelLabel:'Manter como está'}):undefined} onSave={async next=>{const result=await apiClient.updateProcess(process.id,{...patch(next.trim()),expectedDataRevision:process.dataRevision});await loadData({quiet:true,preserveAcervoDraft:true});if(result.reservationRestarted)portalNotice(result.workflowPending?`Agendamento atualizado e confirmação reiniciada. O novo pedido de reserva aguarda envio: ${result.workflowError||'a secretaria deve acompanhar a pendência.'}`:'Agendamento atualizado e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.',{title:'Solicitação de reserva reiniciada'});}}/>;
+  const inlineField=(label:string,value:string,patch:(value:string)=>Record<string,unknown>,type='text',display=value,editable=canEditData,confirmDefenseChange=false,options?:readonly string[])=><InlineProcessField onEditingChange={setSummaryEditing} options={options} label={label} value={value} display={display} type={type} editable={!readOnly && editable} beforeEdit={confirmDefenseChange?()=>portalConfirm(`Tem certeza de que deseja alterar ${label==='Data da defesa'?'a data da defesa':label==='Horário da defesa'?'o horário da defesa':'o local da defesa'}? ${!process.defesa.invitationDriveFileId&&!process.defesa.invitationSentAt&&process.avaliacao.status!=='CONCLUIDO'?'Ao salvar, a solicitação de reserva será reenviada ao responsável pelo local e a etapa de confirmação será reiniciada. A confirmação e o comprovante anteriores deixarão de valer. O responsável receberá um novo pedido e deverá confirmar o agendamento novamente.':'Essa mudança afeta o calendário da defesa. Confirme o novo agendamento com o departamento e preserve os documentos já emitidos.'} Ao salvar, o histórico registrará quem realizou a alteração, a data e hora do registro e os valores anteriores e novos.`,{title:'Atenção: alterar agendamento da defesa',tone:'warning',confirmLabel:'Sim, quero alterar',cancelLabel:'Manter como está'}):undefined} onSave={async next=>{if(hasIssuedInvitation&&!await confirmInvitationRevalidation())return;const result=await apiClient.updateProcess(process.id,{...patch(next.trim()),expectedDataRevision:process.dataRevision,...(hasIssuedInvitation?{revalidateIssuedInvitation:true as const}:{})});await loadData({quiet:true,preserveAcervoDraft:true});if(result.reservationRestarted)portalNotice(result.workflowPending?`Dados atualizados e confirmação reiniciada. O novo pedido de reserva aguarda envio: ${result.workflowError||'a secretaria deve acompanhar a pendência.'}`:'Dados atualizados e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.',{title:'Solicitação de reserva reiniciada'});}}/>;
 
   const handleSignDocument=async(doc:ProcessDocument)=>{
     setSignatureWorking(doc.type);setSignatureNotice(null);
@@ -686,7 +715,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
       setEditingSection(null);
       await loadData();
-      portalNotice(result.reservationRestarted?(result.workflowPending?'Agendamento atualizado. A confirmação foi reiniciada, mas o novo pedido aguarda envio. A secretaria deve acompanhar a pendência.':'Agendamento atualizado e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.'):'Ficha cadastral atualizada.');
+      portalNotice(result.reservationRestarted?(result.workflowPending?'Agendamento atualizado. A confirmação foi reiniciada, mas o novo pedido aguarda envio. A secretaria deve acompanhar a pendência.':'Dados atualizados e novo pedido enviado ao responsável pelo local. Aguarde a confirmação pelo novo pedido.'):'Ficha cadastral atualizada.');
     } catch (err: any) {
       portalNotice(err.message || 'Erro ao salvar alterações da ficha cadastral.');
     }
@@ -801,8 +830,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       return;
     }
     if (!canSubmitAcervo || isAcervoSubmitted || isSubmittingAcervo || repositorySubmitInFlight.current || acervoUploading) return;
-    if (!ataIsArchived) {
-      portalNotice('Aguarde o arquivamento da Ata assinada para salvar a entrega final.');
+    if (deliveryBlocker) {
+      portalNotice(deliveryBlocker.error);
       return;
     }
 
@@ -990,7 +1019,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           <div className="relative flex shrink-0 items-center gap-1.5">
             <span role="status" aria-live="polite" aria-atomic="true" className={copyFeedback?'portal-copy-feedback pointer-events-none absolute right-0 top-full z-50 mt-2 w-max max-w-[min(300px,80vw)] whitespace-normal rounded-lg border border-slate-300 bg-[var(--portal-surface-card)] px-3 py-2 text-xs font-normal normal-case text-slate-800 shadow-sm':'sr-only'}>{copyFeedback?.text||''}</span>
           <button type="button" className="portal-toolbar-icon-button rounded-full bg-white text-slate-950" aria-label="Copiar link do trabalho" title="Copiar link do trabalho" onClick={()=>void copyProcessLink()}><LinkIcon className="h-4 w-4"/></button>
-            {!readOnly&&<button type="button" onClick={()=>setShowAuditLogModal(true)} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-950" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>}
+            {!readOnly&&<button type="button" onClick={()=>{setAuditHistory(null);setShowAuditLogModal(true);}} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-slate-950" title="Histórico de Auditoria" aria-label="Abrir histórico de auditoria"><History className="h-4 w-4"/></button>}
             {isMasterAdmin&&!readOnly&&<button type="button" onClick={()=>{deletionScopeRef.current=deletionScope;deletionDialogRef.current=true;setDeletionTarget({id:process.id,protocol:process.protocolo,title:process.titulo||'',authors:formatStudentsString(process.aluno1,process.aluno2)});setShowDeleteModal(true);}} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white bg-white text-rose-700" aria-label="Excluir trabalho"><Trash2 className="h-4 w-4"/></button>}
           </div>
         </header>
@@ -1021,7 +1050,13 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
           <div className="p-4 sm:p-5">
             <div className="space-y-3">
-              <ProcessSummaryCard process={process} advisorViewerEmail={isAuthenticated && isAdvisor ? normEmail : undefined} canEdit={!readOnly&&canEditData} canEditReservation={canEditDefense} isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onReservationSaved={saved=>{if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;const previous=lastProcessRevision.current;if(previous&&(saved.dataRevision<previous.revision||(saved.dataRevision===previous.revision&&Date.parse(saved.updatedAt)<Date.parse(previous.updatedAt))))return;lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};setRemoteUpdatePending(false);setProcess(saved);}} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
+              {canOpenRegistrationEdit && canToggleRegistrationEdit && (
+                <button type="button" className="portal-action" aria-pressed={editingRegistration}
+                  onClick={() => setEditingRegistration(open => !open)}>
+                  {editingRegistration ? 'Encerrar edição' : 'Alterar dados'}
+                </button>
+              )}
+              <ProcessSummaryCard process={process} advisorViewerEmail={isAuthenticated && isAdvisor ? normEmail : undefined} canEdit={!readOnly&&canEditData} confirmInvitationRevalidation={hasIssuedInvitation?confirmInvitationRevalidation:undefined} canEditReservation={canEditDefense} isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onReservationSaved={saved=>{if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;const previous=lastProcessRevision.current;if(previous&&(saved.dataRevision<previous.revision||(saved.dataRevision===previous.revision&&Date.parse(saved.updatedAt)<Date.parse(previous.updatedAt))))return;lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};setRemoteUpdatePending(false);setProcess(saved);}} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
               <section className="portal-tcc-members-box" aria-label="Dados dos membros">
                 <h2 className="mb-2 text-xs font-bold normal-case">Dados dos membros</h2>
                 <div className="portal-members-table-scroll" role="region" aria-label="Tabela de membros com rolagem horizontal" tabIndex={0}>
@@ -1043,7 +1078,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                       : withoutRegistrationIdentifiers(member))}
                     : {[key]:{...withoutRegistrationIdentifiers(person),[property]:value}};
                   const institution = ('instituicao' in person && person.instituicao) || '';
-                  const displayName = key==='banca' && typeof person.tratamento==='string' ? plainPersonName(person) : person.nome;
+                  const displayName = (key==='banca'||process.legacyRecord) && typeof person.tratamento==='string' ? plainPersonName(person) : person.nome;
                   return <tr key={`${key}-${person.email||person.nome}`}>
                     <th scope="row">{role}</th>
                     <td className="font-bold">{inlineField(`Nome — ${role}`,person.nome,value=>field('nome',value),'text',displayName)}</td>
@@ -1181,7 +1216,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
                   tone={termDeclined?'denied':pendingSignature?'progress':isDownloadable?'available':'pending'}
                   available={isDownloadable} unavailable={!isDownloadable&&!canUseGovbr}
                   onView={()=>void handleDocumentAccess(doc,'view')} onDownload={()=>void handleDocumentAccess(doc,'download')}>
-                  {!readOnly&&isDownloadable&&<button type="button" className="portal-action text-xs" onClick={()=>setCorrectionDoc(doc)}>Solicitar ajuste / correção</button>}
                   {(automaticStatus || canUseGovbr || canSendAsten) && <div className="portal-document-signature-actions flex flex-col gap-2">
                     {automaticStatus && !pendingSignature && <p role="status" className="text-center text-xs font-semibold">{automaticStatus}</p>}
                     {canSendAsten && <button type="button" onClick={()=>handleSignDocument(doc)} disabled={signatureWorking!==''} className="portal-action portal-signature-provider-action"><ShieldCheck className="h-4 w-4"/>Asten</button>}
@@ -1218,7 +1252,8 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
               <>
               <form id="repository-delivery-form" data-delivery-locked={acervoFieldsLocked} onSubmit={handleSubmitAcervo} className="space-y-2">
                 {repositoryReopenNotice&&<aside role="status" className="portal-instruction p-3 text-sm"><p>{repositoryReopenNotice}</p><button type="button" disabled={isSubmittingAcervo} className="portal-action mt-2" onClick={()=>void retryRepositoryDocuments()}>Atualizar documentos</button></aside>}
-                {!isAcervoSubmitted&&!publicationEditing&&<aside role="status" className="portal-instruction mx-auto w-fit max-w-[calc(100%_-_1rem)] p-3 text-left text-sm sm:max-w-[calc(100%_-_2rem)]"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
+                {!isAcervoSubmitted&&!publicationEditing&&deliveryBlocker&&<p role="status" className="portal-instruction p-3 text-sm">{deliveryBlocker.error}</p>}
+                {!isAcervoSubmitted&&!publicationEditing&&!deliveryBlocker&&<aside role="status" className="portal-instruction mx-auto w-fit max-w-[calc(100%_-_1rem)] p-3 text-left text-sm sm:max-w-[calc(100%_-_2rem)]"><p className="font-semibold">Orientações</p><ul className="mt-1 list-disc space-y-1 pl-5">{ataIsArchived&&<li>A entrega final está liberada. Qualquer um dos autores pode enviar os documentos.</li>}<li>Preencha o resumo e as palavras-chave e anexe o PDF do trabalho completo. O envio do TCC é obrigatório.</li><li>A publicação do trabalho completo e do resumo expandido é opcional. Assinale a caixa de seleção abaixo de cada arquivo que deseja tornar público. Se nenhuma caixa for assinalada, nenhum dos dois arquivos será publicado.</li><li>Confirme a entrega. Se você autorizar a publicação de algum arquivo, o termo de autorização será gerado automaticamente, e a ASTEN enviará por e-mail a solicitação de assinatura aos autores e ao orientador. Cada signatário deverá assinar pelo link recebido.</li></ul></aside>}
                 <fieldset disabled={acervoFieldsLocked} className={`portal-repository-grid ${acervoFieldsLocked?'portal-repository-locked':''}`}>
                                   {/* Card 2: Resumo Síntese */}
                   <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-3">
@@ -1376,7 +1411,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
       <PortalModalShell zIndexClass="z-[1000002]" open={downloadPicker} onClose={()=>setDownloadPicker(false)} title="Baixar documentos" icon={Download} maxWidthClass="max-w-lg" bodyClassName="p-4" footer={<div className="flex justify-end gap-2"><button type="button" className="portal-action" onClick={()=>setDownloadPicker(false)}>Fechar</button><button type="button" disabled={isDownloadingDossier||!downloadSelection.length} className="portal-action" onClick={()=>void handleDownloadDossier()}>{isDownloadingDossier?'Preparando…':'Baixar selecionados'}</button></div>}>
         <div className="space-y-2">{documents.map(doc=><label key={doc.id} className="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" disabled={!['DISPONIVEL','ASSINADO'].includes(doc.status)} checked={downloadSelection.includes(doc.type)} onChange={event=>setDownloadSelection(current=>event.target.checked?[...current,doc.type]:current.filter(type=>type!==doc.type))}/><span>{doc.title}<small className="block">{doc.status==='DISPONIVEL'?'Disponível':doc.status==='ASSINADO'?'Assinado':'Não disponível'}</small></span></label>)}</div>
       </PortalModalShell>
-      {showAuditLogModal && (
+      {showAuditLogModal && !readOnly && (
         <div
           className="portal-modal-backdrop fixed inset-0 z-[1000001] flex items-center justify-center p-4"
           onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuditLogModal(false); }}
@@ -1393,8 +1428,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
             <div className="flex justify-end gap-2 p-3"><button type="button" className="portal-action" onClick={()=>void apiClient.downloadProcessAuditLogs(processId).then(({blob,fileName})=>{const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=fileName;anchor.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}).catch(error=>portalNotice(error.message))}><Download className="h-4 w-4"/>Baixar histórico em PDF</button><button type="button" className="portal-action" onClick={()=>setShowAuditLogModal(false)}>Fechar</button></div>
             <div className="max-h-[calc(85vh-140px)] overflow-y-auto" style={{ backgroundColor: 'var(--portal-surface-page)' }}>
               <div className="space-y-3 p-3 sm:p-4">
-                {!auditLogs.length&&<p className="rounded-lg border border-slate-200 bg-white p-4 text-center text-sm text-slate-600">Nenhum evento registrado para este processo.</p>}
-                {auditLogs.map(log=><article key={log.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                {!visibleAuditHistory && <p role="status" className="p-4 text-center text-sm">Carregando histórico…</p>}
+                {visibleAuditHistory?.failed && <p role="alert" className="p-4 text-center text-sm">Não foi possível carregar o histórico. Feche e abra novamente para tentar.</p>}
+                {visibleAuditHistory?.rows?.length === 0 && <p className="rounded-lg border border-slate-200 bg-white p-4 text-center text-sm text-slate-600">Nenhum evento registrado para este processo.</p>}
+                {visibleAuditHistory?.rows?.map(log=><article key={log.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2"><h3 className="font-bold text-slate-900">{log.action}</h3><time className="text-xs font-medium text-slate-600">{log.timestamp}</time></div>
                   <p className="mt-1 break-words text-xs text-slate-600">{log.user}{log.role&&<span> · {log.role}</span>}</p>
                   <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50"><summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--portal-brand-action)]">Ver alterações</summary><div className="space-y-1 border-t border-slate-200 px-3 py-2 text-xs leading-5 text-slate-700">{log.details.split('\n').filter(Boolean).map((line,index)=>{const separator=line.indexOf(': ');return <div key={index} className="break-words">{separator>0?<><strong>{line.slice(0,separator)}:</strong> {line.slice(separator+2)}</>:line}</div>;})}</div></details>
@@ -1404,16 +1441,6 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
           </div>
         </div>
       )}
-
-      {/* Document correction keeps its own action; Ver opens the Drive original. */}
-      <CorrectionRequestModal
-        document={correctionDoc}
-        processId={process.id}
-        onClose={() => setCorrectionDoc(null)}
-        onSuccess={() => loadData()}
-      />
-
-
 
     </div>
   );

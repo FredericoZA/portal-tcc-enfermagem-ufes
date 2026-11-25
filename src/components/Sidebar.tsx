@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             tutorial: { id: 'tutorial', label: getNavLabel('tutorial', 'Como usar'), icon: HelpCircle, emoji: '', visible: true },
             'fluxo-tcc': { id: 'fluxo-tcc', label: getNavLabel('fluxo-tcc', 'Fluxo do TCC'), icon: GitBranch, emoji: '', visible: true },
             'meus-processos': { id: 'meus-processos', label: getNavLabel('meus-processos', 'Meus TCCs'), icon: FileText, emoji: '', visible: !isVisitor },
-            coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '', visible: (isMasterAdmin || isCommissionPresident) && !isVisitor },
+            coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '', visible: isCommissionPresident && !isMasterAdmin && !isVisitor },
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
             replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true },
