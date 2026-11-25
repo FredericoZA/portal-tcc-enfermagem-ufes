@@ -6,7 +6,7 @@ import {ACADEMIC_PERIOD_FIELD, ACADEMIC_PERIOD_LABEL, academicPeriodHelpText, ac
 import {normalizePersonName} from './personNameCase';
 import {AUTHOR_REFERENCE_OPTIONS,authorReferenceOptions,withAuthorReference} from './registrationIdentity';
 import {STUDENT_TREATMENTS,FACULTY_TREATMENTS,COMMITTEE_TREATMENTS,ACADEMIC_DEGREES,isPresentationField} from './personPresentation';
-import { formatTimeExtenso, formatDateExtensoWithWeekday, formatWeekdayPt, renderTccTitle, normalizeEmail } from './formatters';
+import { formatDateExtensoWithWeekday, formatWeekdayPt, renderTccTitle, normalizeEmail } from './formatters';
 import type { IntegrationStudioSettings, StudioValidationRule } from '../types/integrationStudio';
 import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isOtherDefenseLocation, renderCustomLocationName } from './customDefenseLocation';
 import type { CatalogEntry, OperationalConfig, RegistrationAnswers, RegistrationQuestion, VariablePresentation } from '../types/operationalConfig';
@@ -353,10 +353,7 @@ export function formatVariable(value: unknown, presentation: VariablePresentatio
       const time = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
       output = formatDateExtensoWithWeekday(day + 'T12:00:00') + (hasTime ? ' às ' + time : '');
     }
-    if (long && hasTime) {
-      const time = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
-      output = output.replace(time, formatTimeExtenso(time));
-    }
+
   }
   return presentation.letterCase === 'upper'
     ? output.toLocaleUpperCase('pt-BR')

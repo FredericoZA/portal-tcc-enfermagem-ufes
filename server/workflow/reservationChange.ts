@@ -1,6 +1,6 @@
 import { DEFENSE_WEEKDAY_MESSAGE, isDefenseWeekday } from '../../src/utils/defenseSchedule';
 import { OTHER_DEFENSE_LOCATION, isOtherDefenseLocation, renderCustomLocationName } from '../../src/utils/customDefenseLocation';
-import { formatDateWithWeekday, formatTimeExtenso } from '../../src/utils/formatters';
+import { formatDateWithWeekday, formatTime24h } from '../../src/utils/formatters';
 import { officialParticipantLines } from '../../src/utils/officialParticipants';
 import { localDateTimeToIso } from '../../src/utils/operationalConfig';
 import type { ProcessData } from '../../src/types';
@@ -68,12 +68,12 @@ export function buildReservationChangeEmail(
     '',
     'Reserva informada anteriormente:',
     `Data: ${formatDateWithWeekday(process.defesa.startAt)}`,
-    `Horário: ${formatTimeExtenso(process.defesa.startAt)}`,
+    `Horário: ${formatTime24h(process.defesa.startAt)}`,
     `Local: ${process.defesa.local}`,
     '',
     'Nova solicitação:',
     `Data: ${formatDateWithWeekday(proposal.startAt)}`,
-    `Horário: ${formatTimeExtenso(proposal.startAt)}`,
+    `Horário: ${formatTime24h(proposal.startAt)}`,
     `Local: ${proposal.local}`,
     '',
     custom

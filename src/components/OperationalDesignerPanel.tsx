@@ -5,7 +5,7 @@ import { formatVariable, registrationQuestions } from '../utils/operationalConfi
 import { variableLineage } from '../utils/variableLineage';
 import { WorkflowWorkbenchPanel } from './WorkflowWorkbenchPanel';
 const labels = { AREA_TEMATICA: 'Área temática', TEMA_PRINCIPAL: 'Tema', TIPO_DE_ESTUDO: 'Tipo de estudo', FINALIDADE_DO_TRABALHO: 'Finalidade' };
-const formats = { original: 'Original', date: 'Data numérica', date_long: 'Data por extenso', time: 'Hora numérica', time_long: 'Hora por extenso', datetime: 'Data e hora numéricas', datetime_long: 'Data e hora por extenso' };
+const formats = { original: 'Original', date: 'Data numérica', date_long: 'Data por extenso', time: 'Hora numérica', datetime: 'Data e hora numéricas', datetime_long: 'Data por extenso e hora numérica' };
 export function OperationalDesignerPanel({ studio, config, onChange, onInitialForm }: { studio: IntegrationStudioSettings; config: OperationalConfig; onChange: (value: OperationalConfig)=>void; onInitialForm: (questions: any[])=>void }) {
   const [artifact, setArtifact] = useState('tmpl-convite');
   const [search, setSearch] = useState('');

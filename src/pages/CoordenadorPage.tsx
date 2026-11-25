@@ -7,7 +7,7 @@ import { apiClient } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { ProcessData, SignatureJob, AstenIntegrationStatus } from '../types';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
-import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTimeExtenso } from '../utils/formatters';
+import { cleanPersonName, formatProfessorName, formatTccTitle, formatDateNumericWithWeekday, formatTime24h } from '../utils/formatters';
 import {academicName} from '../utils/personPresentation';
 import { loadTableConfig, ColumnDef } from '../components/TableColumnSelectorPanel';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
@@ -472,7 +472,7 @@ export const CoordenadorPage: React.FC<CoordenadorPageProps> = ({ onSelectProces
               <span className="font-normal text-black">{proc.defesa?.startAt ? formatDateNumericWithWeekday(proc.defesa.startAt) : 'N/A'}</span>
             </div>
             {proc.defesa?.startAt && (
-              <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa.startAt)}</div>
+              <div className="text-[9.5px] font-mono font-normal text-black">{formatTime24h(proc.defesa.startAt)}</div>
             )}
           </td>
         );

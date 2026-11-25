@@ -9,7 +9,7 @@ import { apiClient } from '../services/apiClient';
 import {
   formatDateWithWeekday,
   formatDateNumericWithWeekday,
-  formatTimeExtenso,
+  formatTime24h,
   cleanPersonName,
   formatProfessorName,
   formatTccTitle,
@@ -364,7 +364,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
         const row = activeCols.map((k) => {
           switch (k) {
             case 'protocolo': return `"${p.protocolo}"`;
-            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTimeExtenso(p.defesa.startAt)}` : 'A definir'}"`;
+            case 'defesaDataHora': return `"${p.defesa?.startAt ? `${formatDateNumericWithWeekday(p.defesa.startAt)} ${formatTime24h(p.defesa.startAt)}` : 'A definir'}"`;
             case 'progresso': return `"${getStepNumberLabel(progress.label).replace('Fase ', '')}"`;
             case 'titulo': return `"${(p.titulo || '').replace(/"/g, '""')}"`;
             case 'aluno1': return `"${cleanPersonName(p.aluno1?.nome || '').replace(/"/g, '""')}"`;
@@ -472,7 +472,7 @@ export const MeusProcessosPage: React.FC<MeusProcessosPageProps> = ({
             <div className={`flex items-center justify-center ${styles.cellFontSizeClass}`}>
               <span className="font-normal text-black">{formatDateNumericWithWeekday(proc.defesa?.startAt)}</span>
             </div>
-            <div className="text-[9.5px] font-mono font-normal text-black">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+            <div className="text-[9.5px] font-mono font-normal text-black">{formatTime24h(proc.defesa?.startAt)}</div>
           </td>
         );
       case 'progresso': {

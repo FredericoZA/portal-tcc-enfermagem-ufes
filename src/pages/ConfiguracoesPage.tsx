@@ -536,7 +536,7 @@ export const ConfiguracoesPage: React.FC = () => {
         label: BASE_DOCUMENT_TEMPLATES.CONVITE.label,
         fileName: BASE_DOCUMENT_TEMPLATES.CONVITE.fileName,
         description: 'Cadastre o modelo próprio do Master para a carta-convite.',
-        variables: ['<<Alunos>>', '<<Título do Trabalho>>', '<<Orientador (1)>>', '<<Examinador (2)>>', '<<Examinador (3)>>', '<<Data da Defesa (por extenso total)>>', '<<Hora de Início da Defesa (por extenso)>>', '<<Local da Defesa>>'],
+        variables: ['<<Alunos>>', '<<Título do Trabalho>>', '<<Orientador (1)>>', '<<Examinador (2)>>', '<<Examinador (3)>>', '<<Data da Defesa (por extenso total)>>', '<<Hora de Início da Defesa>>', '<<Local da Defesa>>'],
         fields: [],
         templateContentText: BASE_DOCUMENT_TEMPLATES.CONVITE.templateContentText,
         lastUpdated: '',

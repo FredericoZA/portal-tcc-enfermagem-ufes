@@ -36,7 +36,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { useSignatureUpdates } from '../hooks/useSignatureUpdates';
 import { PORTAL_LIVE_UPDATE_EVENT } from '../utils/portalLiveEvents';
-import { formatDatePt, formatDateExtensoTotal, formatTimeExtenso, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
+import { formatDatePt, formatDateExtensoTotal, formatTime24h, formatStudentsString, normalizeEmail, formatNameTitleCase } from '../utils/formatters';
 import { ProcessFlowPanel } from '../components/ProcessFlowPanel';
 import { reservationStatusAlert } from '../utils/reservationStatusAlert';
 import { effectiveDefenseReservationStatus } from '../utils/defenseReservationState';

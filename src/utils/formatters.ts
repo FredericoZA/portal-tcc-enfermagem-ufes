@@ -265,8 +265,15 @@ export function formatDateNumeric(dateStr: string): string {
 }
 
 /** Horário civil do portal, independente do fuso do servidor. */
-export function formatTime24h(value:string):string {
-  const parts=parsePortalDateTime(value);
+export function formatTime24h(value?: string | null): string {
+  const input = value?.trim();
+  if (!input || /^\d{4}-\d{2}-\d{2}$/.test(input)) return '';
+  const clock = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(input);
+  if (clock) {
+    const [, hour, minute] = clock;
+    return Number(hour) < 24 && Number(minute) < 60 ? `${hour.padStart(2, '0')}:${minute}` : '';
+  }
+  const parts = parsePortalDateTime(input);
   return parts?`${String(parts.hour).padStart(2,'0')}:${String(parts.minute).padStart(2,'0')}`:'';
 }
 

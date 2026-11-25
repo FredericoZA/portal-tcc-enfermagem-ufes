@@ -19,7 +19,7 @@ import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_REPOSITORY_CHANGED_EVENT } from '../ut
 import { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { portalConfirm, portalNotice } from '../services/portalDialogs';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -912,7 +912,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
           case 'coorientador': return proc.coorientador?.nome ? `${(proc.legacyRecord?cleanPersonName(proc.coorientador.nome):formatProfessorName(proc.coorientador.nome))} (${proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')})` : '';
           case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
           case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
-          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
           case 'defesaLocal': return proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar';
           default: return '';
         }
@@ -993,7 +993,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
         row.push(`"${kw.replace(/"/g, '""')}"`);
       }
       if (visibleColumns.defesaDataHora) {
-        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTimeExtenso(proc.defesa.startAt)}` : 'A definir';
+        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
         row.push(`"${dt}"`);
       }
       if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
@@ -2210,7 +2210,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <PendingDefenseConfirmationNote process={proc} />
                         <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
                       </div>
-                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
                     </td>
                   );
                 case 'progresso':
@@ -2716,7 +2716,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
                           {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
                         </div>
-                        <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTimeExtenso(proc.defesa?.startAt)}</div>
+                        <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
                       </td>
                     );
                   case 'defesaLocal':

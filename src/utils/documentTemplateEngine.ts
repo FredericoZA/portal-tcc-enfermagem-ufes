@@ -2,7 +2,7 @@ import {documentVariables} from './documentVariables';
 import {authorNames,academicName} from './personPresentation';
 import {adaptDocumentLanguage} from './documentLanguage';
 import { ProcessData } from '../types';
-import { formatDateExtensoWithWeekday, formatTimeExtenso, formatStudentsString } from './formatters';
+import { formatDateExtensoWithWeekday, formatTime24h, formatStudentsString } from './formatters';
 import {isRegistrationIdentifierField} from './operationalConfig';
 
 export interface BaseDocumentTemplate {
@@ -118,8 +118,9 @@ export function generateOfficialDocumentText(
     .map((b) => `${academicName(b)}${b.instituicao ? ` (${b.instituicao})` : ''}`)
     .join(', ') || 'Professores Examinadores Designados';
 
+  const defenseTime = formatTime24h(process.defesa?.startAt);
   const dataHoraStr = process.defesa?.startAt
-    ? `${formatDateExtensoWithWeekday(process.defesa.startAt)} às ${formatTimeExtenso(process.defesa.startAt)}`
+    ? [formatDateExtensoWithWeekday(process.defesa.startAt), defenseTime && `às ${defenseTime}`].filter(Boolean).join(' ')
     : 'Data a ser agendada';
 
   const localFormatText = process.defesa?.local || (isOnline ? 'Defesa on-line — link ainda não informado' : 'Local da defesa ainda não informado');
@@ -183,7 +184,8 @@ export function generateOfficialDocumentText(
     ,'Examinador (3)': academicName(process.banca?.find(item=>item.funcao==='EXAMINER_3') || process.banca?.filter(item=>item.funcao!=='ORIENTADOR')[1])
     ,'Data do Preenchimento': formatDateExtensoWithWeekday(new Date().toISOString())
     ,'Data da Defesa (por extenso total)': process.defesa?.startAt ? formatDateExtensoWithWeekday(process.defesa.startAt) : ''
-    ,'Hora de Início da Defesa (por extenso)': process.defesa?.startAt ? formatTimeExtenso(process.defesa.startAt) : ''
+    ,'Hora de Início da Defesa': defenseTime
+    ,'Hora de Início da Defesa (por extenso)': defenseTime
     ,'Local da Defesa': localFormatText
     ,Situação: resultadoText
     ,Parecer: parecerText

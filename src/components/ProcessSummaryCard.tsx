@@ -6,7 +6,7 @@ import type { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTimeExtenso, formatTccTitle } from '../utils/formatters';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h, formatTccTitle } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { isManagedDefenseLocation } from '../utils/reservationLocation';
@@ -239,7 +239,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
           </div>
           <div className={`${compactField} sm:col-span-2`}>
             <span className={fieldLabel}>Horário</span>
-            <span className={fieldValue}>{process.defesa?.startAt && !/^\d{4}-\d{2}-\d{2}$/.test(process.defesa.startAt) ? formatTimeExtenso(process.defesa.startAt) : 'A definir'}</span>
+            <span className={fieldValue}>{process.defesa?.startAt && !/^\d{4}-\d{2}-\d{2}$/.test(process.defesa.startAt) ? formatTime24h(process.defesa.startAt) : 'A definir'}</span>
           </div>
           <div className={`${compactField} ${webmailUrl && canEditReservation ? 'sm:col-span-3' : 'sm:col-span-5'}`}>
             <span className={fieldLabel}>Local da defesa</span>
