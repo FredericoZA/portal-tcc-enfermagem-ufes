@@ -146,6 +146,26 @@
   color: var(--portal-text-muted);
 }
 
+.portal-document-envelope { position: relative; display: inline-flex; }
+.portal-document-envelope-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -1px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  background: var(--portal-surface-inner);
+}
+.portal-document-envelope[data-document-state="available"] .portal-document-envelope-dot { background: currentColor; }
+.portal-document-envelope[data-document-state="restricted"] .portal-document-envelope-dot {
+  width: 8px;
+  height: 2px;
+  border: none;
+  border-radius: 0;
+  background: currentColor;
+}
+
 .portal-abstract-popover {
   position: fixed;
   z-index: 1000002;

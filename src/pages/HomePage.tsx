@@ -27,7 +27,7 @@ import { getTableStyles, getActionPillStyles, formatColumnLabel, formatCellText,
 import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
-import { TccAbstractPopover } from '../components/TccAbstractPopover';
+import { DocumentEnvelope, TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { StudentNames, GcalStudentNames } from '../components/StudentNames';
 import { ColorfulHeaderIcon } from '../components/ColorfulHeaderIcon';
@@ -2559,8 +2559,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   return (
                     <td key={colKey} data-portal-filter-value={status} className={`${acervoStyles.cellPadClass} ${acervoStyles.borderClass} ${acervoStyles.cellFontSizeClass} ${widthClass} text-center align-middle normal-case`}>
                       {typeof value === 'string'
-                        ? <button type="button" className="font-semibold underline underline-offset-2" aria-label={`Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`} onClick={() => openRepositoryDocument(value)}>{status}</button>
-                        : status}
+                        ? <button type="button" className="portal-abstract-trigger" title={`${label} · ${status}`}
+                            aria-label={`Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`}
+                            onClick={() => openRepositoryDocument(value)}>
+                            <DocumentEnvelope status="available" />
+                          </button>
+                        : <span className="portal-abstract-unavailable" role="img" title={`${label} · ${status}`}
+                            aria-label={`${label}. ${status}`}>
+                            <DocumentEnvelope status={status === 'Presente' ? 'available' : status === 'Ausente' ? 'absent' : 'restricted'} />
+                          </span>}
                     </td>
                   );
                 }
