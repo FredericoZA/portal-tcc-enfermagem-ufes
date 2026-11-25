@@ -264,6 +264,16 @@ test('HTTP: advisor can correct registration before invitation and stages lock s
       assert.equal(response.status, 409, item.id);
       assert.equal((await response.json()).code, code);
     }
+    const approved = await f.request(endpoint(invited.id), advisor, 'PATCH', {
+      ...correction, expectedDataRevision: invited.dataRevision, revalidateIssuedInvitation: true,
+    });
+    assert.equal(approved.status,202,await approved.clone().text());
+    const restarted = await approved.json();
+    assert.equal(restarted.titulo,correction.titulo);
+    assert.equal(restarted.reservationRestarted,true);
+    assert.equal(restarted.defesa.invitationSentAt,undefined);
+    assert.equal(restarted.defesa.localStatus,'PENDENTE');
+    assert.equal(restarted.defesa.reservationHistory[0].invitationSentAt,invited.defesa.invitationSentAt);
     const reopen = await f.request(endpoint(concluded.id) + '/repository/reopen', student, 'POST', {});
     assert.equal(reopen.status, 409);
     assert.equal((await reopen.json()).code, 'REPOSITORY_CLOSED');
@@ -297,6 +307,7 @@ test('HTTP: final delivery requires the deposit, protects closed records and kee
     const process = processFixture(id);
     process.status = 'AGUARDANDO_DADOS_FINAIS';
     process.etapaAtual = 'REPOSITORIO';
+    process.defesa.startAt = '2025-02-20T17:00:00.000Z';
     process.avaliacao = { status: 'CONCLUIDO' };
     process.acervo = {
       trabalhoCompletoFileId: 'fixture-pdf',

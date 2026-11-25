@@ -1,4 +1,6 @@
 import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
+import type { ProcessData } from '../src/types';
+import { plainPersonName } from '../src/utils/personPresentation';
 
 // Exact name AND email pairs checked on the department's public directory on 2026-11-07.
 // https://enfermagem.vitoria.ufes.br/pt-br/docentes
@@ -38,6 +40,12 @@ const faculty = [
 ] as const;
 
 const normalizeName = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toLowerCase();
+const departmentFacultyNames = new Set(faculty.map(([name]) => normalizeName(name)));
+
+export function isDepartmentFacultyName(name: string): boolean {
+  return departmentFacultyNames.has(normalizeName(plainPersonName({nome:name})));
+}
+
 const identities = new Set(faculty.map(([name, email]) => `${normalizeName(name)}|${email}`));
 
 /** Resolve a missing current affiliation only from an exact documented identity. */
@@ -46,9 +54,6 @@ export function ufesFacultyInstitution(person: { nome?: string; email?: string; 
   const identity = `${normalizeName(person.nome || '')}|${(person.email || '').trim().toLowerCase()}`;
   return identities.has(identity) ? DEFAULT_INSTALLATION_PROFILE.institutionName : person.instituicao;
 }
-
-import type { ProcessData } from '../src/types';
-import { plainPersonName } from '../src/utils/personPresentation';
 
 const facultyKey = (person: { nome: string; email?: string }) =>
   `${normalizeName(plainPersonName(person))}|${person.email?.trim().toLowerCase() || ''}`;

@@ -1,3 +1,4 @@
+import {finalDeliveryBlocker} from '../src/utils/finalDeliveryGate';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile} from 'node:fs/promises';
@@ -12,7 +13,7 @@ const source=await readFile('server.ts','utf8');
 const start=source.indexOf("  app.post('/api/processes/:id/final-data'");
 const route=source.slice(start,source.indexOf("  app.post('/api/admin/processes/:id/publication/withdraw'",start));
 function fixture(){
- const p:any={id:'deferred-fixture',protocolo:'TCC - 00002',dataRevision:10,status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO',aluno1:{nome:'Autora fictícia',email:'author@example.invalid'},orientador:{nome:'Orientador fictício',email:'advisor@example.invalid'},avaliacao:{status:'CONCLUIDO',documentRevision:9},acervo:{trabalhoCompletoFileId:'private-work-fixture',trabalhoCompletoFileUrl:'/api/private-work-fixture',resumoExpandidoFileId:'private-abstract-fixture'}};
+ const p:any={id:'deferred-fixture',protocolo:'TCC - 00002',dataRevision:10,status:'AGUARDANDO_DADOS_FINAIS',etapaAtual:'REPOSITORIO',aluno1:{nome:'Autora fictícia',email:'author@example.invalid'},orientador:{nome:'Orientador fictício',email:'advisor@example.invalid'},defesa:{startAt:'2025-02-20T17:00:00.000Z'}, avaliacao:{status:'CONCLUIDO',documentRevision:9},acervo:{trabalhoCompletoFileId:'private-work-fixture',trabalhoCompletoFileUrl:'/api/private-work-fixture',resumoExpandidoFileId:'private-abstract-fixture'}};
  const jobs:any[]=[{id:'signed-ata-fixture',processId:p.id,documentType:'ATA',sourceDataRevision:9,documentVersion:1,status:'ARCHIVED',driveSignedFileId:'private-signed-ata-fixture',signers:[{email:'advisor@example.invalid',role:'ADVISOR',status:'SIGNED'},{email:'one@example.invalid',role:'EXAMINER',status:'SIGNED'},{email:'two@example.invalid',role:'EXAMINER',status:'SIGNED'}]}];
  return {p,jobs};
 }
@@ -23,7 +24,7 @@ function harness(){
  let firstPersist:()=>Promise<void>=async()=>{};
  let event:(process:any,name:string)=>Promise<any>=async()=>({status:'COMPLETED',actions:[]});
  const context:any={Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
-  app:{post:(path:string,auth:unknown,callback:any)=>{assert.equal(path,'/api/processes/:id/final-data');assert.equal(auth,'authenticated');handler=callback;}},requireAuthenticated:'authenticated',processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],
+  app:{post:(path:string,auth:unknown,callback:any)=>{assert.equal(path,'/api/processes/:id/final-data');assert.equal(auth,'authenticated');handler=callback;}},requireAuthenticated:'authenticated',finalDeliveryBlocker,processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],
   getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],ataArchived,declarationReady,
   safeRepositorySignatureError,queueAutomaticAsten:(process:any,type:string)=>{if(process.signatureProviderPreferences?.[type]!=='GOV_BR')process.astenSignatureIntent={documentType:type,revision:signatureDocumentRevision(process,type),queuedAt:'2026-11-07T12:00:00Z'};},
   persistPortalStateDurably:async()=>{calls.persist++;if(calls.persist===1)await firstPersist();},executeConfiguredWorkflowEvent:async(process:any,name:string)=>{calls.events.push(name);return event(process,name);},executeAutomaticAsten:async(_process:any,type:string)=>{calls.automatic.push(type);},updateProcessCompletion:()=>{},};

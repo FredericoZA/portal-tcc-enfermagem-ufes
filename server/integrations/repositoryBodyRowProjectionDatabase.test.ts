@@ -13,7 +13,7 @@ test('lean repository retains exact body-link proof without exposing raw source 
   const make=(id:string):any=>({id,protocolo:`${id.slice(-3)} - Legado`,sourceFingerprint:'a'.repeat(64),titulo:'Historical work',autores:['Author'],orientador:'Advisor',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'Abstract',palavrasChave:['Care'],dataDefesa:'2024-06-01',horaDefesa:'14:00:00',localDefesa:'Room',attachments:[{driveFileId:`original_${id}`,fileName:'work.pdf',sourceFileName:'original-submission.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'SHA256:'+'b'.repeat(64)}],provenance:{
    originalConsent:['Sim'],publicationOverride:null,publicationWithdrawal:null,
    publicationImportBaseline:{policy:'BODY_ROW_LINK_AND_VERIFIED_KIND_HASH_REQUIRED',cutoffDate:'2025-08-28',publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),sourceRecordId:id,sourcePageRecordId:sourcePageId(id),sourceUrl:url,sourceFileName:'work.pdf',sourceRowFingerprint:'c'.repeat(64)}]},
-   pageRecords:[{legacyId:sourcePageId(id),sourceFingerprint:'c'.repeat(64),sourceLinks:[url],authorsOriginal:'Private source author',titleOriginal:'Private raw text',metadata:{private:'x'.repeat(10000)}}],
+   pageRecords:[{legacyId:sourcePageId(id),sourceFingerprint:'c'.repeat(64),sourceLinks:[url],authorsOriginal:'Private source author',titleOriginal:'Catalog title',metadata:{private:'x'.repeat(10000)}}],
    submissionWorkbook:{private:'y'.repeat(50000)},administrativeDocuments:[{kind:'AVALIACAO',privateGrade:10}],privateContacts:['private@example.invalid']
   }});
   const allowed=make('legado-0001'),denied=make('legado-0002'),withdrawn=make('legado-0003'),missing=make('legado-0004'),malformed=make('legado-0005');
@@ -45,5 +45,13 @@ test('lean repository retains exact body-link proof without exposing raw source 
   assert.deepEqual((await db.query<any>('select payload from public.portal_runtime_state')).rows[0].payload,source,'a read projection must not rewrite the canonical runtime');
   for(const role of ['anon','authenticated'])assert.equal((await db.query<any>('select has_function_privilege($1,$2,$3) allowed',[role,'public.portal_read_repository_v1()','EXECUTE'])).rows[0].allowed,false);
   assert.equal((await db.query<any>("select has_function_privilege('service_role','public.portal_read_repository_v1()','EXECUTE') allowed")).rows[0].allowed,true);
+  await db.exec(await readFile('supabase/migrations/20261125155300_repository_legacy_faculty_evidence.sql','utf8'));
+  const enriched=(await db.query<any>('select * from public.portal_read_repository_v1()')).rows[0];
+  assert.deepEqual(publicIds(enriched.payload.legacyAcademicRecords),publicIds(records));
+  assert.equal(enriched.payload.legacyAcademicRecords[0].provenance.pageRecords[0].titleOriginal,'Catalog title');
+  assert.deepEqual(enriched.payload.legacyAcademicRecords[0].provenance.repositoryExaminerRoles,[]);
+  assert.ok(!JSON.stringify(enriched.payload).includes('private@example.invalid'));
+  assert.equal((await db.query<any>("select has_function_privilege('authenticated','public.portal_read_repository_v1()','EXECUTE') allowed")).rows[0].allowed,false);
+
  }finally{await db.close();}
 });

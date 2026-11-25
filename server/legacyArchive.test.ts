@@ -168,3 +168,41 @@ test('signed consolidation preserves issued routes and exposes each current docu
   assert.deepEqual(routes.map(r => r.aliases), [[1], [0, 2], [3]]);
   assert.deepEqual(publicLegacyAdministrativeDocuments(record).map(d => d.id), ['legacy-document-0', 'legacy-document-3']);
 });
+
+test('legacy faculty display uses the matched catalog row and archived internal roles',()=>{
+  const [record]=validateLegacyBatch([{
+    ...legacyFixture(), orientador:'Fábio Lúcio Tavares',
+    examinadores:[
+      {nome:'Daniela Vieira Malta',instituicao:''},
+      {nome:'Aline Piovezan Entringer',instituicao:'Instituição externa'},
+      {nome:'Mirian Fioresi',instituicao:''},
+    ],
+    provenance:{
+      ...legacyFixture().provenance,
+      pageUrl:'https://enfermagem.vitoria.ufes.br/pt-br/trabalhos-de-conclusao-de-curso-defendidos',
+      pageRecords:[{
+        advisorOriginal:'Prof. Dr. Fábio Lúcio Tavares', defenseDate:'2023-06-01',
+        titleOriginal:'TRABALHO HISTÓRICO', authorsOriginal:'Autora demonstrativa',
+      }],
+      repositoryExaminerRoles:[{examinadorInterno:'Daniela Vieira Malta - Aline Piovezan Entringer -'}],
+    },
+  }]);
+  const initial=structuredClone(record);
+  const publicView=publicLegacyAcademicView(record);
+  assert.deepEqual(publicView.advisorAcademic,{tratamento:'Professor',titulacao:'Doutor'});
+  assert.equal(publicView.examinadores[0].instituicao,'Universidade Federal do Espírito Santo');
+  assert.equal(publicView.examinadores[1].instituicao,'Instituição externa');
+  assert.equal(publicView.examinadores[2].instituicao,'');
+  assert.equal('provenance' in publicView,false);
+  assert.deepEqual(record,initial);
+  const correction={
+    ...record,
+    dataDefesa:'2023-06-02',
+    provenance:{...record.provenance,repositoryExaminerRoles:[
+      {examinadorInterno:'Daniela Vieira Malta',examinadorExterno:'Daniela Vieira Malta'},
+    ]},
+  };
+  const conflicting=publicLegacyAcademicView(correction);
+  assert.equal(conflicting.advisorAcademic,undefined);
+  assert.equal(conflicting.examinadores[0].instituicao,'');
+});

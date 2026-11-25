@@ -4928,7 +4928,7 @@ export async function createPortalApp() {
     if(!process||!canAccessProcess(identity.email,process.id))return res.status(404).json({error:'Processo não encontrado.'});
     const isAdvisor=normalizeEmail(identity.email)===normalizeEmail(process.orientador.email)
       &&getActiveProcessRoles(identity.email,process.id).includes('ADVISOR');
-    if(!isReservationAuthor(identity.email,process)&&!isAdvisor&&!hasFullAdministration(identity.email))return res.status(403).json({error:'Somente os autores, o orientador deste TCC ou o Master podem alterar a reserva.'});
+    if(!isReservationAuthor(identity.email,process)&&!isAdvisor)return res.status(403).json({error:'Somente os autores ou o orientador deste TCC podem alterar a reserva.'});
     if(!Number.isInteger(req.body?.expectedDataRevision)||req.body.expectedDataRevision!==process.dataRevision)return res.status(409).json({error:'Os dados do TCC mudaram. Reabra o processo antes do envio.',code:'STALE_DATA_REVISION'});
     let proposed:ReturnType<typeof validateReservationChange>;
     try {

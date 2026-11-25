@@ -21,7 +21,7 @@ export function plainPersonName(person?:AcademicPerson|null):string{
 const sourceTreatment = /^(professora|prof(?:\.?(?:ª|a))\.?|professor|prof\.?|senhora|sra\.?|senhor|sr\.?)\s+/iu;
 const sourceDegree = /^(doutora|dr(?:\.?(?:ª|a))\.?|doutor|dr\.?|mestra|ma\.?|mestre|me\.?|especialista|esp\.?)\s+/iu;
 
-function recordedAcademicName(person: AcademicPerson): AcademicPerson {
+export function recordedAcademicName(person: AcademicPerson): AcademicPerson {
   const original = person.nome.trim();
   const treatment = sourceTreatment.exec(original);
   const rest = treatment ? original.slice(treatment[0].length) : original;

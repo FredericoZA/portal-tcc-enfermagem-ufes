@@ -1,3 +1,4 @@
+import {finalDeliveryBlocker} from '../src/utils/finalDeliveryGate';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFile} from 'node:fs/promises';
@@ -20,7 +21,7 @@ const now='2026-11-07T12:00:00Z';
 function fixture(){
  const p:any={id:'repository-consent-fixture',protocolo:'TCC-2026-0001',titulo:'Trabalho fictício',dataRevision:10,status:'AGUARDANDO_ASSINATURA',etapaAtual:'ASSINATURA',createdAt:now,updatedAt:now,
   aluno1:{nome:'Autora fictícia',email:'author@example.invalid'},aluno2:null,orientador:{nome:'Orientador fictício',email:'advisor@example.invalid'},banca:[],
-  avaliacao:{status:'CONCLUIDO',documentRevision:9,submittedAt:now},
+  defesa:{startAt:'2025-02-20T17:00:00.000Z'}, avaliacao:{status:'CONCLUIDO',documentRevision:9,submittedAt:now},
   acervo:{submittedAt:now,submittedBy:'author@example.invalid',authorizationConfirmedAt:now,publicationRequestedAt:now,publishFullWork:true,publishExpandedAbstract:true,isPublic:true,
    trabalhoCompletoFileId:'private-work-fixture',trabalhoCompletoFileUrl:'/api/source/private-work-fixture',trabalhoCompletoSha256:'a'.repeat(64),trabalhoCompletoVersion:1,trabalhoCompletoFileName:'Trabalho.pdf',
    resumoExpandidoFileId:'private-abstract-fixture',resumoExpandidoSha256:'b'.repeat(64),resumoExpandidoVersion:1,resumoExpandidoFileName:'Resumo.pdf',palavrasChave:['a','b','c','d','e'],resumoSintese:'Resumo fictício preservado.'},
@@ -36,7 +37,7 @@ function harness(p:any,jobs:any[],persist:()=>Promise<void>,options:{durable?:bo
  const background:Promise<unknown>[]=[];
  const calls={automatic:0,queued:0,external:0};
  let role='STUDENT',access=true;
- const context:any={Date,Set,Error,structuredClone,setImmediate,process:{env:{VERCEL:'fixture'}},waitUntil:(task:Promise<unknown>)=>background.push(task),beginRuntimeRequestTask:()=>()=>{},processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],requireAuthenticated:'authenticated',remotePersistenceQueue:Promise.resolve(),settlePreviousRuntimeWrites,
+ const context:any={Date,Set,Error,structuredClone,setImmediate,process:{env:{VERCEL:'fixture'}},waitUntil:(task:Promise<unknown>)=>background.push(task),beginRuntimeRequestTask:()=>()=>{},finalDeliveryBlocker,processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],requireAuthenticated:'authenticated',remotePersistenceQueue:Promise.resolve(),settlePreviousRuntimeWrites,
   getSupabaseRuntimeStatus:()=>({durablePersistenceReady:options.durable===true}),loadPortalRuntimeState:options.read||(async()=>{throw Error('Read not configured');}),applyPersistedState:(remote:any)=>{context.processesStore=structuredClone(remote.processes);context.signatureJobsStore=structuredClone(remote.signatureJobs||[]);context.auditLogsStore=structuredClone(remote.auditLogs||[]);if(remote.access===false)access=false;},inferAstenJobStatus,
   app:{post:(path:string,auth:unknown,handler:any)=>{assert.equal(auth,'authenticated');handlers.set(path,handler);}},getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>access,getActiveProcessRoles:()=>[role],getUserRolesForEmail:()=>({globalRoles:[],memberships:[{roles:[role]}]}),documentSignatureCompleted,ataArchived,declarationReady,publicationRequested,localReviewFilesEnabled:()=>false,
   getGoogleWorkspaceAccessToken:async()=>{calls.external++;return 'fixture-only';},withdrawManyPublicDriveFiles:async()=>{calls.external++;},

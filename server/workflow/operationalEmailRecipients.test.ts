@@ -1,3 +1,4 @@
+import {academicName} from '../../src/utils/personPresentation';
 import {buildGmailRawMessage} from '../integrations/googleWorkspace';
 import {dispatchTrackedEmail,initialEmailDelivery} from '../integrations/trackedGmail';
 import type {EmailDeliveryRecord} from '../../src/types/automation';
@@ -56,8 +57,8 @@ test('convite coletivo coloca os dois examinadores em Para e somente os demais e
 test('cada convidado recebe o painel completo, com instruções apenas para convidados e um link',()=>{
  for(const recipient of operationalEmailRecipients('email-convite',p,department,[])){
   const message=processEmailMessage({process:p,recipient,templateId:'email-convite',eventCode:'INVITATION_SENT',subject:'Assunto antigo',text:'Corpo antigo com instrução ao orientador.',baseUrl:'https://portal.example',courseName:'Enfermagem'});
-  assert.match(message.subject,/Convite para a banca de TCC/);assert.match(message.text,/Prezados,/);assert.ok(message.text.includes(p.orientador.nome));assert.ok(message.text.includes(p.aluno1.nome));assert.ok(message.text.includes(p.aluno2.nome));
-  for(const person of p.banca.filter(person=>person.funcao!=='ORIENTADOR'))assert.ok(message.text.includes(person.nome));
+  assert.match(message.subject,/Convite para a banca de TCC/);assert.match(message.text,/Prezados,/);assert.ok(message.text.includes(academicName(p.orientador,'abbreviated')));assert.ok(message.text.includes(p.aluno1.nome));assert.ok(message.text.includes(p.aluno2.nome));
+  for(const person of p.banca.filter(person=>person.funcao!=='ORIENTADOR'))assert.ok(message.text.includes(academicName(person,'abbreviated')));
   const instructions=message.text.split('ORIENTAÇÕES DO PROCESSO')[1];assert.match(instructions,/Examinadores: usem o botão/);assert.doesNotMatch(instructions,/Participantes:|Orientador:|após a defesa|registre o resultado/);assert.equal((message.html.match(/<a /g)||[]).length,1);
  }
 });

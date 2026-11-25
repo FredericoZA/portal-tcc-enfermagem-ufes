@@ -133,4 +133,4 @@ export interface PrivateLegacyAcademicView {
 export type PublicLegacyAcademicRecord = Pick<LegacyAcademicRecord,
   'id' | 'protocolo' | 'titulo' | 'autores' | 'orientador' | 'coorientador' |
   'coorientadorInstituicao' | 'examinadores' | 'resumo' | 'palavrasChave' | 'dataDefesa' |
-  'horaDefesa' | 'localDefesa'> & { filesRestricted: boolean; authorizationDecision: LegacyAcademicRecord['authorizationDecision']; publicFiles: { index: number; kind: LegacyAttachment['kind']; downloadUrl: string }[] };
+  'horaDefesa' | 'localDefesa'> & { advisorAcademic?: { tratamento?: string; titulacao?: string }; filesRestricted: boolean; authorizationDecision: LegacyAcademicRecord['authorizationDecision']; publicFiles: { index: number; kind: LegacyAttachment['kind']; downloadUrl: string }[] };

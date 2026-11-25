@@ -11,7 +11,7 @@ function fixture(){
  const start=source.indexOf('  const handleReopenRepository=async()=>{'),end=source.indexOf('\n  const canStudentEdit',start);
  assert.ok(start>0&&end>start);
  const state:any={posts:0,confirms:0,notices:[],process:null,busy:false,message:'',refreshes:0,blocking:[],form:{}};
- const context:any={publicationEditing:false,Error,ApiRequestError,repositorySubmissionConfirmed,userEmail:'author@example.invalid',editingSectionRef:{current:null},canSubmitAcervo:true,readOnly:false,process:{id:'p'},repositoryReopenInFlight:{current:false},repositorySubmitInFlight:{current:false},setEditingSection:()=>{},setRemoteUpdatePending:()=>{},legacyAccessScope:{current:'p|owner'},lastProcessRevision:{current:null},
+ const context:any={deliveryBlocker:undefined,publicationEditing:false,Error,ApiRequestError,repositorySubmissionConfirmed,userEmail:'author@example.invalid',editingSectionRef:{current:null},canSubmitAcervo:true,readOnly:false,process:{id:'p'},repositoryReopenInFlight:{current:false},repositorySubmitInFlight:{current:false},setEditingSection:()=>{},setRemoteUpdatePending:()=>{},legacyAccessScope:{current:'p|owner'},lastProcessRevision:{current:null},
   portalPrompt:async(_text:string,_initial:string,options:any)=>{state.confirms++;assert.equal(options.tone,'warning');return 'Correção dos arquivos da entrega';},
   portalNotice:(message:string)=>state.notices.push(message),
   apiClient:{reopenRepository:async(_id:string,reason:string)=>{assert.equal(reason,'Correção dos arquivos da entrega');state.posts++;return {id:'p',dataRevision:5,updatedAt:'now',acervo:{publishFullWork:false,publishExpandedAbstract:false,palavrasChave:['saúde'],resumoSintese:'Resumo'}};}},
