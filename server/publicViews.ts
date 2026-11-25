@@ -216,12 +216,12 @@ export function buildPublicRepository(
     const row = publicRepositoryView(process);
     const jobs = signaturesByProcess.get(process.id) ?? [];
     const acervo = process.acervo;
-    const workId = acervo.trabalhoCompletoFileId;
-    const abstractId = acervo.resumoExpandidoFileId;
-    const work = workId && row.acervo.trabalhoCompletoFileUrl && workId === acervo.publicFullWorkFileId &&
+    const workId = acervo?.trabalhoCompletoFileId;
+    const abstractId = acervo?.resumoExpandidoFileId;
+    const work = acervo && workId && row.acervo.trabalhoCompletoFileUrl && workId === acervo.publicFullWorkFileId &&
       publicFileAuthorized(process, jobs, 'trabalho-completo')
       ? canonicalDriveOriginalLinks(workId, acervo.trabalhoCompletoSha256)?.view : undefined;
-    const abstract = abstractId && row.acervo.resumoExpandidoFileUrl && abstractId === acervo.publicExpandedAbstractFileId &&
+    const abstract = acervo && abstractId && row.acervo.resumoExpandidoFileUrl && abstractId === acervo.publicExpandedAbstractFileId &&
       publicFileAuthorized(process, jobs, 'resumo-expandido')
       ? canonicalDriveOriginalLinks(abstractId, acervo.resumoExpandidoSha256)?.view : undefined;
     return { ...row, acervo: { ...row.acervo, repositoryFullWorkDriveUrl: work, repositoryExpandedAbstractDriveUrl: abstract } };

@@ -121,6 +121,13 @@ function startup(): Promise<StartupState> {
   return startupPromise;
 }
 
+const publicRepository = createPublicRepositoryHandler(createPublicRepositoryReader({
+  durable: () => getSupabaseRuntimeStatus().durablePersistenceReady,
+  readRevision: readPortalRuntimeRevision,
+  readDurable: () => loadPortalRepositorySnapshot({includeSignatureEvidence:true}),
+  readLocal: () => { throw new Error('Catálogo sem fonte durável.'); },
+}), true);
+
 function unavailable(res: Response, diagnostic: StartupFailure) {
   const retrySeconds=Math.ceil((retryStartupAt-Date.now())/1000);
   if(retrySeconds>0)res.setHeader('Retry-After',String(retrySeconds));
@@ -136,13 +143,6 @@ function unavailable(res: Response, diagnostic: StartupFailure) {
     ...(diagnostic.runtimeSignal ? { runtimeSignal: diagnostic.runtimeSignal } : {})
   });
 }
-
-const publicRepository = createPublicRepositoryHandler(createPublicRepositoryReader({
-  durable: () => getSupabaseRuntimeStatus().durablePersistenceReady,
-  readRevision: readPortalRuntimeRevision,
-  readDurable: () => loadPortalRepositorySnapshot({includeSignatureEvidence:true}),
-  readLocal: () => { throw new Error('Catálogo sem fonte durável.'); },
-}), true);
 
 export default async function handler(req: Request, res: Response) {
   if (!admitPortalRequest(req, res)) return;
