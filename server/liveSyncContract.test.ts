@@ -61,6 +61,6 @@ test('alteração tardia do título é bloqueada pela revisão esperada',()=>{
   const card=read('src/components/ProcessSummaryCard.tsx');
   assert.match(server,/req\.body\?\.expectedDataRevision!==undefined/);
   assert.match(server,/code:'STALE_DATA_REVISION'/);
-  assert.match(card,/expectedDataRevision:titleBaseRevision/);
+  assert.match(card,/expectedDataRevision:\s*titleBaseRevision/);
   assert.match(card,/if\(titleEditing \|\| reservationOpen\)return/);
 });

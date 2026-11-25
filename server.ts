@@ -2728,6 +2728,7 @@ export async function createPortalApp() {
     /^\/processes\/[^/]+(?:\/(?:detail|documents|signatures|verifications|evaluation\/(?:schema|draft)|publication-choice|forms|form-submissions|data-review\/schema))?$/,
     /^\/(?:table-preferences|notifications)\/[^/]+$/,
     /^\/(?:president|coordinator)\/signature-queue$/,
+    /^\/integrations\/asten\/status$/,
     /^\/repository\/document-availability$/,
     /^\/registration\/(?:bootstrap|draft)$/,
     /^\/forms\/registration-(?:schema|suggestions)$/,
