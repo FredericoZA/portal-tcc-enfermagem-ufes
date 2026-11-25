@@ -1545,12 +1545,53 @@ async function ensureStoredProcessFolder(portalProcess:ProcessData,accessToken:s
   return folder.id;
 }
 /** The pending state is committed with the registration change before external I/O. */
-async function syncPersistedProcessData(portalProcess:ProcessData):Promise<void>{
-  if(!portalProcess.driveFolderId||localReviewFilesEnabled()||!processesStore.includes(portalProcess))return;
-  try{await syncStoredProcessData(portalProcess,await getGoogleWorkspaceAccessToken());}
-  catch{if(!currentPublicationProcess(portalProcess))return;portalProcess.driveDataSync={...portalProcess.driveDataSync,status:'PENDING',revision:portalProcess.dataRevision,updatedAt:new Date().toISOString(),lastError:'Os dados foram salvos no Portal. A atualização do arquivo de dados no Drive está pendente.'};}
-  try{await persistPortalStateDurably();}
-  catch{if(!currentPublicationProcess(portalProcess))return;portalProcess.driveDataSync={...portalProcess.driveDataSync,status:'PENDING',revision:portalProcess.dataRevision,updatedAt:new Date().toISOString(),lastError:'Os dados foram salvos. A confirmação da sincronização com o Drive está pendente.'};}
+async function syncPersistedProcessData(portalProcess: ProcessData): Promise<void> {
+  if (localReviewFilesEnabled() || portalProcess.status === 'EM_RASCUNHO' || !processesStore.includes(portalProcess)) return;
+  const revision = portalProcess.dataRevision;
+  const previous = portalProcess.driveDataSync;
+  const attempts = previous?.revision === revision ? (previous.attempts ?? 0) + 1 : 1;
+  const pending = (message: string) => {
+    const now = Date.now();
+    portalProcess.driveDataSync = {
+      ...portalProcess.driveDataSync, status: 'PENDING', revision, attempts,
+      updatedAt: new Date(now).toISOString(),
+      nextAttemptAt: new Date(now + Math.min(3600, 15 * 2 ** Math.min(attempts - 1, 8)) * 1000).toISOString(),
+      lastError: message,
+    };
+  };
+  try {
+    const token = await getGoogleWorkspaceAccessToken();
+    if (portalProcess.driveFolderId) await syncStoredProcessData(portalProcess, token);
+    else {
+      if (!currentSettings.driveRootFolderId) throw new Error('Pasta raiz do Drive não configurada.');
+      await ensureStoredProcessFolder(portalProcess, token, currentSettings.driveRootFolderId);
+      if (portalProcess.driveDataSync?.status !== 'SYNCED') throw new Error('Atualização do arquivo não confirmada.');
+    }
+  } catch (error) {
+    if (!processesStore.includes(portalProcess) || portalProcess.dataRevision !== revision) return;
+    const reason = error instanceof Error ? error.message : '';
+    const detail = /^(?:O Drive não forneceu uma condição segura|O registro de dados existente pertence|O destino no Google Drive possui|A pasta|Pasta raiz)/.test(reason)
+      ? reason : 'A atualização do arquivo de dados no Google Drive ainda não foi confirmada.';
+    pending(detail);
+  }
+  try { await persistPortalStateDurably(); }
+  catch {
+    if (processesStore.includes(portalProcess) && portalProcess.dataRevision === revision)
+      pending('A confirmação da sincronização com o Drive está pendente.');
+  }
+}
+
+async function retryPendingProcessData(): Promise<number> {
+  if (localReviewFilesEnabled() || !currentSettings.driveRootFolderId) return 0;
+  const now = Date.now();
+  const due = processesStore.filter(process =>
+    process.status !== 'EM_RASCUNHO' &&
+    process.driveDataSync?.status === 'PENDING' &&
+    (!process.driveDataSync.nextAttemptAt || Date.parse(process.driveDataSync.nextAttemptAt) <= now));
+  due.sort((a, b) => a.driveDataSync!.updatedAt.localeCompare(b.driveDataSync!.updatedAt));
+  const batch = due.slice(0, 2);
+  for (const process of batch) await syncPersistedProcessData(process);
+  return batch.length;
 }
 async function ensureWorkflowProcessFolder(portalProcess:ProcessData):Promise<{accessToken:string;folderId:string}>{
   const accessToken=await getGoogleWorkspaceAccessToken();
@@ -2845,6 +2886,7 @@ export async function createPortalApp() {
         await cleanupExpiredAtaPreviews(token,await ensurePortalRenderFolder(token,currentSettings.driveRootFolderId));
       }catch{failures.push('A limpeza das prévias expiradas da ata ficou pendente.');}
     }
+    const driveDataRetries = await retryPendingProcessData();
     const processCleanups=[];for(const task of selectDueProcessDeletions(processDeletionTasksStore)){try{const result=await retryProcessDeletion(task);processCleanups.push({id:task.id,status:result.status});if(result.status==='PENDING')failures.push('Há limpezas de TCC pendentes nas plataformas integradas.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na limpeza de TCC.');}}
     let workflow:Awaited<ReturnType<typeof runWorkflowMaintenance>>|null=null;
     try{workflow=await runWorkflowMaintenance();if(workflow.failed||workflow.configurationErrors.length)failures.push('Há lembretes com falha; confira a central de andamento.');}catch(error){failures.push(error instanceof Error?error.message:'Falha na manutenção do fluxo.');}
@@ -2864,7 +2906,7 @@ export async function createPortalApp() {
       failures:failures.length,workflowDeferred:workflow?.deferred,
       workflowConfigurationErrors:workflow?.configurationErrors.length,backupCreatedInThisRun:Boolean(backup)
     });
-    res.status(failures.length?502:200).json({ok:failures.length===0,backup,retention,uploads:uploadsResult.status==='fulfilled'?uploadsResult.value:null,downloads:downloadsResult.status==='fulfilled'?downloadsResult.value:null,processCleanups,workflow,failures,executedAt:new Date().toISOString()});
+    res.status(failures.length?502:200).json({ok:failures.length===0,backup,retention,uploads:uploadsResult.status==='fulfilled'?uploadsResult.value:null,downloads:downloadsResult.status==='fulfilled'?downloadsResult.value:null,processCleanups,driveDataRetries,workflow,failures,executedAt:new Date().toISOString()});
   });
 
   // Callback confirmado com commit antes de 200; worker reivindica lease
@@ -4587,6 +4629,7 @@ export async function createPortalApp() {
     auditLogsStore.push({id:`reservation-request:${newId}:0`,processId:newId,actorEmail,actorRoles:['STUDENT'],action:'SOLICITACAO_RESERVA_REGISTRADA',entityType:'reservation',entityId:newId,after:{startAt:newProcess.defesa.startAt,endAt:newProcess.defesa.endAt,local:newProcess.defesa.local,reservationRevision:newProcess.defesa.reservationRevision||0},timestamp:nowISO});
     if(defenseConflicts.length)auditLogsStore.push({id:`log-${Date.now()}-conflict`,processId:newId,actorEmail,actorRoles:getUserRolesForEmail(actorEmail).globalRoles,action:'SOBRESCRITA_CONFLITO_DEFESA',entityType:'defense_schedule',entityId:newId,after:{reason:String(req.body?.conflictOverrideReason||'').trim(),conflicts:defenseConflicts},timestamp:nowISO});
 
+    if (!localReviewFilesEnabled()) newProcess.driveDataSync = { status: 'PENDING', revision: newProcess.dataRevision, updatedAt: nowISO };
     const initialArchive:FormArchiveJob={
       id:`form-registration-${newId}`,processId:newId,formType:'CADASTRO_INICIAL',
       version:newProcess.dataRevision,sha256:'',artifactBase64:'',status:'PENDING',
@@ -4611,6 +4654,7 @@ export async function createPortalApp() {
 
     afterReservationChangeResponse(req,res,async()=>{
       const archived=await retryExistingFormArchiveJob(initialArchive,newProcess);
+      if (newProcess.driveDataSync?.status === 'PENDING') await syncPersistedProcessData(newProcess);
       if(archived.status==='ARCHIVED')await resumeWorkflowAfterNativeFormArchive(newProcess,'CADASTRO_INICIAL',actorEmail);
     },{retain:beginRuntimeRequestTask,waitUntil:process.env.VERCEL?waitUntil:undefined,
       onError:()=>{console.error('[Cadastro] Registro salvo; ações posteriores permanecem pendentes.');}});
@@ -4992,7 +5036,7 @@ export async function createPortalApp() {
     const renamedFolder=updated.protocolo!==existing.protocolo&&Boolean(existing.driveFolderId);
     if(renamedFolder)await renamePortalProcessFolder({accessToken:await getGoogleWorkspaceAccessToken(),fileId:existing.driveFolderId!,previousProtocol:existing.protocolo,protocol:updated.protocolo,rootFolderId:currentSettings.driveRootFolderId||'',processId:existing.id,studentNames:[updated.aluno1.nome,updated.aluno2?.nome].filter(Boolean) as string[]});
     const reviewRollback=dataReview?{memberships:structuredClone(membershipsStore),access:structuredClone(authorizedStudentsStore),jobs:structuredClone(signatureJobsStore),auditLength:auditLogsStore.length}:undefined;
-    if(updated.driveFolderId&&!localReviewFilesEnabled())updated.driveDataSync={...updated.driveDataSync,status:'PENDING',revision:updated.dataRevision,updatedAt:new Date().toISOString()};
+    if(!localReviewFilesEnabled())updated.driveDataSync={...updated.driveDataSync,status:'PENDING',revision:updated.dataRevision,updatedAt:new Date().toISOString()};
     processesStore[procIndex] = updated;
     synchronizeProcessParticipants(updated,actorEmail);
 
@@ -5042,7 +5086,7 @@ export async function createPortalApp() {
   // DELETE /api/processes/:id (Master admin deletes a process)
   app.post('/api/processes/:id/drive-data/retry',requireAuthenticated,requireGlobalRoles('MASTER_ADMIN'),rateLimit({windowMs:60000,limit:10,keyGenerator:req=>getPortalIdentity(req)!.email,standardHeaders:'draft-8',legacyHeaders:false}),async(req,res)=>{
     const process=processesStore.find(item=>item.id===req.params.id);
-    if(!process?.driveFolderId)return res.status(404).json({error:'A pasta deste processo ainda não foi vinculada ao Google Drive.'});
+    if(!process || process.status === 'EM_RASCUNHO')return res.status(404).json({error:'Processo não encontrado.'});
     if(localReviewFilesEnabled())return res.status(409).json({error:'A sincronização real do Drive não está habilitada nesta revisão local.'});
     process.driveDataSync={...process.driveDataSync,status:'PENDING',revision:process.dataRevision,updatedAt:new Date().toISOString()};
     await persistPortalStateDurably();
