@@ -157,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearIdentity = () => {
     clearCachedIdentity();
+    setViewingAccount(null);
     setUserEmailState('');
     setIsAuthenticated(false);
     setCanRegisterProcess(false);

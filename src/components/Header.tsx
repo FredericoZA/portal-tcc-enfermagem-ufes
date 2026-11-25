@@ -91,23 +91,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileSidebar, isMobileSid
             ) : null)}
             <SiteZoomControls />
 
-            <div id="user-profile-summary" className="hidden md:flex items-center gap-2 bg-slate-50 px-3.5 py-1.5 rounded-full border border-slate-200">
-              <User className="w-4 h-4 text-slate-500" />
-              <div className="text-xs">
-                <div className="font-bold text-slate-900 truncate max-w-[180px]" title={userEmail}>{userEmail}</div>
-                <div className="text-[10px] text-emerald-700 font-bold normal-case tracking-wider">{accessLabel}</div>
-              </div>
-            </div>
-            {isMaster && !viewingAccount && (accounts
-              ? <select className="portal-input max-w-[250px]" aria-label="Conta para visualizar" value="" disabled={accountBusy} onChange={e => { if (e.target.value) void changeAccount(e.target.value); }}>
+            <div id="user-profile-summary" className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5">
+              <User className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+              {isMaster && !viewingAccount && accounts ? (
+                <select className="portal-input max-w-[250px]" aria-label="Conta para visualizar" value="" disabled={accountBusy} onChange={e => { if (e.target.value) void changeAccount(e.target.value); }}>
                   <option value="">Selecionar conta para consulta</option>
                   {[...accounts].sort((a,b) => a.name.localeCompare(b.name,'pt-BR')).map(account =>
                     <option key={account.email} value={account.email}>{account.name} ({account.email})</option>)}
                 </select>
-              : <button type="button" className="portal-action" onClick={() => {
+              ) : isMaster && !viewingAccount ? (
+                <button type="button" className="text-left text-xs" aria-label="Visualizar outra conta do Portal" onClick={() => {
                   setAccountError('');
                   void apiClient.getAccountViewTargets().then(setAccounts).catch(() => setAccountError('Não foi possível carregar as contas.'));
-                }}>Visualizar conta</button>)}
+                }}>
+                  <span className="block max-w-[180px] truncate font-bold text-slate-900" title={userEmail}>{userEmail}</span>
+                  <span className="font-semibold text-emerald-700">Visualizar outra conta</span>
+                </button>
+              ) : <div className="text-xs">
+                <div className="max-w-[180px] truncate font-bold text-slate-900" title={userEmail}>{userEmail}</div>
+                <div className="text-[10px] font-bold normal-case tracking-wider text-emerald-700">{accessLabel}</div>
+              </div>}
+            </div>
             {viewingAccount && <div className="flex flex-wrap items-center gap-2">
               <span role="status" className="text-xs font-semibold">Consulta como {viewingAccount}</span>
               <button type="button" className="portal-action" disabled={accountBusy} onClick={() => void changeAccount(null)}>Voltar à visão Master</button>
