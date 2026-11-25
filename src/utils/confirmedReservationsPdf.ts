@@ -1,27 +1,4 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
-import type { ProcessData } from '../types';
-import { defenseEndAt } from './defenseSchedule';
-import { effectiveDefenseReservationStatus, isDefenseOnCalendar } from './defenseReservationState';
-
-type Reservation = Pick<ProcessData, 'protocolo' | 'titulo' | 'defesa' | 'status'>;
-
-export function confirmedReservations(processes: readonly Reservation[], year: number, month: number, timeZone = 'America/Sao_Paulo') {
-  const localDate = new Intl.DateTimeFormat('en-CA', {timeZone,year:'numeric',month:'2-digit',day:'2-digit'});
-  const day = new Intl.DateTimeFormat('pt-BR', {timeZone,weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
-  const time = new Intl.DateTimeFormat('pt-BR', {timeZone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
-  const period = `${year}-${String(month+1).padStart(2,'0')}`;
-  return processes
-    .filter(p=>p.status!=='EM_RASCUNHO' && isDefenseOnCalendar(p) && effectiveDefenseReservationStatus(p)==='CONFIRMADO')
-    .map(p=>({p,start:Date.parse(p.defesa.startAt)}))
-    .filter(({start})=>localDate.format(start).slice(0,7)===period)
-    .sort((a,b)=>a.start-b.start || a.p.protocolo.localeCompare(b.p.protocolo,'pt-BR'))
-    .map(({p,start})=>{
-      const recordedEnd = Date.parse(p.defesa.endAt);
-      const end = recordedEnd>start ? recordedEnd : Date.parse(defenseEndAt(p.defesa.startAt));
-      return [day.format(start), `${time.format(start)} – ${time.format(end)}`, p.defesa.local || '—', p.protocolo, p.titulo];
-    });
-}
-
 const headings = ['Dia', 'Horário', 'Local', 'Processo', 'Título'];
 const widths = [110, 106, 181, 97, 279.89];
 const side = 34;
@@ -65,24 +42,30 @@ export async function buildConfirmedReservationsPdf(input: {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const characterSet = new Set(font.getCharacterSet());
   const tableWidth = widths.reduce((sum,width)=>sum+width,0);
+  const centeredX = (value: string, font: PDFFont, size: number, left: number, width: number) =>
+    left + (width - font.widthOfTextAtSize(value, size)) / 2;
   pdf.setTitle(`Reservas confirmadas · ${input.period}`);
   const newPage = () => {
     const page = pdf.addPage([841.89,595.28]);
-    page.drawText('Reservas confirmadas',{x:side,y:549,size:23,font:bold,color:brand});
+    const title = 'Reservas confirmadas';
+    page.drawText(title,{x:centeredX(title,bold,23,side,tableWidth),y:549,size:23,font:bold,color:brand});
     const course=wrap(input.courseName,font,tableWidth,characterSet)[0];
-    page.drawText(course,{x:side,y:529,size:fontSize,font,color:text});
-    page.drawText(input.period,{x:side,y:508,size:12,font:bold,color:brand});
+    page.drawText(course,{x:centeredX(course,font,fontSize,side,tableWidth),y:529,size:fontSize,font,color:text});
+    page.drawText(input.period,{x:centeredX(input.period,bold,12,side,tableWidth),y:508,size:12,font:bold,color:brand});
     page.drawRectangle({x:side,y:465,width:tableWidth,height:25,color:brand});
     let x=side;
     for(const [index,heading] of headings.entries()) {
-      page.drawText(heading,{x:x+8,y:474,size:10,font:bold,color:rgb(1,1,1)});
+      page.drawText(heading,{x:centeredX(heading,bold,10,x,widths[index]),y:474,size:10,font:bold,color:rgb(1,1,1)});
       x+=widths[index];
     }
     return page;
   };
   let page = newPage();
   let y = 465;
-  if(!input.rows.length) page.drawText('Nenhuma reserva confirmada no período selecionado.',{x:side+8,y:442,size:11,font,color:text});
+  if(!input.rows.length) {
+    const empty = 'Nenhuma reserva confirmada no período selecionado.';
+    page.drawText(empty,{x:centeredX(empty,font,11,side,tableWidth),y:442,size:11,font,color:text});
+  }
   for (const [index,row] of input.rows.entries()) {
     let remaining = row.map((value,i)=>wrap(value,font,widths[i]-16,characterSet));
     while (remaining.some(cell=>cell.length)) {
@@ -93,7 +76,11 @@ export async function buildConfirmedReservationsPdf(input: {
       let x = side;
       for(const [i,cell] of remaining.entries()) {
         if(i) page.drawLine({start:{x,y},end:{x,y:y-height},thickness:0.5,color:line});
-        cell.slice(0,room).forEach((value,n)=>page.drawText(value,{x:x+8,y:y-16-n*lineHeight,size:fontSize,font,color:text}));
+        const visibleLines = cell.slice(0,room);
+        const baseline = y - height / 2 + ((visibleLines.length - 1) * lineHeight - font.heightAtSize(fontSize,{descender:false})) / 2;
+        visibleLines.forEach((value,n)=>page.drawText(value,{
+          x:centeredX(value,font,fontSize,x,widths[i]),y:baseline-n*lineHeight,size:fontSize,font,color:text,
+        }));
         x+=widths[i];
       }
       remaining=remaining.map(cell=>cell.slice(room));
@@ -101,6 +88,9 @@ export async function buildConfirmedReservationsPdf(input: {
     }
   }
   const pages=pdf.getPages();
-  pages.forEach((page,index)=>page.drawText(`${index+1} / ${pages.length}`,{x:side,y:24,size:fontSize,font,color:text}));
+  pages.forEach((page,index)=>{
+    const number = `${index+1} / ${pages.length}`;
+    page.drawText(number,{x:centeredX(number,font,fontSize,side,tableWidth),y:24,size:fontSize,font,color:text});
+  });
   return pdf.save();
 }

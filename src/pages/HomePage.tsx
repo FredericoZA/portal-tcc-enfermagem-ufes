@@ -84,6 +84,7 @@ import { DEFENSE_PENDING_CONFIRMATION_LABEL, DefenseFilter, DefenseState, format
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
 import { PortalModalShell } from '../components/PortalModalShell';
+import { confirmedReservations, formatReservationPeriod, reservationPeriodError, type ReservationPeriod } from '../utils/confirmedReservations';
 
 interface HomePageProps {
   onNavigate: (tab: string) => void;
@@ -1089,7 +1090,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   };
 
   const [isPreparingReservationsPdf, setIsPreparingReservationsPdf] = useState(false);
-  const [reservationReport, setReservationReport] = useState<{rows: string[][]; period: string; fileName: string} | null>(null);
+  const [reservationPeriod, setReservationPeriod] = useState<ReservationPeriod | null>(null);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const refreshData = async () => {
@@ -1293,30 +1294,33 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     };
   };
 
-  const openConfirmedReservationsPdf = async () => {
+  const openConfirmedReservationsPdf = () => {
     if (!ownsCalendarData || isLoading || loadError || isPreparingReservationsPdf) return;
-    try {
-      const {confirmedReservations} = await import('../utils/confirmedReservationsPdf');
-      const rows = confirmedReservations(
-        processes.filter(p=>matchesCalendarLocation(p.defesa.local,calendarLocations)), year, month,
-        settings?.integrationStudio?.operationsPolicy?.timezone || settings?.timezone,
-      );
-      setReservationReport({rows,period:`${monthNamesPt[month]} de ${year}`,fileName:`reservas-confirmadas-${year}-${String(month+1).padStart(2,'0')}.pdf`});
-    } catch {
-      portalNotice('Não foi possível montar a grade das reservas confirmadas. Tente novamente.');
-    }
+    const monthKey = `${year}-${String(month + 1).padStart(2,'0')}`;
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    setReservationPeriod({startDate:`${monthKey}-01`,endDate:`${monthKey}-${lastDay}`});
   };
 
+  const periodError = reservationPeriod ? reservationPeriodError(reservationPeriod) : '';
+  const reservationRows = reservationPeriod && !periodError && ownsCalendarData && !loadError
+    ? confirmedReservations(
+        processes.filter(p=>matchesCalendarLocation(p.defesa.local,calendarLocations)), reservationPeriod,
+        settings?.integrationStudio?.operationsPolicy?.timezone || settings?.timezone,
+      )
+    : [];
+
   const downloadConfirmedReservationsPdf = async () => {
-    if (!reservationReport || isPreparingReservationsPdf) return;
+    if (!reservationPeriod || periodError || !ownsCalendarData || loadError || isPreparingReservationsPdf) return;
     setIsPreparingReservationsPdf(true);
     try {
       const {buildConfirmedReservationsPdf} = await import('../utils/confirmedReservationsPdf');
-      const data = await buildConfirmedReservationsPdf({...reservationReport,courseName:installationProfile.courseName});
+      const data = await buildConfirmedReservationsPdf({
+        rows:reservationRows,period:formatReservationPeriod(reservationPeriod),courseName:installationProfile.courseName,
+      });
       const url = URL.createObjectURL(new Blob([new Uint8Array(data)],{type:'application/pdf'}));
       const link = document.createElement('a');
       link.href=url;
-      link.download=reservationReport.fileName;
+      link.download=`reservas-confirmadas-${reservationPeriod.startDate}-a-${reservationPeriod.endDate}.pdf`;
       link.click();
       window.setTimeout(()=>URL.revokeObjectURL(url),60_000);
     } catch {
@@ -1345,30 +1349,49 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   return (
     <div id="home-page-container" className="space-y-4 max-w-7xl mx-auto py-1 sm:py-2">
       <PortalModalShell
-        open={reservationReport!==null}
+        open={reservationPeriod!==null}
         title="Reservas confirmadas"
-        subtitle={reservationReport?.period}
+        subtitle={reservationPeriod && !periodError ? formatReservationPeriod(reservationPeriod) : undefined}
         icon={CalendarIcon}
         maxWidthClass="max-w-5xl"
         className="max-h-[90dvh]"
-        onClose={()=>setReservationReport(null)}
+        onClose={()=>setReservationPeriod(null)}
         footer={<div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className="portal-action" onClick={()=>setReservationReport(null)}>Fechar</button>
-          <button type="button" className="portal-action portal-action-primary" disabled={isPreparingReservationsPdf} onClick={()=>void downloadConfirmedReservationsPdf()}>
+          <button type="button" className="portal-action" onClick={()=>setReservationPeriod(null)}>Fechar</button>
+          <button type="button" className="portal-action portal-action-primary" disabled={isPreparingReservationsPdf || Boolean(periodError) || !ownsCalendarData || Boolean(loadError)} onClick={()=>void downloadConfirmedReservationsPdf()}>
             <Download className="h-4 w-4" aria-hidden="true" />
             {isPreparingReservationsPdf ? 'Preparando PDF…' : 'Baixar PDF'}
           </button>
         </div>}
       >
-        {reservationReport?.rows.length
+        {reservationPeriod && <fieldset className="mb-4">
+          <legend className="mb-2 text-sm font-bold">Período do PDF</legend>
+          <div className="flex flex-wrap gap-3">
+            <label className="space-y-1 text-xs font-semibold">
+              <span className="block">Data inicial</span>
+              <input type="date" className="portal-input" required value={reservationPeriod.startDate}
+                aria-invalid={Boolean(periodError)} aria-describedby={periodError ? 'reservation-period-error' : undefined}
+                onInput={event=>setReservationPeriod({...reservationPeriod,startDate:event.currentTarget.value})} />
+            </label>
+            <label className="space-y-1 text-xs font-semibold">
+              <span className="block">Data final</span>
+              <input type="date" className="portal-input" required min={reservationPeriod.startDate} value={reservationPeriod.endDate}
+                aria-invalid={Boolean(periodError)} aria-describedby={periodError ? 'reservation-period-error' : undefined}
+                onInput={event=>setReservationPeriod({...reservationPeriod,endDate:event.currentTarget.value})} />
+            </label>
+          </div>
+        </fieldset>}
+        {periodError
+          ? <p id="reservation-period-error" role="alert" className="text-sm text-red-700">{periodError}</p>
+          : reservationRows.length
           ? <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs">
-                <caption className="sr-only">Horários e locais das reservas confirmadas no mês</caption>
+              <table className="w-full border-collapse text-center align-middle text-xs">
+                <caption className="sr-only">Horários e locais das reservas confirmadas no período selecionado</caption>
                 <thead className="bg-slate-200 text-slate-900"><tr>
                   {['Dia','Horário','Local','Processo','Título'].map(label=><th key={label} scope="col" className="border border-slate-300 px-3 py-2">{label}</th>)}
                 </tr></thead>
                 <tbody>
-                  {reservationReport.rows.map((row,index)=><tr key={`${row[3]}-${index}`} className="odd:bg-white even:bg-slate-50">
+                  {reservationRows.map((row,index)=><tr key={`${row[3]}-${index}`} className="odd:bg-white even:bg-slate-50">
                     {row.map((value,column)=><td key={column} className={`border border-slate-300 px-3 py-2 ${column===0||column===1||column===3?'whitespace-nowrap':''}`}>{value}</td>)}
                   </tr>)}
                 </tbody>
@@ -1404,7 +1427,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                             type="button"
                             className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} font-bold normal-case`}
                             disabled={!ownsCalendarData || isLoading || Boolean(loadError) || isPreparingReservationsPdf}
-                            onClick={()=>void openConfirmedReservationsPdf()}
+                            onClick={openConfirmedReservationsPdf}
                           >
                             <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                             PDF das reservas confirmadas
