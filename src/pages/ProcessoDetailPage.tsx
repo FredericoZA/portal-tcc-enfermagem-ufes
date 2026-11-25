@@ -623,15 +623,16 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
   const canStudentEdit = isStudent && !isEvaluationSubmitted && !isAcervoSubmitted && !readOnly;
   const canAdvisorEdit = (isAdvisor || isCoAdvisor) && !isAcervoSubmitted && !readOnly;
   const hasIssuedInvitation = Boolean(process.defesa.invitationDriveFileId || process.defesa.invitationSentAt);
+  const canToggleRegistrationEdit = isMasterAdmin || isAdvisor;
   const canOpenRegistrationEdit = isAuthenticated && !readOnly && !process.legacyRecord &&
     !isEvaluationSubmitted && !isAcervoSubmitted && process.status !== 'CONCLUIDO' &&
-    (isMasterAdmin || isAdvisor) &&
+    (canToggleRegistrationEdit || isStudent) &&
     !signatureJobs.some(job => job.status !== 'CANCELED' && Boolean(job.driveSignedFileId || job.driveUnsignedFileId));
   const confirmInvitationRevalidation = () => portalConfirm(
     'A correção altera dados de uma carta-convite já emitida. Ao salvar, a reserva anterior e o convite ficam no histórico. O responsável pelo local receberá uma nova solicitação de confirmação antes da emissão do convite atualizado.',
     { title: 'Revalidar reserva e carta-convite', confirmLabel: 'Salvar e revalidar', cancelLabel: 'Cancelar', tone: 'warning' },
   );
-  const canEditData = canOpenRegistrationEdit && editingRegistration;
+  const canEditData = canOpenRegistrationEdit && (canToggleRegistrationEdit ? editingRegistration : isStudent);
 
   const canEditDefense=isAuthenticated&&(canStudentEdit||(canAdvisorEdit&&isAdvisor)&&!isEvaluationSubmitted&&!isAcervoSubmitted)&&!process.legacyRecord&&process.status!=='CONCLUIDO';
   const defenseDate=new Date(process.defesa.startAt);
@@ -1049,7 +1050,7 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
           <div className="p-4 sm:p-5">
             <div className="space-y-3">
-              {canOpenRegistrationEdit && (
+              {canOpenRegistrationEdit && canToggleRegistrationEdit && (
                 <button type="button" className="portal-action" aria-pressed={editingRegistration}
                   onClick={() => setEditingRegistration(open => !open)}>
                   {editingRegistration ? 'Encerrar edição' : 'Alterar dados'}
