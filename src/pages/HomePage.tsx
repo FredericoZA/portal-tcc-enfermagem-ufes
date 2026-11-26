@@ -27,6 +27,8 @@ import { getTableStyles, getActionPillStyles, formatColumnLabel, formatCellText,
 import { TABLE_LAYOUTS_EVENT } from '../utils/portalAppearanceLinks';
 import { HeaderSettingsPopover } from '../components/HeaderSettingsPopover';
 import { SearchPopover } from '../components/SearchPopover';
+import { TableExportPopover } from '../components/TableExportPopover';
+import { captureTableExportSnapshot } from '../utils/tableExportSnapshot';
 import { DocumentEnvelope, TccAbstractPopover } from '../components/TccAbstractPopover';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { StudentNames, GcalStudentNames } from '../components/StudentNames';
@@ -821,6 +823,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   };
 
   // States and sorting for the List of Defenses (below the calendar)
+  const defensesTableRef = useRef<HTMLTableElement>(null);
   const [defensesSearch, setDefensesSearch] = useState('');
   const [defensesStartDate, setDefensesStartDate] = useState('');
   const [defensesEndDate, setDefensesEndDate] = useState('');
@@ -886,71 +889,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
       window.removeEventListener(TABLE_LAYOUTS_EVENT, handlePublishedLayouts);
     };
   }, []);
-
-  const handleExportDefensesExcel = (dataToExport: ProcessData[]) => {
-    const activeCols = defensesColumnOrder.filter((k) => defensesVisibleColumns[k]);
-    const labelMap: Record<string, string> = {
-      protocolo: 'Nº do Processo',
-      defesaDataHora: 'Data e Hora',
-      progresso: 'Etapa',
-      titulo: 'Título do Trabalho',
-      aluno1: 'Aluno 1',
-      aluno2: 'Aluno 2',
-      orientador: 'Orientador(a)',
-      membro1: 'Examinador 1',
-      membro2: 'Examinador 2',
-      coorientador: 'Coorientador(a)',
-      resumo: 'Resumo do TCC',
-      palavrasChave: '5 Palavras-Chave',
-      defesaLocal: 'Local da Defesa',
-    };
-
-    const colHeaders = activeCols.map((k) => labelMap[k] || k);
-
-    const csvRows = dataToExport.map((proc) => {
-      const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
-      const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-
-      const getCellVal = (colKey: string): string => {
-        switch (colKey) {
-          case 'protocolo': return `${proc.protocolo || proc.id}`;
-          case 'progresso': return `${progress.percent}% - ${getStepNumberLabel(progress.label)}`;
-          case 'titulo': return proc.titulo || '';
-          case 'aluno1': {
-            const name = proc.aluno1?.nome ? cleanPersonName(proc.aluno1.nome) : '';
-            return name ? name : '';
-          }
-          case 'aluno2': {
-            const name = proc.aluno2?.nome ? cleanPersonName(proc.aluno2.nome) : '';
-            return name ? name : '';
-          }
-          case 'orientador': return proc.orientador?.nome ? `${academicName(proc.orientador, 'abbreviated')} (${displayParticipantInstitution(proc.orientador.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
-          case 'membro1': return evalMembers[0] ? `${academicName(evalMembers[0],'abbreviated')} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
-          case 'membro2': return evalMembers[1] ? `${academicName(evalMembers[1],'abbreviated')} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
-          case 'coorientador': return repositoryCoadvisorText(proc);
-          case 'resumo': return proc.acervo?.resumoSintese || (proc.titulo ? `TCC: ${proc.titulo}` : 'Sem resumo');
-          case 'palavrasChave': return (proc.acervo?.palavrasChave || []).slice(0, 5).join('; ');
-          case 'defesaDataHora': return proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
-          case 'defesaLocal': return proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar';
-          default: return '';
-        }
-      };
-
-      return activeCols.map((k) => `"${getCellVal(k).replace(/"/g, '""')}"`).join(';');
-    });
-
-    const csvContent = '\uFEFF' + [colHeaders.join(';'), ...csvRows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Lista_Defesas_TCCs_${installationProfile.courseAcronym}_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-
 
   const handleExportExcel = (dataToExport: ProcessData[]) => {
     const colHeaders: string[] = [];
@@ -2136,6 +2074,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         defaultTableTitle="Lista de Defesas"
                         defaultFilterTitle="Filtrar por situação"
                       />
+                      <TableExportPopover
+                        disabled={isLoading || !ownsCalendarData}
+                        contextKey={calendarIdentity}
+                        fileName={`lista-de-defesas-${installationProfile.courseAcronym}`}
+                        getSnapshot={() => ownsCalendarData && defensesTableRef.current
+                          ? captureTableExportSnapshot(defensesTableRef.current, {
+                            title: getEditableTableText(defensesCustomLabels, '__tableTitle', `Lista de Defesas — ${monthNamesPt[month]} de ${year}`),
+                          })
+                          : null}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2323,7 +2271,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   );
                 case 'defesaDataHora':
                   return (
-                    <td key="defesaDataHora" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
+                    <td key="defesaDataHora" data-portal-export-value={[
+                      isDefenseReservationPending(proc) ? DEFENSE_PENDING_CONFIRMATION_LABEL : '',
+                      formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, ''),
+                      formatTime24h(proc.defesa?.startAt),
+                    ].filter(Boolean).join('\n')} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
                       <div className={`flex flex-wrap items-center justify-center gap-x-1 ${defStyles.cellFontSizeClass}`}>
                         <PendingDefenseConfirmationNote process={proc} />
                         <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
@@ -2443,7 +2395,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                   );
                 case 'resumo':
                   return (
-                    <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle`}>
+                    <td key="resumo" data-portal-export-value={proc.acervo?.resumoSintese || ''} data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle`}>
                       <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
                     </td>
                   );
@@ -2470,7 +2422,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             return (
               <div className="w-full">
                 <TableScrollWrapper>
-                  <table className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
+                  <table ref={defensesTableRef} aria-label="Lista de Defesas" className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
                     <thead className={`${defStyles.headerTheadClass} ${defStyles.headerWeightClass} ${defStyles.headerFontSizeClass} tracking-normal`} style={defStyles.theadStyle}>
                       <tr>
                         {defensesColumnOrder.map((colKey) => renderDefensesHeaderCell(colKey))}
