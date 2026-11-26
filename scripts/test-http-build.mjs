@@ -40,7 +40,7 @@ try{
   assert.ok(script.ok&&/javascript/i.test(script.headers.get('content-type')||''));
   const css=await request(stylesheet);
   assert.ok(css.ok&&/text\/css/i.test(css.headers.get('content-type')||''));
-  assert.match(await css.text(),/\.items-center\{/,'O CSS compilado inclui utilitários Tailwind usados pela interface.');
+  assert.match(await css.text(),/\.items-center\s*\{[^{}]*\balign-items\s*:\s*center\s*(?:;|\})/,'O CSS compilado inclui o utilitário Tailwind de alinhamento usado pela interface.');
   const workerPath=publicFiles.find(name=>/^assets\/pdf\.worker\.min-[a-f\d]+\.mjs$/i.test(String(name).replaceAll('\\','/')));
   assert.ok(workerPath,'O worker de PDF precisa existir como um recurso estático da mesma origem.');
   const worker=await request('/'+String(workerPath).replaceAll('\\','/'));

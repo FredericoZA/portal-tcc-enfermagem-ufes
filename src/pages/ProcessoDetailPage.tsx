@@ -1050,13 +1050,10 @@ export const ProcessoDetailPage: React.FC<ProcessoDetailPageProps> = ({
 
           <div className="p-4 sm:p-5">
             <div className="space-y-3">
-              {canOpenRegistrationEdit && canToggleRegistrationEdit && (
-                <button type="button" className="portal-action" aria-pressed={editingRegistration}
-                  onClick={() => setEditingRegistration(open => !open)}>
-                  {editingRegistration ? 'Encerrar edição' : 'Alterar dados'}
-                </button>
-              )}
-              <ProcessSummaryCard process={process} advisorViewerEmail={isAuthenticated && isAdvisor ? normEmail : undefined} canEdit={!readOnly&&canEditData} confirmInvitationRevalidation={hasIssuedInvitation?confirmInvitationRevalidation:undefined} canEditReservation={canEditDefense} isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onReservationSaved={saved=>{if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;const previous=lastProcessRevision.current;if(previous&&(saved.dataRevision<previous.revision||(saved.dataRevision===previous.revision&&Date.parse(saved.updatedAt)<Date.parse(previous.updatedAt))))return;lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};setRemoteUpdatePending(false);setProcess(saved);}} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
+              <ProcessSummaryCard process={process} advisorViewerEmail={isAuthenticated && isAdvisor ? normEmail : undefined} canEdit={!readOnly&&canEditData} confirmInvitationRevalidation={hasIssuedInvitation?confirmInvitationRevalidation:undefined} canEditReservation={canEditDefense}
+                registrationEditing={editingRegistration}
+                onToggleRegistrationEdit={canOpenRegistrationEdit && canToggleRegistrationEdit ? () => setEditingRegistration(open => !open) : undefined}
+                isAuthenticated={isAuthenticated} studio={settings?.integrationStudio} onEditingChange={setSummaryEditing} onReservationSaved={saved=>{if(legacyAccessScope.current!==legacyAccessKey||saved.id!==processId)return;const previous=lastProcessRevision.current;if(previous&&(saved.dataRevision<previous.revision||(saved.dataRevision===previous.revision&&Date.parse(saved.updatedAt)<Date.parse(previous.updatedAt))))return;lastProcessRevision.current={revision:saved.dataRevision,updatedAt:saved.updatedAt};setRemoteUpdatePending(false);setProcess(saved);}} onUpdated={()=>loadData({quiet:true,preserveAcervoDraft:true})}/>
               <section className="portal-tcc-members-box" aria-label="Dados dos membros">
                 <h2 className="mb-2 text-xs font-bold normal-case">Dados dos membros</h2>
                 <div className="portal-members-table-scroll" role="region" aria-label="Tabela de membros com rolagem horizontal" tabIndex={0}>

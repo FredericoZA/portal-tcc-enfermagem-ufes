@@ -1,7 +1,7 @@
 import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
-import type { LegacyAcademicPresentation, LegacyAcademicRecord, PublicLegacyAcademicRecord } from '../src/types/legacyArchive';
+import type { LegacyAcademicMetadata, LegacyAcademicPresentation, LegacyAcademicRecord, LegacyFacultyAcademicMetadata, PublicLegacyAcademicRecord } from '../src/types/legacyArchive';
 import { displayParticipantInstitution } from '../src/utils/institutionName';
-import { plainPersonName, recordedAcademicName } from '../src/utils/personPresentation';
+import { ACADEMIC_DEGREES, COMMITTEE_TREATMENTS, FACULTY_TREATMENTS, plainPersonName, recordedAcademicName } from '../src/utils/personPresentation';
 import { isDepartmentFacultyName } from './ufesFacultyInstitution';
 
 const officialCatalog = 'https://enfermagem.vitoria.ufes.br/pt-br/trabalhos-de-conclusao-de-curso-defendidos';
@@ -9,6 +9,38 @@ const normalized = (s: unknown) => typeof s === 'string'
   ? s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\d]+/gu, ' ').trim()
   : '';
 const nameKey = (nome: string) => normalized(plainPersonName({nome:nome.trim()}));
+
+/** Import accepts only the existing presentation enums, never access or role fields. */
+export function validateLegacyAcademicMetadata(value: unknown, role: 'faculty'): LegacyFacultyAcademicMetadata | undefined;
+export function validateLegacyAcademicMetadata(value: unknown, role?: 'committee'): LegacyAcademicMetadata | undefined;
+export function validateLegacyAcademicMetadata(value: unknown, role: 'faculty' | 'committee' = 'committee'): LegacyAcademicMetadata | undefined {
+  if (value === undefined) return;
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+      Object.keys(value).some(key => key !== 'tratamento' && key !== 'titulacao')) {
+    throw new Error('Metadados acadêmicos históricos inválidos.');
+  }
+  const {tratamento, titulacao} = value as Record<string, unknown>;
+  const treatments = role === 'faculty' ? FACULTY_TREATMENTS : COMMITTEE_TREATMENTS;
+  if (tratamento !== undefined && !treatments.some(item => item === tratamento)) {
+    throw new Error('Tratamento acadêmico histórico inválido.');
+  }
+  if (titulacao !== undefined && !ACADEMIC_DEGREES.some(item => item === titulacao)) {
+    throw new Error('Titulação acadêmica histórica inválida.');
+  }
+  return {
+    ...(tratamento !== undefined ? {tratamento: tratamento as LegacyAcademicMetadata['tratamento']} : {}),
+    ...(titulacao !== undefined ? {titulacao: titulacao as LegacyAcademicMetadata['titulacao']} : {}),
+  };
+}
+
+function academicMetadataPresentation(value: unknown, fallback?: LegacyAcademicPresentation, facultyOnly = false): LegacyAcademicPresentation | undefined {
+  let saved: LegacyAcademicMetadata | undefined;
+  try { saved = facultyOnly ? validateLegacyAcademicMetadata(value, 'faculty') : validateLegacyAcademicMetadata(value); } catch { return fallback; }
+  if (!saved || !Object.keys(saved).length) return fallback;
+  // Reviewed fields, including "Sem titulação", must not be replaced by inference.
+  return {...fallback, ...saved};
+}
 
 function recordedAdvisorDegree(record: LegacyAcademicRecord): PublicLegacyAcademicRecord['advisorAcademic'] {
   const {pageUrl, pageRecords} = record.provenance;
@@ -78,7 +110,8 @@ const isMissingInstitution = (value: string) => !normalized(value) || normalized
 export function legacyFacultyPresentation(record: LegacyAcademicRecord): Pick<PublicLegacyAcademicRecord,
     'advisorAcademic' | 'coadvisorAcademic' | 'coorientador' | 'coorientadorInstituicao' | 'examinadores'> {
   const catalog = recordedAdvisorDegree(record);
-  const advisorAcademic = catalog || academicEvidence(record.orientador, [], record.dataDefesa);
+  const advisorAcademic = academicMetadataPresentation(record.advisorAcademic,
+    catalog || academicEvidence(record.orientador, [], record.dataDefesa), true);
   const {internal, external} = archivedExaminerRoles(record);
   const examinadores = record.examinadores.map(person=>{
     const key = nameKey(person.nome);
@@ -86,8 +119,9 @@ export function legacyFacultyPresentation(record: LegacyAcademicRecord): Pick<Pu
     const knownInstitution = verified || (internal.has(key) && !external.has(key) && isDepartmentFacultyName(person.nome));
     const instituicao = knownInstitution && isMissingInstitution(person.instituicao)
       ? DEFAULT_INSTALLATION_PROFILE.institutionName : person.instituicao;
-    const evidence = academicEvidence(person.nome, [...(internal.get(key) || []), ...(external.get(key) || [])], record.dataDefesa);
-    return {...person, nome:verified?.name || person.nome, instituicao, ...evidence};
+    const evidence = academicMetadataPresentation({tratamento:person.tratamento, titulacao:person.titulacao},
+      academicEvidence(person.nome, [...(internal.get(key) || []), ...(external.get(key) || [])], record.dataDefesa));
+    return {nome:verified?.name || person.nome, instituicao, ...evidence};
   });
 
   let {coorientador, coorientadorInstituicao} = record;
@@ -101,7 +135,8 @@ export function legacyFacultyPresentation(record: LegacyAcademicRecord): Pick<Pu
   if (coadvisor && isMissingInstitution(coorientadorInstituicao)) {
     coorientadorInstituicao = DEFAULT_INSTALLATION_PROFILE.institutionName;
   }
-  const coadvisorAcademic = academicEvidence(coorientador, [], record.dataDefesa);
+  const coadvisorAcademic = academicMetadataPresentation(record.coadvisorAcademic,
+    academicEvidence(coorientador, [], record.dataDefesa), true);
   return {
     ...(advisorAcademic ? {advisorAcademic} : {}),
     ...(coadvisorAcademic ? {coadvisorAcademic} : {}),

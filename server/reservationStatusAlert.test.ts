@@ -137,9 +137,32 @@ test('componente usa um único bloco vermelho para avisos e botão de reserva ve
   assert.match(src, /const alert = reservationStatusAlert\(process, /);
   assert.match(src, /const denial = alert\?\.kind === 'denied'/);
   assert.match(src, /\{alert && \([\s\S]*?role="alert"[\s\S]*?border-red-300 bg-red-50/);
-  assert.match(src, /onClick=\{openReservation\}[^>]*className="[^"]*border-red-700 bg-red-700/);
+  const summary = renderToStaticMarkup(createElement(ProcessSummaryCard, {process: process('CONFIRMADO'), canEdit: false, canEditReservation: true, onUpdated: async () => {}}));
+  assert.match(summary, /<button[^>]*aria-label="Alterar reserva da defesa"[^>]*class="[^"]*border-red-700 bg-red-700/);
   assert.doesNotMatch(src, /A reserva foi recusada\. É necessário enviar uma nova solicitação/);
   assert.doesNotMatch(src, /Nova solicitação de reserva aguardando confirmação do responsável\./);
+});
+
+test('ação cadastral ocupa o mesmo quadro e padrão da reserva, preservando seu alcance', () => {
+  const render = (canEditReservation: boolean, onToggleRegistrationEdit?: () => void, registrationEditing = false) => renderToStaticMarkup(createElement(ProcessSummaryCard, {
+    process: process('CONFIRMADO'), canEdit: false, canEditReservation, onToggleRegistrationEdit, registrationEditing, onUpdated: async () => {},
+  }));
+  const reservation = render(true);
+  const master = render(false, () => {});
+  const button = (html: string, label: string) => html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>[\\s\\S]*?<\\/button>`))?.[0] || '';
+  const reservationButton = button(reservation, 'Alterar reserva da defesa');
+  const masterButton = button(master, 'Alterar dados do processo');
+  assert.ok(masterButton, 'a ação administrativa continua disponível');
+  assert.equal(masterButton.match(/class="([^"]*)"/)?.[1], reservationButton.match(/class="([^"]*)"/)?.[1]);
+  assert.match(masterButton, /aria-pressed="false"/);
+  assert.match(masterButton, /Editar título e dados dos membros/);
+  assert.ok(master.indexOf(masterButton) < master.indexOf('</section>'), 'a ação fica dentro do quadro Dados do processo');
+  assert.doesNotMatch(master, /Alterar reserva|A mudança inicia uma nova solicitação/);
+  assert.doesNotMatch(render(false), /Alterar dados do processo/);
+  assert.match(button(render(false, () => {}, true), 'Encerrar edição dos dados do processo'), /aria-pressed="true"/);
+  const combined = render(true, () => {});
+  assert.equal((combined.match(/aria-label="Alterar reserva da defesa"/g) || []).length, 1);
+  assert.equal((combined.match(/aria-label="Alterar dados do processo"/g) || []).length, 1);
 });
 
 test('dados do processo confirmam a reserva vigente e orientam apenas quem pode alterá-la', () => {

@@ -1,3 +1,11 @@
+import type { AcademicDegree, CommitteeTreatment, FACULTY_TREATMENTS } from '../utils/personPresentation';
+
+/** Reviewed academic metadata only; it grants no role or access to the work. */
+export type LegacyAcademicMetadata = { tratamento?: CommitteeTreatment; titulacao?: AcademicDegree };
+export type LegacyFacultyAcademicMetadata = Omit<LegacyAcademicMetadata, 'tratamento'> & {
+  tratamento?: typeof FACULTY_TREATMENTS[number];
+};
+
 /** Imported historical works never enter the live defense/signature workflow. */
 export interface LegacyAcademicRecord {
   id: string;
@@ -6,9 +14,11 @@ export interface LegacyAcademicRecord {
   titulo: string;
   autores: string[];
   orientador: string;
+  advisorAcademic?: LegacyFacultyAcademicMetadata;
   coorientador: string;
   coorientadorInstituicao: string;
-  examinadores: { nome: string; instituicao: string }[];
+  coadvisorAcademic?: LegacyFacultyAcademicMetadata;
+  examinadores: ({ nome: string; instituicao: string } & LegacyAcademicMetadata)[];
   resumo: string;
   palavrasChave: string[];
   dataDefesa: string;
@@ -137,7 +147,7 @@ export type PublicLegacyAcademicRecord = Pick<LegacyAcademicRecord,
   'horaDefesa' | 'localDefesa'> & {
     advisorAcademic?: LegacyAcademicPresentation;
     coadvisorAcademic?: LegacyAcademicPresentation;
-    examinadores: (LegacyAcademicRecord['examinadores'][number] & LegacyAcademicPresentation)[];
+    examinadores: (Omit<LegacyAcademicRecord['examinadores'][number], keyof LegacyAcademicMetadata> & LegacyAcademicPresentation)[];
     filesRestricted: boolean;
     authorizationDecision: LegacyAcademicRecord['authorizationDecision'];
     publicFiles: { index: number; kind: LegacyAttachment['kind']; downloadUrl: string }[];

@@ -4,7 +4,7 @@ import { normalizePersonName } from '../src/utils/personNameCase';
 import {repositoryDefenseLocation} from '../src/utils/repositoryDefenseLocation';
 import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
 import { renderTccTitle } from '../src/utils/formatters';
-import { legacyFacultyPresentation } from './legacyFacultyPresentation';
+import { legacyFacultyPresentation, validateLegacyAcademicMetadata } from './legacyFacultyPresentation';
 import type { ProcessData } from '../src/types';
 import type { LegacyAcademicRecord, LegacyAttachment, LegacyAdministrativeFile, PublicLegacyAcademicRecord, PrivateLegacyAcademicView } from '../src/types/legacyArchive';
 
@@ -176,10 +176,22 @@ export function validateLegacyBatch(value: unknown): LegacyAcademicRecord[] {
     const provenance = input.provenance;
     if (!provenance || typeof provenance !== 'object' || Array.isArray(provenance) || JSON.stringify(provenance).length > 100000) throw new Error('Origem histórica ausente ou excessiva.');
     legacyAdministrativeFiles({provenance});
+    const advisorAcademic = validateLegacyAcademicMetadata(input.advisorAcademic, 'faculty');
+    const coadvisorAcademic = validateLegacyAcademicMetadata(input.coadvisorAcademic, 'faculty');
+    const examinadores = input.examinadores.map((person: unknown) => {
+      if (!person || typeof person !== 'object' || Array.isArray(person) ||
+          ![Object.prototype, null].includes(Object.getPrototypeOf(person)) ||
+          Object.keys(person).some(key => !['nome','instituicao','tratamento','titulacao'].includes(key))) {
+        throw new Error('Participante acadêmico histórico inválido.');
+      }
+      const member = person as Record<string, unknown>;
+      return {nome: bounded(member.nome), instituicao: bounded(member.instituicao),
+        ...validateLegacyAcademicMetadata({tratamento:member.tratamento, titulacao:member.titulacao})};
+    });
     // Whitelist: no live workflow, sessions, email jobs, grades or external public links.
     const record = canonicalLegacyRecord({ id, protocolo, sourceFingerprint, titulo, autores,
       orientador: bounded(input.orientador), coorientador: bounded(input.coorientador), coorientadorInstituicao: bounded(input.coorientadorInstituicao),
-      examinadores: input.examinadores.map((p: any) => ({nome: bounded(p.nome), instituicao: bounded(p.instituicao)})),
+      ...(advisorAcademic ? {advisorAcademic} : {}), ...(coadvisorAcademic ? {coadvisorAcademic} : {}), examinadores,
       resumo: bounded(input.resumo, 40000), palavrasChave: input.palavrasChave.map((v: unknown) => bounded(v, 500)),
       dataDefesa, horaDefesa, localDefesa: bounded(input.localDefesa, 2000),
       isPublic: false, publishFullWork: false, publishExpandedAbstract: false, publicationState: 'NOT_REQUESTED',
