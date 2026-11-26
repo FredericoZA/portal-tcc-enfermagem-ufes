@@ -10,7 +10,7 @@ import type { IntegrationStudioSettings } from '../../src/types/integrationStudi
 import type { RegistrationAnswers } from '../../src/types/operationalConfig';
 import { registrationAnswersWithoutIdentifiers, registrationPayload, registrationQuestions } from '../../src/utils/operationalConfig';
 import { evaluateStudioCondition, validateStudioAnswer } from '../../src/utils/courseStudioValidator';
-import { formatNameTitleCase, formatTccTitle, normalizeEmail } from '../../src/utils/formatters';
+import { formatNameTitleCase, normalizeEmail } from '../../src/utils/formatters';
 import { CUSTOM_LOCATION_FIELD, OTHER_DEFENSE_LOCATION, getCustomLocationFieldValue, isCustomLocationRegistration, isOtherDefenseLocation, normalizeCustomLocationInput } from '../../src/utils/customDefenseLocation';
 
 const LEGACY_LOCATION_ALIASES = new Map<string, string>([
