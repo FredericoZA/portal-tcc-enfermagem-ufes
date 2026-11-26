@@ -21,6 +21,8 @@ type ProcessSummaryProps = {
   canEdit: boolean;
   confirmInvitationRevalidation?: () => Promise<boolean>;
   canEditReservation?: boolean;
+  registrationEditing?: boolean;
+  onToggleRegistrationEdit?: () => void;
   advisorViewerEmail?: string;
   isAuthenticated?: boolean;
   onEditingChange?: (editing:boolean)=>void;
@@ -53,9 +55,10 @@ const webmailByDomain = new Map([
 const compactField = 'flex min-w-0 flex-col gap-1';
 const fieldLabel = 'text-[10px] font-semibold text-slate-600';
 const fieldValue = 'text-[11px] font-semibold leading-4 text-slate-900';
+const summaryActionClass = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-red-700 bg-red-700 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60';
 
 export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
-  process, canEdit, confirmInvitationRevalidation, canEditReservation=false, advisorViewerEmail, isAuthenticated=false, onEditingChange, studio, onUpdated,onReservationSaved,
+  process, canEdit, confirmInvitationRevalidation, canEditReservation=false, registrationEditing=false, onToggleRegistrationEdit, advisorViewerEmail, isAuthenticated=false, onEditingChange, studio, onUpdated,onReservationSaved,
 }) => {
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
@@ -255,7 +258,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             <span className={fieldLabel}>Local da defesa</span>
             <span className={`${fieldValue} break-words`}>{process.defesa?.local || 'A confirmar'}</span>
           </div>
-          <div className={`flex flex-wrap items-center justify-center gap-2 ${webmailUrl && canEditReservation ? 'sm:col-span-4' : 'sm:col-span-2'}`}>
+          <div className={`flex flex-wrap items-center justify-end gap-2 ${webmailUrl && canEditReservation ? 'sm:col-span-4' : 'sm:col-span-2'}`}>
             {webmailUrl && (
               <a href={webmailUrl} target="_blank" rel="noopener noreferrer" className="portal-action inline-flex items-center gap-1.5">
                 <Mail className="h-3.5 w-3.5" aria-hidden="true"/>
@@ -269,10 +272,23 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
                 disabled={outstanding}
                 aria-label={denial ? 'Refazer reserva' : 'Alterar reserva da defesa'}
                 title={outstanding ? 'Há uma solicitação de alteração aguardando resolução.' : denial ? 'Refazer a reserva negada' : 'Solicitar nova reserva'}
-                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-red-700 bg-red-700 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className={summaryActionClass}
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true"/>
                 {denial ? 'Refazer reserva' : 'Alterar reserva'}
+              </button>
+            )}
+            {onToggleRegistrationEdit && (
+              <button
+                type="button"
+                onClick={onToggleRegistrationEdit}
+                aria-label={registrationEditing ? 'Encerrar edição dos dados do processo' : 'Alterar dados do processo'}
+                aria-pressed={registrationEditing}
+                title={registrationEditing ? 'Encerrar edição dos dados cadastrais' : 'Editar título e dados dos membros'}
+                className={summaryActionClass}
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true"/>
+                {registrationEditing ? 'Encerrar edição' : 'Alterar dados'}
               </button>
             )}
           </div>
