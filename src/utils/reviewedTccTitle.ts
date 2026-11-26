@@ -6,10 +6,11 @@ export const UPPERCASE_TCC_TITLE_MESSAGE = 'Escreva o título em caixa normal. U
 export const normalizeReviewedTccTitle = (title: string): string =>
   title.normalize('NFC').trim().replace(/\s+/gu, ' ');
 
-const titleWords = /[\p{L}\p{M}]+(?:\p{N}+[\p{L}\p{M}]*)*/gu;
+const titleWords = /\bCAPS(?: AD(?: I{1,3})?| I{1,3})\b|[\p{L}\p{M}]+(?:\p{N}+[\p{L}\p{M}]*)*/gu;
 const titleConnectives = new Set(['a', 'as', 'ao', 'aos', 'o', 'os', 'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos', 'com', 'sem', 'para', 'por']);
 
 function titleAcronym(title: string, word: RegExpMatchArray, previous?: RegExpMatchArray): string | null {
+  if (word[0].startsWith('CAPS ')) return word[0];
   const acronym = academicAcronym(word[0]);
   if (acronym) return acronym;
   // A recognized instrument may have a short, uppercase variant suffix, such as WHOQOL-BREF.

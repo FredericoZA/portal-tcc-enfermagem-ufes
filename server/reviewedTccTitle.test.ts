@@ -11,6 +11,10 @@ test('reviewed titles preserve proper names, natural case and mathematical symbo
 test('capitalization suggestion preserves recognized acronyms and Roman numerals without Title Case',()=>{
   assert.equal(suggestSentenceTitle('A CONVIVÊNCIA ENTRE A PESSOA COM TRANSTORNO BIPOLAR E SEUS FAMILIARES'),'A convivência entre a pessoa com transtorno bipolar e seus familiares');
   assert.equal(suggestSentenceTitle('ESTUDO NO CAPS III E NO SUS'),'Estudo no CAPS III e no SUS');
+  assert.equal(suggestSentenceTitle('ESTUDO NO CAPS AD III'),'Estudo no CAPS AD III');
+  assert.equal(suggestSentenceTitle('ESTUDO NO CAPS AD DO MUNICÍPIO'),'Estudo no CAPS AD do município');
+  assert.equal(hasUppercaseTitlePassage('Estudo com o CAPS AD III'),false);
+
 });
 
 test('a caixa alta em um trecho do título é identificada mesmo com subtítulo em caixa normal', () => {
