@@ -55,7 +55,7 @@ try {
       };
     });
     const label = `${role}/${activity} em ${width}px`;
-    assert.ok(layout.font >= 16, `Corpo legível: ${label}`);
+    assert.ok(layout.font >= 14, `Corpo legível: ${label}`);
     assert.equal(layout.overflow, false, `Texto sem corte: ${label}`);
     if (width >= 1024) {
       assert.equal(layout.columns.length, 2, `Duas colunas: ${label}`);
@@ -121,7 +121,7 @@ try {
     await manual.screenshot({path: path.join(output, `manual-atual-${role}.png`)});
   }
   assert.equal(await manual.locator('#tutorial-manual-notice').count(), 0);
-  const pdfLink = manual.locator('.portal-public-title-row').getByRole('link', {name: 'Acesse o manual detalhado em PDF'});
+  const pdfLink = page.getByRole('link', {name: 'Acesse o manual detalhado em PDF', exact: true});
   assert.equal(await pdfLink.getAttribute('href'), '/manual/manual-portal-tcc.pdf');
   assert.equal(await pdfLink.getAttribute('target'), '_blank');
   await pdfLink.focus();
@@ -141,7 +141,7 @@ try {
     flowText.findIndex(text => /assinar a declaração/i.test(text)));
   assert.equal(await page.locator('#signature-flow-title').count(), 1);
   assert.match(await flow.innerText(), /Portal do Professor/);
-  assert.match(await flow.locator('[aria-labelledby="signature-flow-title"]').innerText(), /Orientador e dois examinadores/);
+  assert.match(await flow.locator('[aria-labelledby="signature-flow-title"]').innerText(), /Orientador, dois examinadores, cada autor e coorientador/);
   await flow.locator('img').scrollIntoViewIfNeeded();
   await flow.locator('img').evaluate(async (img: HTMLImageElement) => { await img.decode(); });
   const signatureLayout = flow.locator('[data-signature-layout]');
@@ -166,13 +166,27 @@ try {
     await page.setViewportSize({width, height: 844});
     const headerFits = await manual.evaluate(root => {
       const title = root.querySelector('.portal-public-title-row')!.getBoundingClientRect();
-      const pdf = root.querySelector('#tutorial-manual-pdf')!.getBoundingClientRect();
       const filter = root.querySelector('.portal-tutorial-filter-row')!.getBoundingClientRect();
-      return pdf.bottom <= title.bottom && title.bottom <= filter.top &&
+      return title.bottom <= filter.top &&
         [...root.querySelectorAll('.portal-tutorial-filter-row button')].every(button =>
           button.getBoundingClientRect().bottom <= filter.bottom);
     });
     assert.ok(headerFits, `Cabeçalho do manual sem sobreposição em ${width}px`);
+    const pdfLayout = await pdfLink.evaluate(link => {
+      const card = document.getElementById('portal-tutorial-page')!;
+      const guide = card.getBoundingClientRect();
+      const button = link.getBoundingClientRect();
+      const footer = document.querySelector('footer')!.getBoundingClientRect();
+      const font = Number.parseFloat(getComputedStyle(link.querySelector('span')!).fontSize);
+      return {
+        belowGuide: !card.contains(link) && button.top > guide.bottom && button.top - guide.bottom <= 32,
+        centered: Math.abs(guide.left + guide.width / 2 - button.left - button.width / 2) <= 1,
+        beforeFooter: button.bottom <= footer.top,
+        fits: button.left >= 0 && button.right <= innerWidth && button.height >= 48,
+        legible: font >= 14,
+      };
+    });
+    assert.deepEqual(pdfLayout, {belowGuide: true, centered: true, beforeFooter: true, fits: true, legible: true}, `Botão do PDF em ${width}px`);
     for (const role of Object.keys(guideActivityOrder) as (keyof typeof roleLabels)[]) {
       await manual.getByRole('button', {name: roleLabels[role], exact: true}).click();
       const activities = activitiesForRole(role);

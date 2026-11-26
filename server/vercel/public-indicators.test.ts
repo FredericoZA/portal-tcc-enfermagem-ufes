@@ -4,7 +4,7 @@ import type {Request,Response} from 'express';
 import {DEMO_PROCESSES} from '../../src/services/demoSeed';
 import type {LegacyAcademicRecord} from '../../src/types/legacyArchive';
 import {buildPublicIndicatorsFromState} from '../publicIndicators';
-import handler from './public-indicators';
+import {createPublicIndicatorsHandler} from './public-indicators';
 
 const now=Date.parse('2026-11-01T12:00:00Z');
 const legacy=(index:number):LegacyAcademicRecord=>({id:`legado-${String(index+1).padStart(4,'0')}`,protocolo:`${String(index+1).padStart(3,'0')} - Legado`,sourceFingerprint:'a'.repeat(64),titulo:'PRIVATE_TITLE_SENTINEL',autores:['PRIVATE_PERSON_SENTINEL'],orientador:'PRIVATE_ADVISOR_SENTINEL',coorientador:'',coorientadorInstituicao:'',examinadores:[],resumo:'PRIVATE_SUMMARY_SENTINEL',palavrasChave:['PRIVATE_KEYWORD_SENTINEL'],dataDefesa:'2025-08-28',horaDefesa:'',localDefesa:'PRIVATE_LOCATION_SENTINEL',isPublic:index<3,publishFullWork:index<3,publishExpandedAbstract:false,publicationState:index<3?'PUBLIC':'NOT_REQUESTED',authorizationDecision:index<3?'AUTHORIZED':'DENIED',provenance:{publicationImportBaseline:{publicFiles:[{kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64)}]},originalConsent:[index<3?'Sim':'Não']},attachments:[{driveFileId:`private_file_id_${index}`,fileName:'PRIVATE_FILENAME_SENTINEL.pdf',kind:'TRABALHO_COMPLETO',sha256:'b'.repeat(64),evidence:'Original histórico'}]});
@@ -21,9 +21,10 @@ async function fixture(run:(f:{invoke:(method?:string)=>Promise<{status:number;b
     assert.equal(url.origin,'https://indicator-db.invalid');assert.equal(url.pathname,'/rest/v1/portal_runtime_state');
     return fail?Response.json({error:'PRIVATE_ERROR_SENTINEL'},{status:500}):Response.json(rows);
   };
+  const handler=createPublicIndicatorsHandler();
   const invoke=async(method='GET')=>{
     let status=200,body:unknown;const headers:Record<string,string>={};
-    const res={setHeader:(key:string,value:string)=>{headers[key]=value;},status:(value:number)=>{status=value;return res;},json:(value:unknown)=>{body=value;return res;}} as unknown as Response;
+    const res={setHeader:(key:string,value:string)=>{headers[key]=value;},status:(value:number)=>{status=value;return res;},json:(value:unknown)=>{body=value;return res;},end:(value?:string)=>{body=value ? JSON.parse(value) : undefined;return res;}} as unknown as Response;
     await handler({method,url:'/api/public-indicators',headers:{'x-real-ip':`127.0.0.${fixtureNumber}`},socket:{remoteAddress:'127.0.0.1'}} as unknown as Request,res);
     return {status,body,headers};
   };
@@ -42,7 +43,8 @@ test('Vercel público lê somente a projeção necessária e produz os mesmos ag
     const expected=buildPublicIndicatorsFromState(rows[0],now);
     assert.deepEqual({...response.body,generatedAt:expected.generatedAt},expected);
     assert.doesNotMatch(JSON.stringify(response.body),/PRIVATE_|private_file|legado-|@|matricula|sourceFingerprint|attachments|resumo|aluno1/);
-    assert.match(response.headers['Cache-Control'],/private, no-store/);
+    assert.match(response.headers['Cache-Control'],/public, max-age=30/);
+    assert.match(response.headers['Vercel-CDN-Cache-Control'],/s-maxage=120/);
     assert.equal(calls.length,1);
     assert.equal(calls[0].url.searchParams.get('select'),'processes:payload->processes,legacyAcademicRecords:payload->legacyAcademicRecords');
     assert.equal(calls[0].init.method,undefined);assert.equal(calls[0].init.cache,'no-store');assert.equal(calls[0].init.redirect,'error');
@@ -65,6 +67,8 @@ test('Vercel indicadores não expõe falhas do banco nem aceita ausência de est
     rows.push({});assert.equal((await invoke()).status,503);
     setFailure();
     const response=await invoke();assert.equal(response.status,503);
+    assert.match(response.headers['Cache-Control'],/private, no-store/);
+    assert.equal(response.headers['Vercel-CDN-Cache-Control'],undefined);
     assert.doesNotMatch(JSON.stringify(response.body),/PRIVATE_ERROR_SENTINEL|secret|indicator-db/);
   });
 });
@@ -72,6 +76,7 @@ test('Vercel indicadores não expõe falhas do banco nem aceita ausência de est
 test('Vercel indicadores aplica limite de requisições antes do próximo acesso ao banco',async()=>{
   await fixture(async({invoke,calls})=>{
     for(let index=0;index<120;index++)assert.equal((await invoke()).status,200);
+    assert.equal(calls.length,1,'Repeated requests share the cached aggregate.');
     const before=calls.length,response=await invoke();
     assert.equal(response.status,429);assert.equal(calls.length,before);assert.equal(response.body.code,'REQUEST_RATE_LIMITED');assert.ok(Number(response.headers['Retry-After'])>0);
   });

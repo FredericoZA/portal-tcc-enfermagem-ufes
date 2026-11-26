@@ -140,6 +140,10 @@
       "destination": "/api/replication-model?slug=:slug"
     },
     {
+      "source": "/api/public/indicators",
+      "destination": "/api/public-indicators"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/index"
     },

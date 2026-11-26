@@ -76,11 +76,18 @@ function backgroundColor(element: HTMLElement | null | undefined, table: HTMLTab
  */
 export function captureTableExportSnapshot(
   table: HTMLTableElement,
-  { title }: { title: string },
+  { title, columnOrder }: { title: string; columnOrder?: readonly string[] },
 ): TableExportSnapshot {
   const headers = Array.from(table.tHead?.rows[0]?.cells || []);
-  const selected = headers.map((header, index) => ({ header, index }))
+  const visible = headers.map((header, index) => ({ header, index }))
     .filter(({ header }) => visibleHeader(header));
+  const byKey = new Map(visible.map(column => [column.header.dataset.portalColumnKey, column]));
+  const selected = columnOrder
+    ? columnOrder.flatMap(key => {
+        const column = byKey.get(key);
+        return column ? [column] : [];
+      })
+    : visible;
   const rows = Array.from(table.tBodies).flatMap(body => Array.from(body.rows))
     .filter(row => !isPortalTableRowFilteredOut(row) && row.dataset.portalExport !== 'false');
   const firstHeader = selected[0]?.header;

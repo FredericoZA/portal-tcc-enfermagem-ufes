@@ -4,6 +4,7 @@ import {legacyFileIsPublic,publicLegacyAcademicView} from './legacyArchive';
 import {canonicalDriveOriginalLinks} from './driveOriginalLinks';
 import {publicFileAuthorized} from './workflow/publicationAccess';
 import {legacyRepositoryProcess} from '../src/utils/legacyRepository';
+import {legacyRepositoryPeople} from './legacyRepositoryPeople';
 import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
 import {reservationReceipts} from './reservationReceipts';
 import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
@@ -242,7 +243,7 @@ export function buildPublicRepository(
    }),
   ...[...legacyGroups.values()].flatMap(records => records.map(record => {
    const view = publicLegacyAcademicView(record);
-   const process = legacyRepositoryProcess(view);
+   const process = legacyRepositoryPeople(legacyRepositoryProcess(view));
    const directLink = (kind: 'TRABALHO_COMPLETO' | 'RESUMO_EXPANDIDO') => {
     const file = view.publicFiles.find(item => item.kind === kind);
     const original = file && record.attachments[file.index];

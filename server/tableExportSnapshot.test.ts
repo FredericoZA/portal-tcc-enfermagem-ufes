@@ -139,3 +139,15 @@ test('zero selected columns and explicit empty values do not recover hidden data
   const summary = el('TD', el('BUTTON', 'Resumo indisponível')); summary.dataset.portalExportValue = '';
   assert.deepEqual(captureTableExportSnapshot(table([header('resumo', 'Resumo')], [row(summary)]), { title: 'Lista' }).rows, [['']]);
 });
+
+test('export-specific columns can be reordered and excluded without changing the source sheet', () => {
+  const source = table(
+    [header('aluno1', 'Discente'), header('protocolo', 'Processo'), header('titulo', 'Título')],
+    [row(el('TD', 'Ana'), el('TD', 'TCC - 00001'), el('TD', 'Primeira defesa'))],
+  );
+  const selection = captureTableExportSnapshot(source, {title: 'Lista de Defesas', columnOrder: ['titulo', 'protocolo']});
+  assert.deepEqual(selection.columns.map(column => column.label), ['Título', 'Processo']);
+  assert.deepEqual(selection.rows, [['Primeira defesa', 'TCC - 00001']]);
+  assert.deepEqual(captureTableExportSnapshot(source, {title:'Lista de Defesas'}).rows,
+    [['Ana', 'TCC - 00001', 'Primeira defesa']]);
+});

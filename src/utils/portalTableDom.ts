@@ -130,6 +130,22 @@ function sortRows(table: HTMLTableElement, key: string, index: number, direction
   applyFilters(table);
 }
 
+/** Apply the visible sheet's column filters and ordering to an export table. */
+export function copyPortalTableView(source: HTMLTableElement | null, target: HTMLTableElement) {
+  const state = source && tableState.get(source);
+  if (!state) return;
+  const sourceKeys = new Set(Array.from(source.tHead?.rows[0]?.cells || [], keyForHeader));
+  const filters = new Map([...state.filters].filter(([key]) => sourceKeys.has(key)));
+  tableState.set(target, {filters});
+  const index = Array.from(target.tHead?.rows[0]?.cells || []).findIndex((header, i) =>
+    keyForHeader(header, i) === state.sortKey);
+  if (index >= 0 && state.sortKey && state.sortDirection && sourceKeys.has(state.sortKey)) {
+    sortRows(target, state.sortKey, index, state.sortDirection);
+  } else {
+    applyFilters(target);
+  }
+}
+
 function menuButton(label: string, className: string, onClick: () => void) {
   const button = document.createElement('button');
   button.type = 'button';

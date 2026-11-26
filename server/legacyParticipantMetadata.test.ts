@@ -137,3 +137,65 @@ test('the current SQL repository projection preserves participant metadata and m
     }
   } finally { await db.close(); }
 });
+
+test('reviewed historical evidence is applied to the matching defense and only fills missing fields', () => {
+  const record = {
+    ...fixture(),
+    id:'legado-0092', protocolo:'092 - Legado', dataDefesa:'2021-05-17',
+    examinadores:[
+      {nome:'Daniela Vieira Malta', instituicao:'FAESA'},
+      {nome:'Priscila Silva Machado', instituicao:''},
+    ],
+  };
+  const before = structuredClone(record);
+  const [row] = buildPublicRepository([], [record]);
+  assert.equal(academicName(row.banca[0], 'abbreviated'), 'Prof.ª Dr.ª Daniela Vieira Malta');
+  assert.equal(row.banca[0].instituicao, 'FAESA');
+  assert.equal(row.banca[1].nome, 'Priscilla Silva Machado');
+  assert.deepEqual(record, before);
+
+  const [other] = buildPublicRepository([], [{...record, id:'legado-0093', protocolo:'093 - Legado'}]);
+  assert.equal(other.banca[0].titulacao, undefined);
+  const [differentPerson] = buildPublicRepository([], [{...record, examinadores:[{nome:'Daniela Vieira', instituicao:''}]}]);
+  assert.equal(differentPerson.banca[0].titulacao, undefined);
+  const [reviewed] = buildPublicRepository([], [{
+    ...record,
+    examinadores:[{nome:'Daniela Vieira Malta', instituicao:'FAESA', tratamento:'Senhora', titulacao:'Sem titulação'}],
+  }]);
+  assert.equal(reviewed.banca[0].tratamento, 'Senhora');
+  assert.equal(reviewed.banca[0].titulacao, 'Sem titulação');
+
+  const clinicalRole = [{nome:'Karina Fardin Fiorotti', instituicao:'Não informado'}];
+  const [early, later] = buildPublicRepository([], [
+    {...record, id:'legado-0081', protocolo:'081 - Legado', dataDefesa:'2022-08-16', examinadores:clinicalRole},
+    {...record, id:'legado-0101', protocolo:'101 - Legado', dataDefesa:'2026-07-13', examinadores:clinicalRole,
+      coorientador:'Fernanda Garcia Gabira Miguez', coorientadorInstituicao:'UFES', coadvisorAcademic:undefined},
+  ]);
+  assert.equal(early.banca[0].titulacao, 'Mestra');
+  assert.equal(early.banca[0].instituicao, 'HUCAM');
+  assert.equal(later.banca[0].titulacao, 'Doutora');
+  assert.equal(later.coorientador?.titulacao, 'Doutora');
+  assert.equal(later.coorientador?.instituicao, 'UFES');
+});
+
+test('restores the sourced examiner only for the matching defense with a vacant slot', () => {
+  const record = {
+    ...fixture(),
+    id:'legado-0095', protocolo:'095 - Legado', dataDefesa:'2022-12-09',
+    autores:['Guilherme Germano da Silva'],
+    titulo:'Violência Autoprovocada Contra Pessoa com Deficiência no Espírito Santo: Frequência e Fatores Associados',
+    examinadores:[{nome:'Luciana de Cássia Nunes Nascimento', instituicao:'UFES'}],
+  };
+  const [restored] = buildPublicRepository([], [record]);
+  assert.equal(restored.banca[1].funcao, 'EXAMINER_3');
+  assert.equal(academicName(restored.banca[1], 'abbreviated'), 'Sra. Ma. Nathália Miguel Teixeira Santana');
+  assert.equal(restored.banca[1].instituicao, 'IFES');
+  assert.equal(record.examinadores.length, 1);
+  const [differentTitle] = buildPublicRepository([], [{...record, titulo:'Outra defesa'}]);
+  assert.equal(differentTitle.banca.length, 1);
+  const [alreadyFilled] = buildPublicRepository([], [{
+    ...record, examinadores:[...record.examinadores, {nome:'Pessoa examinadora registrada', instituicao:''}],
+  }]);
+  assert.equal(alreadyFilled.banca.length, 2);
+  assert.equal(alreadyFilled.banca[1].nome, 'Pessoa examinadora registrada');
+});
