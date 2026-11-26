@@ -141,7 +141,7 @@ try {
     flowText.findIndex(text => /assinar a declaração/i.test(text)));
   assert.equal(await page.locator('#signature-flow-title').count(), 1);
   assert.match(await flow.innerText(), /Portal do Professor/);
-  assert.match(await flow.locator('[aria-labelledby="signature-flow-title"]').innerText(), /Orientador e dois examinadores/);
+  assert.match(await flow.locator('[aria-labelledby="signature-flow-title"]').innerText(), /Orientador, dois examinadores, cada autor e coorientador/);
   await flow.locator('img').scrollIntoViewIfNeeded();
   await flow.locator('img').evaluate(async (img: HTMLImageElement) => { await img.decode(); });
   const signatureLayout = flow.locator('[data-signature-layout]');
