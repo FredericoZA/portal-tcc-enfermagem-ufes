@@ -6,10 +6,11 @@ import {
   isRepositoryDocumentKey, publishedRepositoryDocuments, repositoryDocumentStatus, repositoryDriveOriginalView,
   type RepositoryDocumentIndex, type RepositoryDocumentKey,
 } from '../utils/repositoryDocuments';
-import {PORTAL_MANAGED_COLUMN_EVENT,type ManagedColumnChange} from '../utils/portalTableDom';
+import {PORTAL_MANAGED_COLUMN_EVENT,copyPortalTableView,type ManagedColumnChange} from '../utils/portalTableDom';
 import {openDriveDocument} from '../utils/driveDocumentAccess';
 import {institutionSearchText} from '../utils/institutionName';
-import {createPortal} from 'react-dom';
+import {createPortal, flushSync} from 'react-dom';
+import {createRoot} from 'react-dom/client';
 import {buildCalendarMonthGrid,CALENDAR_WEEKDAY_LABELS} from '../utils/calendarMonthGrid';
 import {calendarDefenseLocationOptions, calendarStandaloneGoogleEvents, calendarGoogleEventLocation, matchesCalendarLocation, toggleCalendarLocation, type CalendarLocationOption, type CalendarLocationSelection} from '../utils/calendarDefenseLocations';
 import {currentDefenseSelection, isDefenseOnCalendar, isDefenseReservationPending} from '../utils/defenseReservationState';
@@ -18,8 +19,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { PORTAL_LIVE_UPDATE_EVENT, PORTAL_REPOSITORY_CHANGED_EVENT } from '../utils/portalLiveEvents';
 import { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
-import { portalConfirm, portalNotice } from '../services/portalDialogs';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress, getStepNumberLabel } from '../utils/formatters';
+import { portalNotice } from '../services/portalDialogs';
+import { formatDateWithWeekday, formatDateNumeric, formatDateNumericWithWeekday, formatTime24h, formatStudentsString, cleanPersonName, formatProfessorName, formatTccTitle, getProcessProgress } from '../utils/formatters';
 import { OnlineSystemTutorial } from '../components/OnlineSystemTutorial';
 import { TableScrollWrapper } from '../components/TableScrollWrapper';
 import { loadTableConfig, ColumnDef, TableTextFormat, DEFAULT_TABLE_TEXT_FORMAT } from '../components/TableColumnSelectorPanel';
@@ -59,7 +60,6 @@ import {
   BookOpen,
   HelpCircle,
   GraduationCap,
-  Download,
   ExternalLink,
   Award,
   Check,
@@ -85,22 +85,37 @@ import { resolveInstallationProfile } from '../utils/installationProfile';
 import { DEFENSE_PENDING_CONFIRMATION_LABEL, DefenseFilter, DefenseState, formatDefenseCalendarSummary, getDefenseCalendarSummaryParts, getDefenseState, getDefenseStateFromTimes, matchesDefenseFilter } from '../utils/defenseSemantics';
 import { getPortalToneCssVars } from '../utils/portalSemanticTokens';
 import { formatProcessLabel } from '../components/PortalProcessPill';
-import { PortalModalShell } from '../components/PortalModalShell';
-import { confirmedReservations, formatReservationPeriod, reservationPeriodError, type ReservationPeriod } from '../utils/confirmedReservations';
+import { formatReservationPeriod, type ReservationPeriod } from '../utils/confirmedReservations';
 
 interface HomePageProps {
   onNavigate: (tab: string) => void;
   initialPublicTab?: 'calendario' | 'biblioteca' | 'tutorial';
 }
 
-function repositoryCoadvisorText(process: ProcessData): string {
-  const person = process.coorientador;
-  if (!person) return '';
-  const name = academicName(person, 'abbreviated');
-  const institution = displayParticipantInstitution(person.instituicao || '');
-  if (!name) return institution;
-  const fallback = process.legacyRecord ? 'Não informado' : 'Instituição Externa';
-  return `${name} (${institution || fallback})`;
+function captureRenderedTableExport(
+  tableElement: React.ReactElement,
+  source: HTMLTableElement | null,
+  title: string,
+  columnOrder: string[],
+  appearance: Record<string, string>,
+) {
+  // Work from the same rendered cells without changing the visible table.
+  const container = document.createElement('div');
+  container.inert = true;
+  container.className = 'portal-table-export-source';
+  Object.assign(container.style, appearance);
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    flushSync(() => root.render(tableElement));
+    const table = container.querySelector('table');
+    if (!table) return null;
+    copyPortalTableView(source, table);
+    return captureTableExportSnapshot(table, {title, columnOrder});
+  } finally {
+    root.unmount();
+    container.remove();
+  }
 }
 
 /** The current request controls the notice, independently of receipts from earlier requests. */
@@ -757,19 +772,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   const [selectedLibSelection, setSelectedLibDoc] = useState<ProcessData | null>(null);
   const selectedLibDoc = selectedLibSelection ? repositoryProcesses.find(process => process.id === selectedLibSelection.id || process.protocolo === selectedLibSelection.protocolo) || null : null;
   const repositorySection = useRef<HTMLElement>(null);
-  const showRepositoryDocuments = () => {
-    const scrollHost = repositorySection.current?.querySelector<HTMLElement>('[data-portal-scroll-host="true"]');
-    const documentHeader = scrollHost?.querySelector<HTMLTableCellElement>('th[data-portal-managed-column="true"]');
-    if (!scrollHost || !documentHeader) return;
-
-    const pinnedHeader = documentHeader.parentElement?.firstElementChild;
-    const left = pinnedHeader === documentHeader ? 0 :
-      scrollHost.scrollLeft + documentHeader.getBoundingClientRect().left
-      - scrollHost.getBoundingClientRect().left - scrollHost.clientLeft
-      - (pinnedHeader?.getBoundingClientRect().width ?? 0);
-    scrollHost.scrollLeft = Math.max(0, left);
-    documentHeader.querySelector<HTMLButtonElement>('.portal-core-column-menu')?.focus({ preventScroll: true });
-  };
+  const repositoryTableRef = useRef<HTMLTableElement>(null);
   const [documentFilters,setDocumentFilters] = useState<Partial<Record<RepositoryDocumentKey,string[]>>>({});
   const [documentSort,setDocumentSort] = useState<{column:RepositoryDocumentKey; direction:'asc'|'desc'}>();
   useEffect(() => {
@@ -890,95 +893,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     };
   }, []);
 
-  const handleExportExcel = (dataToExport: ProcessData[]) => {
-    const colHeaders: string[] = [];
-    if (visibleColumns.protocolo) colHeaders.push('Nº do Processo');
-    if (visibleColumns.progresso) colHeaders.push('Etapa');
-    if (visibleColumns.titulo) colHeaders.push('Título do Trabalho');
-    if (visibleColumns.aluno1) colHeaders.push('Aluno 1');
-    if (visibleColumns.aluno2) colHeaders.push('Aluno 2');
-    if (visibleColumns.orientador) colHeaders.push('Orientador(a)');
-    if (visibleColumns.membro1) colHeaders.push('Examinador 1');
-    if (visibleColumns.membro2) colHeaders.push('Examinador 2');
-    if (visibleColumns.coorientador) colHeaders.push('Coorientador(a)');
-    if (visibleColumns.resumo) colHeaders.push('Resumo do TCC');
-    if (visibleColumns.palavrasChave) colHeaders.push('Palavras-chave');
-    if (visibleColumns.defesaDataHora) colHeaders.push('Data e Hora');
-    if (visibleColumns.defesaLocal) colHeaders.push('Local da Defesa');
-    const exportedDocuments = REPOSITORY_DOCUMENT_COLUMNS.filter(column => visibleColumns[column.key]);
-    colHeaders.push(...exportedDocuments.map(column => column.label));
-
-    const csvRows = dataToExport.map((proc) => {
-      const row: string[] = [];
-      const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
-      const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-
-      if (visibleColumns.protocolo) row.push(`"${proc.protocolo || proc.id}"`);
-      if (visibleColumns.progresso) row.push(`"${progress.percent}% - ${getStepNumberLabel(progress.label)}"`);
-      if (visibleColumns.titulo) row.push(`"${(proc.titulo || '').replace(/"/g, '""')}"`);
-      if (visibleColumns.aluno1) {
-        const name = proc.aluno1?.nome ? cleanPersonName(proc.aluno1.nome) : '';
-        row.push(`"${(name).replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.aluno2) {
-        const name = proc.aluno2?.nome ? cleanPersonName(proc.aluno2.nome) : '';
-        row.push(`"${name ? (name).replace(/"/g, '""') : ''}"`);
-      }
-      if (visibleColumns.orientador) {
-        const orient = proc.orientador?.nome ? `${academicName(proc.orientador, 'abbreviated')} (${displayParticipantInstitution(installationProfile.institutionName)})` : 'A definir';
-        row.push(`"${orient.replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.membro1) {
-        const ev1 = evalMembers[0] ? `${academicName(evalMembers[0],'abbreviated')} (${displayParticipantInstitution(evalMembers[0].instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName))})` : 'A definir';
-        row.push(`"${ev1.replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.membro2) {
-        const ev2 = evalMembers[1] ? `${academicName(evalMembers[1],'abbreviated')} (${displayParticipantInstitution(evalMembers[1].instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa'))})` : 'A definir';
-        row.push(`"${ev2.replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.coorientador) {
-        const coorient = repositoryCoadvisorText(proc);
-        row.push(`"${coorient.replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.resumo) {
-        const res = proc.acervo?.resumoSintese || '';
-        row.push(`"${res.replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.palavrasChave) {
-        const kw = (proc.acervo?.palavrasChave || []).join('; ');
-        row.push(`"${kw.replace(/"/g, '""')}"`);
-      }
-      if (visibleColumns.defesaDataHora) {
-        const dt = proc.defesa?.startAt ? `${formatDateNumericWithWeekday(proc.defesa.startAt)} ${formatTime24h(proc.defesa.startAt)}` : 'A definir';
-        row.push(`"${dt}"`);
-      }
-      if (visibleColumns.defesaLocal) row.push(`"${(proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar').replace(/"/g, '""')}"`);
-      for (const {key} of exportedDocuments) {
-        row.push(`"${repositoryDocumentStatus(repositoryDocumentRows.get(proc)?.[key])}"`);
-      }
-
-      return row.join(';');
-    });
-
-    const csvContent = '\uFEFF' + [colHeaders.join(';'), ...csvRows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Acervo_Repositorio_TCCs_${installationProfile.courseAcronym}_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleRepositoryDownloadRequest = async () => {
-    const confirmed = await portalConfirm(
-      'Deseja baixar todos os dados do Repositório de TCCs? O arquivo será gerado em CSV compatível com Excel.',
-      { title: 'Baixar dados', confirmLabel: 'Baixar CSV' },
-    );
-    if (confirmed) handleExportExcel(repositoryProcesses);
-  };
-
   const [expandedItemIds, setExpandedItemIds] = useState<Record<string, boolean>>({});
 
   const toggleExpandItem = (id: string) => {
@@ -1043,8 +957,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     }
   };
 
-  const [isPreparingReservationsPdf, setIsPreparingReservationsPdf] = useState(false);
-  const [reservationPeriod, setReservationPeriod] = useState<ReservationPeriod | null>(null);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const refreshData = async () => {
@@ -1248,42 +1160,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     };
   };
 
-  const openConfirmedReservationsPdf = () => {
-    if (!ownsCalendarData || isLoading || loadError || isPreparingReservationsPdf) return;
-    const monthKey = `${year}-${String(month + 1).padStart(2,'0')}`;
-    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    setReservationPeriod({startDate:`${monthKey}-01`,endDate:`${monthKey}-${lastDay}`});
-  };
-
-  const periodError = reservationPeriod ? reservationPeriodError(reservationPeriod) : '';
-  const reservationRows = reservationPeriod && !periodError && ownsCalendarData && !loadError
-    ? confirmedReservations(
-        processes.filter(p=>matchesCalendarLocation(p.defesa.local,calendarLocations)), reservationPeriod,
-        settings?.integrationStudio?.operationsPolicy?.timezone || settings?.timezone,
-      )
-    : [];
-
-  const downloadConfirmedReservationsPdf = async () => {
-    if (!reservationPeriod || periodError || !ownsCalendarData || loadError || isPreparingReservationsPdf) return;
-    setIsPreparingReservationsPdf(true);
-    try {
-      const {buildConfirmedReservationsPdf} = await import('../utils/confirmedReservationsPdf');
-      const data = await buildConfirmedReservationsPdf({
-        rows:reservationRows,period:formatReservationPeriod(reservationPeriod),courseName:installationProfile.courseName,
-      });
-      const url = URL.createObjectURL(new Blob([new Uint8Array(data)],{type:'application/pdf'}));
-      const link = document.createElement('a');
-      link.href=url;
-      link.download=`reservas-confirmadas-${reservationPeriod.startDate}-a-${reservationPeriod.endDate}.pdf`;
-      link.click();
-      window.setTimeout(()=>URL.revokeObjectURL(url),60_000);
-    } catch {
-      portalNotice('Não foi possível gerar o PDF das reservas confirmadas. Tente novamente.');
-    } finally {
-      setIsPreparingReservationsPdf(false);
-    }
-  };
-
   const handleGoogleCalendarSync = async () => {
     setIsSyncingCalendar(true);
     setSyncStatus('Sincronizando pelo servidor seguro...');
@@ -1300,59 +1176,339 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
     }
   };
 
+  function defenseListProcesses(period?: ReservationPeriod) {
+    const listProcesses = filteredProcesses.filter((proc) => {
+      if (!ownsCalendarData || !isDefenseOnCalendar(proc) || !matchesCalendarLocation(proc.defesa.local,calendarLocations)) return false;
+      const d = new Date(proc.defesa.startAt);
+      const matchYear = d.getFullYear() === year;
+      const matchMonth = d.getMonth() === month;
+
+      // If search or date filters are actively configured, bypass monthly focus
+      if (!period && !defensesSearch && !defensesStartDate && !defensesEndDate) {
+        if (!matchYear || !matchMonth) return false;
+      }
+
+      // Text Search Filter
+      if (defensesSearch) {
+        const term = defensesSearch.toLowerCase();
+        const titleMatch = (proc.titulo || '').toLowerCase().includes(term);
+        const studentMatch = formatStudentsString(proc.aluno1, proc.aluno2).toLowerCase().includes(term);
+        const advisorMatch = (proc.orientador?.nome || '').toLowerCase().includes(term);
+        const protocolMatch = (proc.protocolo || '').toLowerCase().includes(term);
+        if (!titleMatch && !studentMatch && !advisorMatch && !protocolMatch) return false;
+      }
+
+      if (period) {
+        const dateKey = formatDateNumeric(proc.defesa.startAt).split('/').reverse().join('-');
+        if (dateKey < period.startDate || dateKey > period.endDate) return false;
+      } else {
+        if (defensesStartDate && d < new Date(defensesStartDate + 'T00:00:00')) return false;
+        if (defensesEndDate && d > new Date(defensesEndDate + 'T23:59:59')) return false;
+      }
+
+      // O mesmo estado semântico controla filtro e apresentação.
+      if (!matchesDefenseFilter(proc, defenseStatusFilter)) return false;
+
+      return true;
+    });
+
+    const sortedProcesses = [...listProcesses];
+    if (defensesSortColumn) {
+      sortedProcesses.sort((a, b) => {
+        let valA: any = '';
+        let valB: any = '';
+
+        if (defensesSortColumn === 'date' || defensesSortColumn === 'defesaDataHora') {
+          valA = a.defesa?.startAt ? new Date(a.defesa.startAt).getTime() : 0;
+          valB = b.defesa?.startAt ? new Date(b.defesa.startAt).getTime() : 0;
+        } else if (defensesSortColumn === 'title') {
+          valA = formatTccTitle(a.titulo || '').toLowerCase();
+          valB = formatTccTitle(b.titulo || '').toLowerCase();
+        } else if (defensesSortColumn === 'student' || defensesSortColumn === 'aluno1') {
+          valA = cleanPersonName(a.aluno1?.nome || '').toLowerCase();
+          valB = cleanPersonName(b.aluno1?.nome || '').toLowerCase();
+        } else if (defensesSortColumn === 'aluno2') {
+          valA = cleanPersonName(a.aluno2?.nome || '').toLowerCase();
+          valB = cleanPersonName(b.aluno2?.nome || '').toLowerCase();
+        } else if (defensesSortColumn === 'orientador') {
+          valA = cleanPersonName(a.orientador?.nome || '').toLowerCase();
+          valB = cleanPersonName(b.orientador?.nome || '').toLowerCase();
+        } else if (defensesSortColumn === 'membro1') {
+          valA = cleanPersonName(a.banca?.filter(b => b.funcao !== 'ORIENTADOR')[0]?.nome || '').toLowerCase();
+          valB = cleanPersonName(b.banca?.filter(b => b.funcao !== 'ORIENTADOR')[0]?.nome || '').toLowerCase();
+        } else if (defensesSortColumn === 'membro2') {
+          valA = cleanPersonName(a.banca?.filter(b => b.funcao !== 'ORIENTADOR')[1]?.nome || '').toLowerCase();
+          valB = cleanPersonName(b.banca?.filter(b => b.funcao !== 'ORIENTADOR')[1]?.nome || '').toLowerCase();
+        } else if (defensesSortColumn === 'coorientador') {
+          valA = cleanPersonName(a.coorientador?.nome || '').toLowerCase();
+          valB = cleanPersonName(b.coorientador?.nome || '').toLowerCase();
+        } else if (defensesSortColumn === 'defesaLocal') {
+          valA = (a.defesa?.local || '').toLowerCase();
+          valB = (b.defesa?.local || '').toLowerCase();
+        } else if (defensesSortColumn === 'protocolo') {
+          valA = (a.protocolo || '').toLowerCase();
+          valB = (b.protocolo || '').toLowerCase();
+        } else if (defensesSortColumn === 'progress' || defensesSortColumn === 'progresso') {
+          valA = getProcessProgress(a).percent;
+          valB = getProcessProgress(b).percent;
+        }
+
+        if (valA < valB) return 1;
+        if (valA > valB) return -1;
+        return 0;
+      });
+    }
+
+    return sortedProcesses;
+  }
+
+  function renderDefensesTable(listProcesses: ProcessData[], columnOrder: string[], tableRef?: React.Ref<HTMLTableElement>) {
+    // A paginação é aplicada uma única vez pelo runtime canônico da planilha.
+    const defStyles = getTableStyles(defensesTextFormat);
+
+    const renderDefensesHeaderCell = (colKey: string) => {
+      const colDef = ALL_DEFENSES_COLUMNS.find(c => c.key === colKey);
+      const rawLabel = colDef?.label || colKey;
+      const formattedLabel = formatColumnLabel(colKey, rawLabel, defensesTextFormat, defensesCustomLabels);
+      const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
+      return (
+        <th
+          key={colKey}
+          data-portal-column-key={colKey}
+          className={`${defStyles.headerThClass} ${defStyles.cellPadClass} ${widthClass} ${defStyles.headerWeightClass} ${defStyles.headerTextColorClass} ${defStyles.headerFontSizeClass} ${defStyles.headerCasingClass} ${defStyles.headerBorderClass} ${defStyles.headerAlignClass} align-middle select-none transition-colors group`}
+          style={defStyles.theadStyle}
+        >
+          <div className={`flex items-center justify-center ${defStyles.headerWrapClass}`}>
+            <span>{formattedLabel}</span>
+          </div>
+        </th>
+      );
+    };
+
+    const renderDefensesBodyCell = (colKey: string, proc: any, progress: any, defenseState: DefenseState, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
+      const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
+      const alignClass = defStyles.cellAlignClass;
+
+      switch (colKey) {
+        case 'protocolo':
+          return (
+            <td
+              key="protocolo"
+              onClick={(e) => {
+                e.stopPropagation();
+                setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
+              }}
+              className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.borderClass} align-middle ${alignClass} cursor-pointer ${defStyles.firstColCellHoverClass} group/col0 transition-colors`}
+              title="Clique aqui para abrir os detalhes e documentos deste TCC"
+            >
+              <div
+                className={`${defStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
+                style={getPortalToneCssVars(defenseState)}
+                data-defense-state={defenseState}
+              >
+                {formatProcessLabel(proc.protocolo || proc.id)}
+              </div>
+            </td>
+          );
+        case 'defesaDataHora':
+          return (
+            <td key="defesaDataHora" data-portal-export-value={[
+              isDefenseReservationPending(proc) ? DEFENSE_PENDING_CONFIRMATION_LABEL : '',
+              formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, ''),
+              formatTime24h(proc.defesa?.startAt),
+            ].filter(Boolean).join('\n')} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
+              <div className={`flex flex-wrap items-center justify-center gap-x-1 ${defStyles.cellFontSizeClass}`}>
+                <PendingDefenseConfirmationNote process={proc} />
+                <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
+              </div>
+              <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
+            </td>
+          );
+        case 'progresso':
+          return (
+            <td key="progresso" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} align-middle ${defStyles.borderClass} cursor-grab`}>
+              <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={defensesTextFormat} />
+            </td>
+          );
+        case 'titulo':
+          return (
+            <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={proc.titulo}>
+                {formatCellText('titulo', proc.titulo, defensesTextFormat, '')}
+              </div>
+            </td>
+          );
+        case 'aluno1':
+          return (
+            <td key="aluno1" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className="w-full mx-auto">
+                <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
+                  {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), defensesTextFormat, '')}
+                </div>
+              </div>
+            </td>
+          );
+        case 'aluno2':
+          return (
+            <td key="aluno2" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className="w-full mx-auto">
+                {proc.aluno2?.nome ? (
+                  <>
+                    <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
+                      {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), defensesTextFormat, '')}
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-slate-300 font-mono text-[11px]">—</span>
+                )}
+              </div>
+            </td>
+          );
+        case 'orientador':
+          return (
+            <td key="orientador" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className="w-full mx-auto">
+                <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
+                  {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), defensesTextFormat, '')}
+                </div>
+                <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
+                  {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
+                </div>
+              </div>
+            </td>
+          );
+        case 'membro1':
+          return (
+            <td key="membro1" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className="w-full mx-auto">
+                {ev1 ? (
+                  <div>
+                    <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
+                      {formatCellText('membro1', academicName(ev1,'abbreviated'), defensesTextFormat, '')}
+                    </div>
+                    <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
+                      {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-slate-400 italic text-[10px]">A definir</span>
+                )}
+              </div>
+            </td>
+          );
+        case 'membro2':
+          return (
+            <td key="membro2" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className="w-full mx-auto">
+                {ev2 ? (
+                  <div>
+                    <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
+                      {formatCellText('membro2', academicName(ev2,'abbreviated'), defensesTextFormat, '')}
+                    </div>
+                    <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
+                      {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-slate-400 italic text-[10px]">A definir</span>
+                )}
+              </div>
+            </td>
+          );
+        case 'coorientador':
+          return (
+            <td key="coorientador" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
+              <div className="w-full mx-auto">
+                {proc.coorientador?.nome ? (
+                  <div>
+                    <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
+                      {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), defensesTextFormat, '')}
+                    </div>
+                    <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
+                      {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-slate-300 font-mono text-[11px]">—</span>
+                )}
+              </div>
+            </td>
+          );
+        case 'resumo':
+          return (
+            <td key="resumo" data-portal-export-value={proc.acervo?.resumoSintese || ''} data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle`}>
+              <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
+            </td>
+          );
+        case 'palavrasChave':
+          return (
+            <td key="palavrasChave" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} ${defStyles.borderClass} leading-tight ${defStyles.cellWrapClass} align-middle cursor-grab`}>
+              {(proc.acervo?.palavrasChave && proc.acervo.palavrasChave.length > 0
+                ? proc.acervo.palavrasChave
+                : []
+              ).slice(0, 5).join('; ')}
+            </td>
+          );
+        case 'defesaLocal':
+          return (
+            <td key="defesaLocal" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} leading-normal ${defStyles.cellWrapClass} align-middle cursor-grab`}>
+              <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', defensesTextFormat, '')}</span>
+            </td>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <table ref={tableRef} aria-label="Lista de Defesas" className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
+        <thead className={`${defStyles.headerTheadClass} ${defStyles.headerWeightClass} ${defStyles.headerFontSizeClass} tracking-normal`} style={defStyles.theadStyle}>
+          <tr>
+            {columnOrder.map((colKey) => renderDefensesHeaderCell(colKey))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200">
+          {listProcesses.map((proc) => {
+            const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
+            const defenseState = getDefenseState(proc);
+            const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
+            const ev1 = evalMembers[0];
+            const ev2 = evalMembers[1];
+
+            const cleanInst = (str?: string) => {
+              if (!str) return '';
+              return displayParticipantInstitution(str);
+            };
+
+            return (
+              <tr
+                key={proc.id}
+                className={`transition-all duration-200 ${defStyles.rowZebraClass} ${defStyles.cellTextColorClass}`}
+              >
+                {columnOrder.map((colKey) => renderDefensesBodyCell(colKey, proc, progress, defenseState, ev1, ev2, cleanInst))}
+              </tr>
+            );
+          })}
+          </tbody>
+      </table>
+    );
+  }
+
+  function getDefenseExportSnapshot(period: ReservationPeriod, columns: string[]) {
+    if (!ownsCalendarData || isLoading || loadError) return null;
+    const columnOrder = Array.from(new Set([...columns, ...defensesColumnOrder.filter(key => defensesVisibleColumns[key])]));
+    const title = getEditableTableText(defensesCustomLabels, '__tableTitle', 'Lista de Defesas');
+    return captureRenderedTableExport(
+      renderDefensesTable(defenseListProcesses(period), columnOrder),
+      defensesTableRef.current,
+      `${title} · ${formatReservationPeriod(period)}`,
+      columns,
+      getTableStyles(defensesTextFormat).rootStyle,
+    );
+  }
+
   return (
     <div id="home-page-container" className="space-y-4 max-w-7xl mx-auto py-1 sm:py-2">
-      <PortalModalShell
-        open={reservationPeriod!==null}
-        title="Reservas confirmadas"
-        subtitle={reservationPeriod && !periodError ? formatReservationPeriod(reservationPeriod) : undefined}
-        icon={CalendarIcon}
-        maxWidthClass="max-w-5xl"
-        className="max-h-[90dvh]"
-        onClose={()=>setReservationPeriod(null)}
-        footer={<div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className="portal-action" onClick={()=>setReservationPeriod(null)}>Fechar</button>
-          <button type="button" className="portal-action portal-action-primary" disabled={isPreparingReservationsPdf || Boolean(periodError) || !ownsCalendarData || Boolean(loadError)} onClick={()=>void downloadConfirmedReservationsPdf()}>
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {isPreparingReservationsPdf ? 'Preparando PDF…' : 'Baixar PDF'}
-          </button>
-        </div>}
-      >
-        {reservationPeriod && <fieldset className="mb-4">
-          <legend className="mb-2 text-sm font-bold">Período do PDF</legend>
-          <div className="flex flex-wrap gap-3">
-            <label className="space-y-1 text-xs font-semibold">
-              <span className="block">Data inicial</span>
-              <input type="date" className="portal-input" required value={reservationPeriod.startDate}
-                aria-invalid={Boolean(periodError)} aria-describedby={periodError ? 'reservation-period-error' : undefined}
-                onInput={event=>setReservationPeriod({...reservationPeriod,startDate:event.currentTarget.value})} />
-            </label>
-            <label className="space-y-1 text-xs font-semibold">
-              <span className="block">Data final</span>
-              <input type="date" className="portal-input" required min={reservationPeriod.startDate} value={reservationPeriod.endDate}
-                aria-invalid={Boolean(periodError)} aria-describedby={periodError ? 'reservation-period-error' : undefined}
-                onInput={event=>setReservationPeriod({...reservationPeriod,endDate:event.currentTarget.value})} />
-            </label>
-          </div>
-        </fieldset>}
-        {periodError
-          ? <p id="reservation-period-error" role="alert" className="text-sm text-red-700">{periodError}</p>
-          : reservationRows.length
-          ? <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-center align-middle text-xs">
-                <caption className="sr-only">Horários e locais das reservas confirmadas no período selecionado</caption>
-                <thead className="bg-slate-200 text-slate-900"><tr>
-                  {['Dia','Horário','Local','Processo','Título'].map(label=><th key={label} scope="col" className="border border-slate-300 px-3 py-2">{label}</th>)}
-                </tr></thead>
-                <tbody>
-                  {reservationRows.map((row,index)=><tr key={`${row[3]}-${index}`} className="odd:bg-white even:bg-slate-50">
-                    {row.map((value,column)=><td key={column} className={`border border-slate-300 px-3 py-2 ${column===0||column===1||column===3?'whitespace-nowrap':''}`}>{value}</td>)}
-                  </tr>)}
-                </tbody>
-              </table>
-            </div>
-          : <p>Nenhuma reserva confirmada no período selecionado.</p>}
-      </PortalModalShell>
       {activeLoadError && <div role="alert" className="portal-card flex flex-wrap items-center justify-between gap-3 p-4"><p>{activeLoadError}</p><button type="button" className="portal-action portal-action-primary" onClick={()=>setLoadAttempt(value=>value+1)}>Tentar novamente</button></div>}
       {/* PUBLIC TAB 1: CALENDÁRIO */}
       {publicTab === 'calendario' && (
@@ -1368,29 +1524,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 {/* TOP HEADER BAR (Synchronized palette) */}
                 <div data-portal-sheet-title="true" className={`${defStyles.calendarBannerClass} px-3 sm:px-4 py-2 sm:py-2.5 border-b transition-colors`} style={defStyles.bannerHeaderStyle}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <ColorfulHeaderIcon type="calendar" textFormat={defensesTextFormat} />
-                          <h1 className="text-base sm:text-lg font-black normal-case tracking-tight leading-snug">
-                            Calendário de Defesas — {monthNamesPt[month]} de {year}
-                          </h1>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <CalendarLocationFilter key={calendarIdentity} options={calendarLocationOptions} value={calendarLocations} onChange={selection=>{setCalendarLocationSelection({identity:calendarIdentity,value:selection});setSelectedDayDefenses(null);setSelectedDayGcalEvents(null);}}/>
-                          <button
-                            type="button"
-                            className={`portal-calendar-period-button ${defStyles.calendarNavBtnClass} font-bold normal-case`}
-                            disabled={!ownsCalendarData || isLoading || Boolean(loadError) || isPreparingReservationsPdf}
-                            onClick={openConfirmedReservationsPdf}
-                          >
-                            <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                            PDF das reservas confirmadas
-                          </button>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <ColorfulHeaderIcon type="calendar" textFormat={defensesTextFormat} />
+                        <h1 className="text-base sm:text-lg font-black normal-case tracking-tight leading-snug">
+                          Calendário de Defesas — {monthNamesPt[month]} de {year}
+                        </h1>
                       </div>
 
-                      {/* Month Navigation: Popup Calendar / Seta Esquerda / Hoje / Seta Direita */}
-                      <div className="portal-calendar-toolbar shrink-0">
+                      <div className="portal-calendar-toolbar">
+                        <div className="inline-flex shrink-0 items-center">
+                          <CalendarLocationFilter key={calendarIdentity} options={calendarLocationOptions} value={calendarLocations} onChange={selection=>{setCalendarLocationSelection({identity:calendarIdentity,value:selection});setSelectedDayDefenses(null);setSelectedDayGcalEvents(null);}}/>
+                          <span className="portal-toolbar-group-divider" aria-hidden="true" />
+                        </div>
                         {/* Month & Year Popup Selector Button */}
                         <div className="portal-calendar-period-control relative">
                           <button
@@ -2042,6 +2187,23 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
 
                   <div className="portal-sheet-toolbar shrink-0">
                     <div className="portal-sheet-toolbar-terminal">
+                      <TableExportPopover
+                        disabled={isLoading || !ownsCalendarData || Boolean(loadError)}
+                        contextKey={calendarIdentity}
+                        fileName={`lista-de-defesas-${installationProfile.courseAcronym}`}
+                        triggerLabel="Baixar lista de defesas"
+                        initialPeriod={{
+                          startDate: `${year}-${String(month + 1).padStart(2, '0')}-01`,
+                          endDate: `${year}-${String(month + 1).padStart(2, '0')}-${new Date(Date.UTC(year, month + 1, 0)).getUTCDate()}`,
+                        }}
+                        columns={defensesColumnOrder.map(key => ({
+                          key,
+                          label: formatColumnLabel(key, ALL_DEFENSES_COLUMNS.find(column => column.key === key)?.label || key, defensesTextFormat, defensesCustomLabels),
+                        }))}
+                        visibleColumns={defensesVisibleColumns}
+                        getSnapshot={getDefenseExportSnapshot}
+                      />
+                      <span className="portal-toolbar-group-divider" aria-hidden="true" />
                       <SearchPopover
                         value={defensesSearch}
                         onChange={setDefensesSearch}
@@ -2073,16 +2235,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                         setEndDate={setDefensesEndDate}
                         defaultTableTitle="Lista de Defesas"
                         defaultFilterTitle="Filtrar por situação"
-                      />
-                      <TableExportPopover
-                        disabled={isLoading || !ownsCalendarData}
-                        contextKey={calendarIdentity}
-                        fileName={`lista-de-defesas-${installationProfile.courseAcronym}`}
-                        getSnapshot={() => ownsCalendarData && defensesTableRef.current
-                          ? captureTableExportSnapshot(defensesTableRef.current, {
-                            title: getEditableTableText(defensesCustomLabels, '__tableTitle', `Lista de Defesas — ${monthNamesPt[month]} de ${year}`),
-                          })
-                          : null}
                       />
                     </div>
                   </div>
@@ -2124,43 +2276,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
             Carregando agenda de defesas...
           </div>
         ) : (() => {
-            const listProcesses = filteredProcesses.filter((proc) => {
-              if (!ownsCalendarData || !isDefenseOnCalendar(proc) || !matchesCalendarLocation(proc.defesa.local,calendarLocations)) return false;
-              const d = new Date(proc.defesa.startAt);
-              const matchYear = d.getFullYear() === year;
-              const matchMonth = d.getMonth() === month;
-
-              // If search or date filters are actively configured, bypass monthly focus
-              if (!defensesSearch && !defensesStartDate && !defensesEndDate) {
-                if (!matchYear || !matchMonth) return false;
-              }
-
-              // Text Search Filter
-              if (defensesSearch) {
-                const term = defensesSearch.toLowerCase();
-                const titleMatch = (proc.titulo || '').toLowerCase().includes(term);
-                const studentMatch = formatStudentsString(proc.aluno1, proc.aluno2).toLowerCase().includes(term);
-                const advisorMatch = (proc.orientador?.nome || '').toLowerCase().includes(term);
-                const protocolMatch = (proc.protocolo || '').toLowerCase().includes(term);
-                if (!titleMatch && !studentMatch && !advisorMatch && !protocolMatch) return false;
-              }
-
-              // Date Filters
-              if (defensesStartDate) {
-                if (new Date(proc.defesa.startAt) < new Date(defensesStartDate + 'T00:00:00')) return false;
-              }
-              if (defensesEndDate) {
-                if (new Date(proc.defesa.startAt) > new Date(defensesEndDate + 'T23:59:59')) return false;
-              }
-
-              // O mesmo estado semântico controla filtro e apresentação.
-              if (!matchesDefenseFilter(proc, defenseStatusFilter)) return false;
-
-              return true;
-            });
-
+            const listProcesses = defenseListProcesses();
             if (listProcesses.length === 0) {
-              const periodStr = `${monthNamesPt[month]} de ${year}`;
               return (
                 <div className="bg-white p-12 text-center text-xs text-slate-500 space-y-3">
                   <p className="font-bold text-slate-700 text-sm">
@@ -2173,288 +2290,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
               );
             }
 
-            const sortedProcesses = [...listProcesses];
-            if (defensesSortColumn) {
-              sortedProcesses.sort((a, b) => {
-                let valA: any = '';
-                let valB: any = '';
-
-                if (defensesSortColumn === 'date' || defensesSortColumn === 'defesaDataHora') {
-                  valA = a.defesa?.startAt ? new Date(a.defesa.startAt).getTime() : 0;
-                  valB = b.defesa?.startAt ? new Date(b.defesa.startAt).getTime() : 0;
-                } else if (defensesSortColumn === 'title') {
-                  valA = formatTccTitle(a.titulo || '').toLowerCase();
-                  valB = formatTccTitle(b.titulo || '').toLowerCase();
-                } else if (defensesSortColumn === 'student' || defensesSortColumn === 'aluno1') {
-                  valA = cleanPersonName(a.aluno1?.nome || '').toLowerCase();
-                  valB = cleanPersonName(b.aluno1?.nome || '').toLowerCase();
-                } else if (defensesSortColumn === 'aluno2') {
-                  valA = cleanPersonName(a.aluno2?.nome || '').toLowerCase();
-                  valB = cleanPersonName(b.aluno2?.nome || '').toLowerCase();
-                } else if (defensesSortColumn === 'orientador') {
-                  valA = cleanPersonName(a.orientador?.nome || '').toLowerCase();
-                  valB = cleanPersonName(b.orientador?.nome || '').toLowerCase();
-                } else if (defensesSortColumn === 'membro1') {
-                  valA = cleanPersonName(a.banca?.filter(b => b.funcao !== 'ORIENTADOR')[0]?.nome || '').toLowerCase();
-                  valB = cleanPersonName(b.banca?.filter(b => b.funcao !== 'ORIENTADOR')[0]?.nome || '').toLowerCase();
-                } else if (defensesSortColumn === 'membro2') {
-                  valA = cleanPersonName(a.banca?.filter(b => b.funcao !== 'ORIENTADOR')[1]?.nome || '').toLowerCase();
-                  valB = cleanPersonName(b.banca?.filter(b => b.funcao !== 'ORIENTADOR')[1]?.nome || '').toLowerCase();
-                } else if (defensesSortColumn === 'coorientador') {
-                  valA = cleanPersonName(a.coorientador?.nome || '').toLowerCase();
-                  valB = cleanPersonName(b.coorientador?.nome || '').toLowerCase();
-                } else if (defensesSortColumn === 'defesaLocal') {
-                  valA = (a.defesa?.local || '').toLowerCase();
-                  valB = (b.defesa?.local || '').toLowerCase();
-                } else if (defensesSortColumn === 'protocolo') {
-                  valA = (a.protocolo || '').toLowerCase();
-                  valB = (b.protocolo || '').toLowerCase();
-                } else if (defensesSortColumn === 'progress' || defensesSortColumn === 'progresso') {
-                  valA = getProcessProgress(a).percent;
-                  valB = getProcessProgress(b).percent;
-                }
-
-                if (valA < valB) return 1;
-                if (valA > valB) return -1;
-                return 0;
-              });
-            }
-
-            // A paginação é aplicada uma única vez pelo runtime canônico da planilha.
-            const defStyles = getTableStyles(defensesTextFormat);
-
-            const renderDefensesHeaderCell = (colKey: string) => {
-              if (!defensesVisibleColumns[colKey]) return null;
-              const colDef = ALL_DEFENSES_COLUMNS.find(c => c.key === colKey);
-              const rawLabel = colDef?.label || colKey;
-              const formattedLabel = formatColumnLabel(colKey, rawLabel, defensesTextFormat, defensesCustomLabels);
-              const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
-              return (
-                <th
-                  key={colKey}
-                  data-portal-column-key={colKey}
-                  className={`${defStyles.headerThClass} ${defStyles.cellPadClass} ${widthClass} ${defStyles.headerWeightClass} ${defStyles.headerTextColorClass} ${defStyles.headerFontSizeClass} ${defStyles.headerCasingClass} ${defStyles.headerBorderClass} ${defStyles.headerAlignClass} align-middle select-none transition-colors group`}
-                  style={defStyles.theadStyle}
-                >
-                  <div className={`flex items-center justify-center ${defStyles.headerWrapClass}`}>
-                    <span>{formattedLabel}</span>
-                  </div>
-                </th>
-              );
-            };
-
-            const renderDefensesBodyCell = (colKey: string, proc: any, progress: any, defenseState: DefenseState, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
-              if (!defensesVisibleColumns[colKey]) return null;
-              const widthClass = `${getColWidthClass(colKey, defensesColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, defensesTextFormat)}`;
-              const alignClass = defStyles.cellAlignClass;
-
-              switch (colKey) {
-                case 'protocolo':
-                  return (
-                    <td
-                      key="protocolo"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
-                      }}
-                      className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.borderClass} align-middle ${alignClass} cursor-pointer ${defStyles.firstColCellHoverClass} group/col0 transition-colors`}
-                      title="Clique aqui para abrir os detalhes e documentos deste TCC"
-                    >
-                      <div
-                        className={`${defStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
-                        style={getPortalToneCssVars(defenseState)}
-                        data-defense-state={defenseState}
-                      >
-                        {formatProcessLabel(proc.protocolo || proc.id)}
-                      </div>
-                    </td>
-                  );
-                case 'defesaDataHora':
-                  return (
-                    <td key="defesaDataHora" data-portal-export-value={[
-                      isDefenseReservationPending(proc) ? DEFENSE_PENDING_CONFIRMATION_LABEL : '',
-                      formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, ''),
-                      formatTime24h(proc.defesa?.startAt),
-                    ].filter(Boolean).join('\n')} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} align-middle ${alignClass} ${defStyles.borderClass} cursor-grab`}>
-                      <div className={`flex flex-wrap items-center justify-center gap-x-1 ${defStyles.cellFontSizeClass}`}>
-                        <PendingDefenseConfirmationNote process={proc} />
-                        <span>{formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), defensesTextFormat, '')}</span>
-                      </div>
-                      <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
-                    </td>
-                  );
-                case 'progresso':
-                  return (
-                    <td key="progresso" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} align-middle ${defStyles.borderClass} cursor-grab`}>
-                      <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={defensesTextFormat} />
-                    </td>
-                  );
-                case 'titulo':
-                  return (
-                    <td key="titulo" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className={`${defStyles.cellWrapClass} ${alignClass} ${defStyles.cellFontSizeClass}`} title={proc.titulo}>
-                        {formatCellText('titulo', proc.titulo, defensesTextFormat, '')}
-                      </div>
-                    </td>
-                  );
-                case 'aluno1':
-                  return (
-                    <td key="aluno1" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className="w-full mx-auto">
-                        <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
-                          {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), defensesTextFormat, '')}
-                        </div>
-                      </div>
-                    </td>
-                  );
-                case 'aluno2':
-                  return (
-                    <td key="aluno2" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className="w-full mx-auto">
-                        {proc.aluno2?.nome ? (
-                          <>
-                            <div className={`${defStyles.cellFontSizeClass} ${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), defensesTextFormat, '')}
-                            </div>
-                          </>
-                        ) : (
-                          <span className="text-slate-300 font-mono text-[11px]">—</span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                case 'orientador':
-                  return (
-                    <td key="orientador" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className="w-full mx-auto">
-                        <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                          {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), defensesTextFormat, '')}
-                        </div>
-                        <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                          {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
-                        </div>
-                      </div>
-                    </td>
-                  );
-                case 'membro1':
-                  return (
-                    <td key="membro1" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className="w-full mx-auto">
-                        {ev1 ? (
-                          <div>
-                            <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro1', academicName(ev1,'abbreviated'), defensesTextFormat, '')}
-                            </div>
-                            <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                              {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), defensesTextFormat, '')}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic text-[10px]">A definir</span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                case 'membro2':
-                  return (
-                    <td key="membro2" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className="w-full mx-auto">
-                        {ev2 ? (
-                          <div>
-                            <div className={`font-normal ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('membro2', academicName(ev2,'abbreviated'), defensesTextFormat, '')}
-                            </div>
-                            <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                              {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 italic text-[10px]">A definir</span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                case 'coorientador':
-                  return (
-                    <td key="coorientador" className={`${defStyles.cellPadClass} ${widthClass} ${alignClass} ${defStyles.borderClass} align-middle cursor-grab`}>
-                      <div className="w-full mx-auto">
-                        {proc.coorientador?.nome ? (
-                          <div>
-                            <div className={`${defStyles.cellWeightClass} ${defStyles.cellTextColorClass} ${defStyles.cellFontSizeClass} leading-tight ${defStyles.cellWrapClass}`}>
-                              {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), defensesTextFormat, '')}
-                            </div>
-                            <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                              {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), defensesTextFormat, '')}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-300 font-mono text-[11px]">—</span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                case 'resumo':
-                  return (
-                    <td key="resumo" data-portal-export-value={proc.acervo?.resumoSintese || ''} data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.borderClass} align-middle`}>
-                      <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
-                    </td>
-                  );
-                case 'palavrasChave':
-                  return (
-                    <td key="palavrasChave" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} ${defStyles.borderClass} leading-tight ${defStyles.cellWrapClass} align-middle cursor-grab`}>
-                      {(proc.acervo?.palavrasChave && proc.acervo.palavrasChave.length > 0
-                        ? proc.acervo.palavrasChave
-                        : []
-                      ).slice(0, 5).join('; ')}
-                    </td>
-                  );
-                case 'defesaLocal':
-                  return (
-                    <td key="defesaLocal" className={`${defStyles.cellPadClass} ${widthClass} ${defStyles.cellTextColorClass} ${alignClass} ${defStyles.cellFontSizeClass} leading-normal ${defStyles.cellWrapClass} align-middle cursor-grab`}>
-                      <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', defensesTextFormat, '')}</span>
-                    </td>
-                  );
-                default:
-                  return null;
-              }
-            };
-
-            return (
-              <div className="w-full">
-                <TableScrollWrapper>
-                  <table ref={defensesTableRef} aria-label="Lista de Defesas" className={`w-full ${defStyles.cellAlignClass} border-collapse text-xs`}>
-                    <thead className={`${defStyles.headerTheadClass} ${defStyles.headerWeightClass} ${defStyles.headerFontSizeClass} tracking-normal`} style={defStyles.theadStyle}>
-                      <tr>
-                        {defensesColumnOrder.map((colKey) => renderDefensesHeaderCell(colKey))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                    {sortedProcesses.map((proc) => {
-                      const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
-                      const defenseState = getDefenseState(proc);
-                      const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-                      const ev1 = evalMembers[0];
-                      const ev2 = evalMembers[1];
-
-                      const cleanInst = (str?: string) => {
-                        if (!str) return '';
-                        return displayParticipantInstitution(str);
-                      };
-
-                      return (
-                        <tr
-                          key={proc.id}
-                          className={`transition-all duration-200 ${defStyles.rowZebraClass} ${defStyles.cellTextColorClass}`}
-                        >
-                          {defensesColumnOrder.map((colKey) => renderDefensesBodyCell(colKey, proc, progress, defenseState, ev1, ev2, cleanInst))}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </TableScrollWrapper>
-            </div>
-          );
+            return <TableScrollWrapper>
+              {renderDefensesTable(listProcesses, defensesColumnOrder.filter(key => defensesVisibleColumns[key]), defensesTableRef)}
+            </TableScrollWrapper>;
           })()}
         </div>
       </section>
@@ -2462,8 +2300,327 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
   )}
 
       {/* PUBLIC TAB 2: REPOSITÓRIO DE TCCS & ACERVO DIGITAL */}
-      {publicTab === 'biblioteca' && (
-        <>
+      {publicTab === 'biblioteca' && (() => {
+        const activeDocumentFilters = REPOSITORY_DOCUMENT_COLUMNS.flatMap(({key}) => {
+          const allowed = documentFilters[key];
+          return visibleColumns[key] && allowed ? [{key,allowed}] : [];
+        });
+        function repositoryListProcesses(period: ReservationPeriod) {
+          const filteredLibProcesses = repositoryProcesses.filter(process =>
+            matchesRepositoryQuery(process,{search:libSearch,startDate:period.startDate,endDate:period.endDate}) &&
+            activeDocumentFilters.every(({key,allowed}) =>
+              allowed.includes(repositoryDocumentStatus(repositoryDocumentRows.get(process)?.[key]))));
+
+          const sortedLibProcesses = filteredLibProcesses.sort((a, b) => {
+            const archiveOrder = Number(Boolean(a.legacyRecord)) - Number(Boolean(b.legacyRecord));
+            if (archiveOrder) return archiveOrder;
+            const newestFirst = (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0);
+            if (newestFirst) return newestFirst;
+            return (b.protocolo || '').localeCompare(a.protocolo || '', 'pt-BR', { numeric: true });
+          });
+          if (documentSort && visibleColumns[documentSort.column]) {
+            const {column,direction} = documentSort;
+            sortedLibProcesses.sort((a,b) => {
+              const left = repositoryDocumentStatus(repositoryDocumentRows.get(a)?.[column]);
+              const right = repositoryDocumentStatus(repositoryDocumentRows.get(b)?.[column]);
+              const result = left.localeCompare(right,'pt-BR');
+              return direction === 'asc' ? result : -result;
+            });
+          }
+
+          return sortedLibProcesses;
+        }
+
+        function acervoColumnLabel(colKey: string) {
+          const colDef = ALL_ACERVO_COLUMNS.find(c => c.key === colKey);
+          const rawLabel = colDef?.label || colKey;
+          const formerLabel = FORMER_ACERVO_EXAMINER_LABELS[colKey];
+          const isFormerDefault = formerLabel && acervoCustomLabels[colKey]?.trim().toLowerCase() === formerLabel;
+          return formatColumnLabel(colKey, rawLabel, acervoTextFormat, isFormerDefault ? undefined : acervoCustomLabels);
+        }
+
+        function renderAcervoTable(records: ProcessData[], columnOrder: string[], tableRef?: React.Ref<HTMLTableElement>) {
+          const acervoStyles = getTableStyles(acervoTextFormat);
+          const renderAcervoHeaderCell = (colKey: string) => {
+            const formattedLabel = acervoColumnLabel(colKey);
+            const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
+
+            return (
+              <th
+                key={colKey}
+                data-portal-column-key={colKey}
+                data-portal-managed-column={isRepositoryDocumentKey(colKey) || undefined}
+                data-portal-filter-options={isRepositoryDocumentKey(colKey) ? REPOSITORY_DOCUMENT_STATUSES.join('|') : undefined}
+                data-portal-filter-selected={isRepositoryDocumentKey(colKey) ? documentFilters[colKey]?.join('|') : undefined}
+                aria-sort={documentSort?.column === colKey ? documentSort.direction === 'asc' ? 'ascending' : 'descending' : undefined}
+                className={`${acervoStyles.headerThClass} ${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerTextColorClass} ${acervoStyles.headerFontSizeClass} ${acervoStyles.headerCasingClass} ${acervoStyles.headerBorderClass} ${acervoStyles.headerAlignClass} align-middle select-none transition-colors group`}
+              >
+                <div className={`flex items-center justify-center ${acervoStyles.headerWrapClass}`}>
+                  <span>{formattedLabel}</span>
+                </div>
+              </th>
+            );
+          };
+
+          const renderAcervoBodyCell = (colKey: string, proc: ProcessData, progress: any, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
+            const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
+            const alignClass = acervoStyles.cellAlignClass;
+
+            if (isRepositoryDocumentKey(colKey)) {
+              const value = repositoryDocumentRows.get(proc)?.[colKey];
+              const label = REPOSITORY_DOCUMENT_COLUMNS.find(column => column.key === colKey)!.label;
+              const status = repositoryDocumentStatus(value);
+              const driveUrl = repositoryDriveOriginalView(value);
+              const openLabel = `Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`;
+              return (
+                <td key={colKey} data-portal-filter-value={status} data-portal-export-value={status} className={`${acervoStyles.cellPadClass} ${acervoStyles.borderClass} ${acervoStyles.cellFontSizeClass} ${widthClass} text-center align-middle normal-case`}>
+                  {driveUrl
+                    ? <a href={driveUrl} target="_blank" rel="noopener noreferrer" className="portal-abstract-trigger"
+                        title={`${label} · ${status}`} aria-label={openLabel}>
+                        <DocumentEnvelope status="available" />
+                      </a>
+                    : typeof value === 'string'
+                    ? <button type="button" className="portal-abstract-trigger" title={`${label} · ${status}`}
+                        aria-label={openLabel}
+                        onClick={() => openRepositoryDocument(value)}>
+                        <DocumentEnvelope status="available" />
+                      </button>
+                    : <span className="portal-abstract-unavailable" role="img" title={`${label} · ${status}`}
+                        aria-label={`${label}. ${status}`}>
+                        <DocumentEnvelope status={status === 'Presente' ? 'available' : status === 'Ausente' ? 'absent' : 'restricted'} />
+                      </span>}
+                </td>
+              );
+            }
+
+            switch (colKey) {
+              case 'protocolo':
+                return (
+                  <td
+                    key="protocolo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
+                    }}
+                    className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.borderClass} align-middle ${alignClass} cursor-pointer ${acervoStyles.firstColCellHoverClass} group/col0 transition-colors`}
+                    title="Clique aqui no Nº do Processo para abrir o TCC"
+                  >
+                    <div
+                      className={`${acervoStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
+                      style={getPortalToneCssVars('neutral')}
+                    >
+                      {formatProcessLabel(proc.protocolo || proc.id)}
+                    </div>
+                  </td>
+                );
+              case 'progresso':
+                return (
+                  <td key="progresso" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} align-middle ${acervoStyles.borderClass}`}>
+                    <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={acervoTextFormat} />
+                  </td>
+                );
+              case 'titulo':
+                return (
+                  <td key="titulo" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className={`${acervoStyles.cellWrapClass} ${alignClass} ${acervoStyles.cellFontSizeClass}`} title={proc.titulo}>
+                      {formatCellText('titulo', proc.titulo, acervoTextFormat, '')}
+                      <PendingDefenseConfirmationNote process={proc} />
+                    </div>
+                  </td>
+                );
+              case 'aluno1':
+                return (
+                  <td key="aluno1" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className="w-full mx-auto">
+                      <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                        {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), acervoTextFormat, '')}
+                      </div>
+                    </div>
+                  </td>
+                );
+              case 'aluno2':
+                return (
+                  <td key="aluno2" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className="w-full mx-auto">
+                      {proc.aluno2?.nome ? (
+                        <>
+                          <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                            {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), acervoTextFormat, '')}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-slate-300 font-mono text-[11px]">—</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              case 'orientador':
+                return (
+                  <td key="orientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className="w-full mx-auto">
+                      <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                        {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), acervoTextFormat, '')}
+                      </div>
+                      <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
+                        {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.institutionName), acervoTextFormat, '')}
+                      </div>
+                    </div>
+                  </td>
+                );
+              case 'membro1':
+                return (
+                  <td key="membro1" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className="w-full mx-auto">
+                      {ev1 ? (
+                        <div>
+                          <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                            {formatCellText('membro1', academicName(ev1,'abbreviated'), acervoTextFormat, '')}
+                          </div>
+                          <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
+                            {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), acervoTextFormat, '')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[10px]">A definir</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              case 'membro2':
+                return (
+                  <td key="membro2" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className="w-full mx-auto">
+                      {ev2 ? (
+                        <div>
+                          <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                            {formatCellText('membro2', academicName(ev2,'abbreviated'), acervoTextFormat, '')}
+                          </div>
+                          <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
+                            {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[10px]">A definir</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              case 'coorientador':
+                return (
+                  <td key="coorientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className="w-full mx-auto">
+                      {proc.coorientador && (proc.coorientador.nome || proc.coorientador.instituicao) ? (
+                        <div>
+                          {proc.coorientador.nome && (
+                            <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
+                              {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), acervoTextFormat, '')}
+                            </div>
+                          )}
+                          <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
+                            {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300 font-mono text-[11px]">—</span>
+                      )}
+                    </div>
+                  </td>
+                );
+              case 'resumo':
+                return (
+                  <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} data-portal-export-value={proc.acervo?.resumoSintese || ''} className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
+                  </td>
+                );
+              case 'palavrasChave':
+                return (
+                  <td key="palavrasChave" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.cellFontSizeClass} ${acervoStyles.borderClass} leading-tight ${acervoStyles.cellWrapClass} align-middle`}>
+                    {proc.acervo?.palavrasChave?.length
+                      ? proc.acervo.palavrasChave.join(' • ')
+                      : <span className="text-slate-600">Palavras-chave não localizadas</span>}
+                  </td>
+                );
+              case 'defesaDataHora':
+                return (
+                  <td key="defesaDataHora" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
+                    <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
+                      {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
+                    </div>
+                    <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
+                  </td>
+                );
+              case 'defesaLocal':
+                return (
+                  <td key="defesaLocal" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} leading-normal ${acervoStyles.cellWrapClass} align-middle`}>
+                    <div className="flex flex-col items-center justify-center gap-0.5 leading-tight">
+                      <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', acervoTextFormat, '')}</span>
+                    </div>
+                  </td>
+                );
+              default:
+                return null;
+            }
+          };
+
+          return (
+            <table ref={tableRef} aria-label="Repositório de TCCs" className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
+              {records.length === 0 && (
+                <caption className="caption-bottom p-6 text-center text-sm text-slate-600">Nenhum TCC encontrado para os filtros selecionados.</caption>
+              )}
+              <thead className={`${acervoStyles.headerTheadClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerFontSizeClass} tracking-normal`} style={acervoStyles.theadStyle}>
+                <tr>
+                  {columnOrder.map((colKey) => renderAcervoHeaderCell(colKey))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {records.map((proc) => {
+                  const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
+                  const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
+                  const ev1 = evalMembers[0];
+                  const ev2 = evalMembers[1];
+
+                  const cleanInst = (str?: string) => {
+                    if (!str) return '';
+                    return displayParticipantInstitution(str);
+                  };
+
+                  return (
+                    <tr
+                      key={proc.id}
+                      className={`${acervoStyles.rowZebraClass} hover:bg-slate-100/60 transition-colors ${acervoStyles.cellTextColorClass}`}
+                    >
+                      {columnOrder.map((colKey) => renderAcervoBodyCell(colKey, proc, progress, ev1, ev2, cleanInst))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          );
+        }
+
+        function getRepositoryExportSnapshot(period: ReservationPeriod, columns: string[]) {
+          if (repositoryLoading || repositoryError) return null;
+          const columnOrder = Array.from(new Set([...columns, ...acervoColumnOrder.filter(key => visibleColumns[key])]));
+          const title = getEditableTableText(acervoCustomLabels, '__tableTitle', 'Repositório & Acervo Digital');
+          const {startDate, endDate} = period;
+          const periodLabel = startDate && endDate ? formatReservationPeriod(period)
+            : startDate ? `Desde ${formatDateNumeric(startDate)}` : endDate ? `Até ${formatDateNumeric(endDate)}` : '';
+          return captureRenderedTableExport(
+            renderAcervoTable(repositoryListProcesses(period), columnOrder),
+            repositoryTableRef.current,
+            [title, periodLabel].filter(Boolean).join(' · '),
+            columns,
+            getTableStyles(acervoTextFormat).rootStyle,
+          );
+        }
+
+        const sortedLibProcesses = repositoryListProcesses({startDate: libStartDate, endDate: libEndDate});
+        const isDateFiltered = !!(libStartDate || libEndDate);
+        const displayedLibProcesses = isDateFiltered || libRecordsLimit === 'all'
+          ? sortedLibProcesses
+          : sortedLibProcesses.slice(0, libRecordsLimit);
+
+        return (
           <section id="biblioteca-tccs-section" className="space-y-3" ref={repositorySection}>
             {/* UNIFIED GRAY HEADER BANNER & SPREADSHEET CARD */}
             <div data-portal-sheet="repository" data-portal-has-filter="false" className={`portal-sheet-frame bg-white border border-slate-300 rounded-2xl shadow-sm overflow-hidden ${getTableStyles(acervoTextFormat).fontFamilyClass}`} style={getTableStyles(acervoTextFormat).rootStyle}>
@@ -2481,15 +2638,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                     <div className="portal-sheet-toolbar shrink-0">
                       <div className="portal-sheet-toolbar-actions">
                         {acervoTextFormat.showDownloadDadosButton !== false && (
-                          <button
-                            type="button"
-                            onClick={() => void handleRepositoryDownloadRequest()}
-                            className="portal-toolbar-icon-button"
-                            title="Baixar dados — exporta o Repositório de TCCs em CSV"
-                            aria-label="Baixar dados — exporta o Repositório de TCCs em CSV"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
+                          <TableExportPopover
+                            disabled={repositoryLoading || Boolean(repositoryError)}
+                            contextKey={calendarIdentity}
+                            fileName={`repositorio-tccs-${installationProfile.courseAcronym}`}
+                            triggerLabel="Baixar lista do repositório"
+                            initialPeriod={{startDate: libStartDate, endDate: libEndDate}}
+                            optionalPeriod
+                            columns={acervoColumnOrder.map(key => ({key, label: acervoColumnLabel(key)}))}
+                            visibleColumns={visibleColumns}
+                            getSnapshot={getRepositoryExportSnapshot}
+                          />
                         )}
                       </div>
 
@@ -2500,13 +2659,6 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                           placeholder="Buscar no acervo..."
                           textFormat={acervoTextFormat}
                         />
-                        <button
-                          type="button"
-                          className="portal-toolbar-icon-button portal-repository-documents-jump"
-                          onClick={showRepositoryDocuments}
-                        >
-                          Documentos
-                        </button>
                         <HeaderSettingsPopover
                           recordsLimit={libRecordsLimit}
                           setRecordsLimit={setLibRecordsLimit}
@@ -2543,322 +2695,28 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, initialPublicTab
                 <p role="status" className="px-4 py-2 text-sm text-slate-600">Não foi possível consultar a presença de documentos nesta sessão.</p>
               )}
 
-              {/* SPREADSHEET TABLE FOR BIBLIOTECA */}
               {(() => {
-              const activeDocumentFilters = REPOSITORY_DOCUMENT_COLUMNS.flatMap(({key}) => {
-                const allowed = documentFilters[key];
-                return visibleColumns[key] && allowed ? [{key,allowed}] : [];
-              });
-              const filteredLibProcesses = repositoryProcesses.filter(process =>
-                matchesRepositoryQuery(process,{search:libSearch,startDate:libStartDate,endDate:libEndDate}) &&
-                activeDocumentFilters.every(({key,allowed}) =>
-                  allowed.includes(repositoryDocumentStatus(repositoryDocumentRows.get(process)?.[key]))));
-
-              const sortedLibProcesses = filteredLibProcesses.sort((a, b) => {
-                const archiveOrder = Number(Boolean(a.legacyRecord)) - Number(Boolean(b.legacyRecord));
-                if (archiveOrder) return archiveOrder;
-                const newestFirst = (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0);
-                if (newestFirst) return newestFirst;
-                return (b.protocolo || '').localeCompare(a.protocolo || '', 'pt-BR', { numeric: true });
-              });
-              if (documentSort && visibleColumns[documentSort.column]) {
-                const {column,direction} = documentSort;
-                sortedLibProcesses.sort((a,b) => {
-                  const left = repositoryDocumentStatus(repositoryDocumentRows.get(a)?.[column]);
-                  const right = repositoryDocumentStatus(repositoryDocumentRows.get(b)?.[column]);
-                  const result = left.localeCompare(right,'pt-BR');
-                  return direction === 'asc' ? result : -result;
-                });
-              }
-
-              // If date filters are active, show ALL matching records. Otherwise slice to records limit (100, 150, 200, todos).
-              const isDateFiltered = !!(libStartDate || libEndDate);
-              const displayedLibProcesses = isDateFiltered || libRecordsLimit === 'all'
-                ? sortedLibProcesses
-                : sortedLibProcesses.slice(0, libRecordsLimit);
-
-              if (displayedLibProcesses.length === 0 && !activeDocumentFilters.length) {
-                if (repositoryLoading) {
-                  return <p role="status" className="p-6 text-center text-sm text-slate-600">Carregando o repositório…</p>;
-                }
-                if (repositoryError) return null;
-                return (
-                  <div className="p-12 text-center text-xs text-slate-500 space-y-2 bg-white border border-slate-200 shadow-2xs rounded-lg">
-                    <p className="font-bold text-slate-700 text-sm">{repositoryProcesses.length ? 'Nenhum TCC encontrado para os filtros selecionados.' : 'Nenhum TCC no repositório.'}</p>
-                    {repositoryProcesses.length > 0 && <p className="text-slate-500">Tente redefinir os termos de pesquisa ou período de data.</p>}
-                  </div>
-                );
-              }
-
-              const acervoStyles = getTableStyles(acervoTextFormat);
-              const renderAcervoHeaderCell = (colKey: string) => {
-                if (!visibleColumns[colKey]) return null;
-                const colDef = ALL_ACERVO_COLUMNS.find(c => c.key === colKey);
-                const rawLabel = colDef?.label || colKey;
-                const formerLabel = FORMER_ACERVO_EXAMINER_LABELS[colKey];
-                const isFormerDefault = formerLabel && acervoCustomLabels[colKey]?.trim().toLowerCase() === formerLabel;
-                const formattedLabel = formatColumnLabel(colKey, rawLabel, acervoTextFormat, isFormerDefault ? undefined : acervoCustomLabels);
-                const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
-
-                return (
-                  <th
-                    key={colKey}
-                    data-portal-column-key={colKey}
-                    data-portal-managed-column={isRepositoryDocumentKey(colKey) || undefined}
-                    data-portal-filter-options={isRepositoryDocumentKey(colKey) ? REPOSITORY_DOCUMENT_STATUSES.join('|') : undefined}
-                    data-portal-filter-selected={isRepositoryDocumentKey(colKey) ? documentFilters[colKey]?.join('|') : undefined}
-                    aria-sort={documentSort?.column === colKey ? documentSort.direction === 'asc' ? 'ascending' : 'descending' : undefined}
-                    className={`${acervoStyles.headerThClass} ${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerTextColorClass} ${acervoStyles.headerFontSizeClass} ${acervoStyles.headerCasingClass} ${acervoStyles.headerBorderClass} ${acervoStyles.headerAlignClass} align-middle select-none transition-colors group`}
-                  >
-                    <div className={`flex items-center justify-center ${acervoStyles.headerWrapClass}`}>
-                      <span>{formattedLabel}</span>
-                    </div>
-                  </th>
-                );
-              };
-
-              const renderAcervoBodyCell = (colKey: string, proc: ProcessData, progress: any, ev1: any, ev2: any, cleanInst: (s?: string) => string) => {
-                if (!visibleColumns[colKey]) return null;
-                const widthClass = `${getColWidthClass(colKey, acervoColumnWidths, colKey === 'resumo' ? 'w-[100px] min-w-[88px]' : 'min-w-[95px]')} ${getColumnWeightClass(colKey, acervoTextFormat)}`;
-                const alignClass = acervoStyles.cellAlignClass;
-
-                if (isRepositoryDocumentKey(colKey)) {
-                  const value = repositoryDocumentRows.get(proc)?.[colKey];
-                  const label = REPOSITORY_DOCUMENT_COLUMNS.find(column => column.key === colKey)!.label;
-                  const status = repositoryDocumentStatus(value);
-                  const driveUrl = repositoryDriveOriginalView(value);
-                  const openLabel = `Ver ${label.toLocaleLowerCase('pt-BR')} de ${proc.protocolo} no Google Drive`;
+                if (displayedLibProcesses.length === 0 && !activeDocumentFilters.length) {
+                  if (repositoryLoading) {
+                    return <p role="status" className="p-6 text-center text-sm text-slate-600">Carregando o repositório…</p>;
+                  }
+                  if (repositoryError) return null;
                   return (
-                    <td key={colKey} data-portal-filter-value={status} className={`${acervoStyles.cellPadClass} ${acervoStyles.borderClass} ${acervoStyles.cellFontSizeClass} ${widthClass} text-center align-middle normal-case`}>
-                      {driveUrl
-                        ? <a href={driveUrl} target="_blank" rel="noopener noreferrer" className="portal-abstract-trigger"
-                            title={`${label} · ${status}`} aria-label={openLabel}>
-                            <DocumentEnvelope status="available" />
-                          </a>
-                        : typeof value === 'string'
-                        ? <button type="button" className="portal-abstract-trigger" title={`${label} · ${status}`}
-                            aria-label={openLabel}
-                            onClick={() => openRepositoryDocument(value)}>
-                            <DocumentEnvelope status="available" />
-                          </button>
-                        : <span className="portal-abstract-unavailable" role="img" title={`${label} · ${status}`}
-                            aria-label={`${label}. ${status}`}>
-                            <DocumentEnvelope status={status === 'Presente' ? 'available' : status === 'Ausente' ? 'absent' : 'restricted'} />
-                          </span>}
-                    </td>
+                    <div className="p-12 text-center text-xs text-slate-500 space-y-2 bg-white border border-slate-200 shadow-2xs rounded-lg">
+                      <p className="font-bold text-slate-700 text-sm">{repositoryProcesses.length ? 'Nenhum TCC encontrado para os filtros selecionados.' : 'Nenhum TCC no repositório.'}</p>
+                      {repositoryProcesses.length > 0 && <p className="text-slate-500">Tente redefinir os termos de pesquisa ou período de data.</p>}
+                    </div>
                   );
                 }
 
-                switch (colKey) {
-                  case 'protocolo':
-                    return (
-                      <td
-                        key="protocolo"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProcessLink(proc.id,null,true);window.dispatchEvent(new CustomEvent('portal:open-process',{detail:{id:proc.id,readOnly:true}}));
-                        }}
-                        className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.borderClass} align-middle ${alignClass} cursor-pointer ${acervoStyles.firstColCellHoverClass} group/col0 transition-colors`}
-                        title="Clique aqui no Nº do Processo para abrir o TCC"
-                      >
-                        <div
-                          className={`${acervoStyles.firstColBtnClass} portal-semantic-tone whitespace-nowrap`}
-                          style={getPortalToneCssVars('neutral')}
-                        >
-                          {formatProcessLabel(proc.protocolo || proc.id)}
-                        </div>
-                      </td>
-                    );
-                  case 'progresso':
-                    return (
-                      <td key="progresso" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} align-middle ${acervoStyles.borderClass}`}>
-                        <ProgressIndicator percent={progress.percent} label={progress.label} textFormat={acervoTextFormat} />
-                      </td>
-                    );
-                  case 'titulo':
-                    return (
-                      <td key="titulo" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className={`${acervoStyles.cellWrapClass} ${alignClass} ${acervoStyles.cellFontSizeClass}`} title={proc.titulo}>
-                          {formatCellText('titulo', proc.titulo, acervoTextFormat, '')}
-                          <PendingDefenseConfirmationNote process={proc} />
-                        </div>
-                      </td>
-                    );
-                  case 'aluno1':
-                    return (
-                      <td key="aluno1" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className="w-full mx-auto">
-                          <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                            {formatCellText('aluno1', cleanPersonName(proc.aluno1?.nome || '—'), acervoTextFormat, '')}
-                          </div>
-                        </div>
-                      </td>
-                    );
-                  case 'aluno2':
-                    return (
-                      <td key="aluno2" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className="w-full mx-auto">
-                          {proc.aluno2?.nome ? (
-                            <>
-                              <div className={`${acervoStyles.cellFontSizeClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('aluno2', cleanPersonName(proc.aluno2.nome), acervoTextFormat, '')}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-slate-300 font-mono text-[11px]">—</span>
-                          )}
-                        </div>
-                      </td>
-                    );
-                  case 'orientador':
-                    return (
-                      <td key="orientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className="w-full mx-auto">
-                          <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                            {formatCellText('orientador', academicName(proc.orientador, 'abbreviated'), acervoTextFormat, '')}
-                          </div>
-                          <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                            {formatCellText('orientador', cleanInst(proc.orientador?.instituicao || installationProfile.institutionName), acervoTextFormat, '')}
-                          </div>
-                        </div>
-                      </td>
-                    );
-                  case 'membro1':
-                    return (
-                      <td key="membro1" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className="w-full mx-auto">
-                          {ev1 ? (
-                            <div>
-                              <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro1', academicName(ev1,'abbreviated'), acervoTextFormat, '')}
-                              </div>
-                              <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                                {formatCellText('membro1', cleanInst(ev1.instituicao || (proc.legacyRecord?'Não informado':installationProfile.defaultInstitutionName)), acervoTextFormat, '')}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 italic text-[10px]">A definir</span>
-                          )}
-                        </div>
-                      </td>
-                    );
-                  case 'membro2':
-                    return (
-                      <td key="membro2" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className="w-full mx-auto">
-                          {ev2 ? (
-                            <div>
-                              <div className={`font-normal ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                {formatCellText('membro2', academicName(ev2,'abbreviated'), acervoTextFormat, '')}
-                              </div>
-                              <div className="text-[9px] text-slate-600 font-mono mt-1 leading-tight break-words">
-                                {formatCellText('membro2', cleanInst(ev2.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 italic text-[10px]">A definir</span>
-                          )}
-                        </div>
-                      </td>
-                    );
-                  case 'coorientador':
-                    return (
-                      <td key="coorientador" className={`${acervoStyles.cellPadClass} ${widthClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className="w-full mx-auto">
-                          {proc.coorientador && (proc.coorientador.nome || proc.coorientador.instituicao) ? (
-                            <div>
-                              {proc.coorientador.nome && (
-                                <div className={`${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${acervoStyles.cellFontSizeClass} leading-tight ${acervoStyles.cellWrapClass}`}>
-                                  {formatCellText('coorientador', academicName(proc.coorientador, 'abbreviated'), acervoTextFormat, '')}
-                                </div>
-                              )}
-                              <div className="text-[9px] text-slate-600 font-mono font-normal mt-1 leading-tight break-words">
-                                {formatCellText('coorientador', cleanInst(proc.coorientador.instituicao || (proc.legacyRecord?'Não informado':'Instituição Externa')), acervoTextFormat, '')}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-slate-300 font-mono text-[11px]">—</span>
-                          )}
-                        </div>
-                      </td>
-                    );
-                  case 'resumo':
-                    return (
-                      <td key="resumo" data-portal-filter-value={proc.acervo?.resumoSintese || ''} className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <TccAbstractPopover summary={proc.acervo?.resumoSintese} processLabel={formatProcessLabel(proc.protocolo || proc.id)} unavailableLabel={proc.legacyRecord ? 'Resumo não localizado no acervo importado' : undefined} />
-                      </td>
-                    );
-                  case 'palavrasChave':
-                    return (
-                      <td key="palavrasChave" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.cellFontSizeClass} ${acervoStyles.borderClass} leading-tight ${acervoStyles.cellWrapClass} align-middle`}>
-                        {proc.acervo?.palavrasChave?.length
-                          ? proc.acervo.palavrasChave.join(' • ')
-                          : <span className="text-slate-600">Palavras-chave não localizadas</span>}
-                      </td>
-                    );
-                  case 'defesaDataHora':
-                    return (
-                      <td key="defesaDataHora" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellWeightClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} align-middle`}>
-                        <div className={`${acervoStyles.cellFontSizeClass} whitespace-nowrap`}>
-                          {formatCellText('defesaDataHora', formatDateNumericWithWeekday(proc.defesa?.startAt), acervoTextFormat, '')}
-                        </div>
-                        <div className="text-[9.5px] text-slate-500 font-mono font-normal">{formatTime24h(proc.defesa?.startAt)}</div>
-                      </td>
-                    );
-                  case 'defesaLocal':
-                    return (
-                      <td key="defesaLocal" className={`${acervoStyles.cellPadClass} ${widthClass} ${acervoStyles.cellTextColorClass} ${alignClass} ${acervoStyles.borderClass} leading-normal ${acervoStyles.cellWrapClass} align-middle`}>
-                        <div className="flex flex-col items-center justify-center gap-0.5 leading-tight">
-                          <span>{formatCellText('defesaLocal', proc.defesa?.local || installationProfile.defaultDefenseLocation || 'Local a confirmar', acervoTextFormat, '')}</span>
-                        </div>
-                      </td>
-                    );
-                  default:
-                    return null;
-                }
-              };
-
-              return (
-                <TableScrollWrapper>
-                  <table className={`w-full ${acervoStyles.cellAlignClass} border-collapse text-xs`}>
-                    {displayedLibProcesses.length === 0 && (
-                      <caption className="caption-bottom p-6 text-center text-sm text-slate-600">Nenhum TCC encontrado para os filtros selecionados.</caption>
-                    )}
-                    <thead className={`${acervoStyles.headerTheadClass} ${acervoStyles.headerWeightClass} ${acervoStyles.headerFontSizeClass} tracking-normal`} style={acervoStyles.theadStyle}>
-                      <tr>
-                        {acervoColumnOrder.map((colKey) => renderAcervoHeaderCell(colKey))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {displayedLibProcesses.map((proc) => {
-                        const progress = proc.legacyRecord?{percent:100,label:'Registro histórico',color:'text-emerald-700'}:getProcessProgress(proc);
-                        const evalMembers = (proc.banca || []).filter(b => b.funcao !== 'ORIENTADOR');
-                        const ev1 = evalMembers[0];
-                        const ev2 = evalMembers[1];
-
-                        const cleanInst = (str?: string) => {
-                          if (!str) return '';
-                          return displayParticipantInstitution(str);
-                        };
-
-                        return (
-                          <tr
-                            key={proc.id}
-                            className={`${acervoStyles.rowZebraClass} hover:bg-slate-100/60 transition-colors ${acervoStyles.cellTextColorClass}`}
-                          >
-                            {acervoColumnOrder.map((colKey) => renderAcervoBodyCell(colKey, proc, progress, ev1, ev2, cleanInst))}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </TableScrollWrapper>
-              );
-            })()}
-          </div>
-        </section>
-        </>
-      )}
+                return <TableScrollWrapper>
+                  {renderAcervoTable(displayedLibProcesses, acervoColumnOrder.filter(key => visibleColumns[key]), repositoryTableRef)}
+                </TableScrollWrapper>;
+              })()}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* PUBLIC TAB 3: TUTORIAL DO SISTEMA & MANUAL PASSO A PASSO */}
       {publicTab === 'tutorial' && (

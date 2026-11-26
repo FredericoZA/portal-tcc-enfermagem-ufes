@@ -4,20 +4,17 @@ import { readFileSync } from 'node:fs';
 
 const read = (path: string) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
-test('download do Repositório usa o diálogo canônico do Portal', () => {
+test('downloads do calendário e do repositório usam o mesmo painel de exportação', () => {
   const home = read('src/pages/HomePage.tsx');
-  const dialogs = read('src/components/PortalDialogs.tsx');
-  const service = read('src/services/portalDialogs.ts');
+  const panel = read('src/components/TableExportPopover.tsx');
 
-  assert.match(home, /import \{[^}]*\bportalConfirm\b[^}]*\} from '\.\.\/services\/portalDialogs'/);
-  assert.match(home, /handleRepositoryDownloadRequest/);
-  assert.match(home, /portalConfirm\([\s\S]*title: 'Baixar dados'[\s\S]*confirmLabel: 'Baixar CSV'/);
-  assert.doesNotMatch(home, /showDownloadConfirm|Confirmar Download dos Dados|Deseja baixar a planilha com todos os dados do Repositório de TCCs/);
+  assert.match(home, /<TableExportPopover\b[^]*?triggerLabel="Baixar lista de defesas"/);
+  assert.match(home, /<TableExportPopover\b[^]*?triggerLabel="Baixar lista do repositório"[^]*?getSnapshot=\{getRepositoryExportSnapshot\}/);
+  assert.doesNotMatch(home, /handleRepositoryDownloadRequest|showRepositoryDocuments|portal-repository-documents-jump/);
 
-  assert.match(dialogs, /portal-modal-surface/);
-  assert.match(dialogs, /portal-modal-header/);
-  assert.match(dialogs, /portal-action portal-action-primary/);
-  assert.match(dialogs, /current\.title/);
-  assert.match(dialogs, /current\.confirmLabel/);
-  assert.match(service, /PortalDialogOptions/);
+  assert.match(panel, /portal-table-settings-popover portal-modal-surface portal-table-export-popover/);
+  assert.match(panel, /Data de início/);
+  assert.match(panel, /Data de fim/);
+  assert.match(panel, /Colunas e ordem/);
+  for (const label of ['Excel', 'CSV', 'PDF']) assert.ok(panel.includes(`label: '${label}'`));
 });

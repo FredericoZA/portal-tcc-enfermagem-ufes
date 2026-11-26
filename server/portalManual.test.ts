@@ -18,7 +18,7 @@ test('manual público é PDF legível, com navegação e seções dos quatro per
   }
 });
 
-test('manual em PDF fica no cabeçalho e é compartilhado pelos perfis',()=>{
+test('manual em PDF fica abaixo do tutorial e é compartilhado pelos perfis',()=>{
   const sidebar=readFileSync('src/components/Sidebar.tsx','utf8');
   const tutorial=readFileSync('src/pages/PortalTutorialPage.tsx','utf8');
   assert.doesNotMatch(sidebar,/id="nav-item-manual"/);
@@ -26,7 +26,10 @@ test('manual em PDF fica no cabeçalho e é compartilhado pelos perfis',()=>{
   const headerEnd=tutorial.indexOf('</section>'),guideStart=tutorial.indexOf('<PortalIllustratedGuide');
   const linkStart=tutorial.indexOf('id="tutorial-manual-pdf"');
   assert.ok(headerEnd>=0&&guideStart>headerEnd);
-  assert.ok(linkStart > tutorial.indexOf('portal-public-title-row') && linkStart < headerEnd);
+  const linkWrapper = tutorial.lastIndexOf('<div', linkStart);
+  assert.ok(linkWrapper > guideStart);
+  assert.match(tutorial.slice(guideStart, linkWrapper), /<PortalIllustratedGuide[^>]*\/>\s*<\/div>\s*<\/div>\s*$/);
+  assert.match(tutorial.slice(linkWrapper, linkStart), /mt-4 flex justify-center/);
   assert.match(tutorial, /Acesse o manual detalhado em PDF/);
   assert.doesNotMatch(tutorial, /tutorial-manual-notice/);
 });

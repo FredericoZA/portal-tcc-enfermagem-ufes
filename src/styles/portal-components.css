@@ -263,43 +263,19 @@ button[aria-label^="Configurar exibição"],
   box-shadow: none;
 }
 
-.portal-toolbar-icon-button.portal-repository-documents-jump {
-  width: auto;
-  padding-inline: 10px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
 /* Downloads follow the same compact toolbar as search and display settings. */
 .portal-table-export-trigger:disabled { opacity: .45; cursor: not-allowed; }
 .portal-table-export-trigger[aria-expanded="true"] { background: var(--portal-brand-sage); }
-.portal-table-export-popover { position: fixed; z-index: 1000001; overflow-y: auto; border: 1px solid var(--portal-border); border-radius: 12px; background: var(--portal-surface-panel); box-shadow: 0 12px 32px rgba(15,23,42,.18); }
-.portal-table-export-heading { justify-content: space-between; gap: 12px; padding: 8px 12px; }
-.portal-table-export-heading h3 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: var(--portal-type-navigation); font-weight: 800; }
-.portal-table-export-body { padding: 14px; }
-.portal-table-export-summary { color: var(--portal-brand-header); font-size: var(--portal-type-content); font-weight: 800; }
-.portal-table-export-description { margin: 5px 0 12px; color: var(--portal-text-muted); font-size: 11px; line-height: 1.5; }
-.portal-table-export-options { display: flex; flex-direction: column; gap: 8px; }
-.portal-table-export-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 61px; padding: 10px 12px; border: 1px solid var(--portal-border); background: var(--portal-surface-inner); color: var(--portal-text-dark); text-align: left; cursor: pointer; transition: border-color 120ms, background 120ms; }
-.portal-table-export-option:not(:disabled):hover { border-color: var(--portal-brand-sage); background: #f1f7f4; }
-.portal-table-export-option:focus-visible { outline: 2px solid var(--portal-brand-header); outline-offset: 2px; }
-.portal-table-export-option:disabled { cursor: not-allowed; opacity: .55; }
-.portal-table-export-format-icon { display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 8px; color: #146c43; background: #e6f2eb; }
-.portal-table-export-format-icon[data-format="csv"] { color: #275e91; background: #e9f0f8; }
-.portal-table-export-format-icon[data-format="pdf"] { color: #a32d3b; background: #fbecef; }
-.portal-table-export-option-copy { flex: 1; min-width: 0; }
-.portal-table-export-option-title { display: flex; align-items: baseline; gap: 8px; font-size: var(--portal-type-navigation); font-weight: 800; }
-.portal-table-export-extension { color: var(--portal-text-muted); font-size: var(--portal-type-content); font-weight: 500; }
-.portal-table-export-option-description { display: block; margin-top: 3px; font-size: var(--portal-type-content); font-weight: 400; line-height: 1.4; color: var(--portal-text-muted); }
-.portal-table-export-option-arrow { flex: none; color: var(--portal-brand-header); }
-.portal-table-export-footnote { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--portal-border); color: var(--portal-text-muted); font-size: var(--portal-type-content); line-height: 1.5; }
-.portal-table-export-error, .portal-table-export-success { margin: 10px 0 0; font-size: 11px; line-height: 1.5; }
+.portal-table-export-popover { display: flex; flex-direction: column; }
+.portal-table-export-popover > .portal-settings-popover-body { min-height: 0; }
+.portal-table-export-popover > .portal-settings-popover-header { flex: none; font-weight: 850; }
+.portal-table-export-period, .portal-table-export-formats { border: 0; padding: 0 0 8px; }
+.portal-table-export-formats { margin-top: 4px; border-bottom: 1px solid var(--portal-border); }
+.portal-table-export-popover .portal-settings-footer { justify-content: flex-end; }
+.portal-table-export-error, .portal-table-export-status { margin: 6px 0 0; font-size: var(--portal-type-content); }
 .portal-table-export-error { color: var(--portal-danger); }
-.portal-table-export-success { color: var(--portal-brand-header); }
-
-[data-portal-sheet="repository"]:not(:has(th[data-portal-managed-column="true"])) .portal-repository-documents-jump {
-  display: none;
-}
+.portal-table-export-status { color: var(--portal-brand-header); }
+.portal-table-export-source { position: fixed; left: -100000px; top: 0; pointer-events: none; }
 
 /* Tons semânticos aplicados por variável, sem duplicar HEX nos componentes. */
 .portal-semantic-tone {
@@ -1040,7 +1016,7 @@ button[aria-label^="Configurar exibição"],
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   white-space: nowrap;
 }
 

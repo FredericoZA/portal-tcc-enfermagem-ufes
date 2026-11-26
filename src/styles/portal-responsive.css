@@ -141,6 +141,10 @@ body #portal-app-root #sidebar-nav,
 body #portal-app-root #sidebar-nav * {
   font-size: var(--portal-type-navigation);
 }
+/* A ação principal do manual usa a mesma escala da navegação. */
+body #portal-app-root #tutorial-manual-pdf > span {
+  font-size: var(--portal-type-navigation);
+}
 /* Os títulos e a orientação dos grupos não são itens de navegação de 14px. */
 body #portal-app-root #sidebar-nav .portal-sidebar-section-heading,
 body #portal-app-root #sidebar-nav .portal-sidebar-section-hint {
