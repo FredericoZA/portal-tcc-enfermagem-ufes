@@ -389,33 +389,29 @@ try {
         }
         if (tab === 'biblioteca') {
           const repository = page.locator('#biblioteca-tccs-section');
-          const jump = repository.getByRole('button', { name: 'Documentos', exact: true });
-          await jump.waitFor({ state: 'visible' });
-          await jump.click();
+          const download = repository.getByRole('button', {name:'Baixar lista do repositório', exact:true});
+          await download.waitFor({state:'visible'});
           const repositoryLayout = await repository.evaluate(section => {
             const toolbar = section.querySelector('.portal-sheet-toolbar');
-            const scrollHost = section.querySelector('[data-portal-scroll-host="true"]');
-            const headers = scrollHost.querySelectorAll('th[data-portal-managed-column="true"]');
-            const first = headers[0];
-            const pinned = first.parentElement.firstElementChild;
-            const filter = first.querySelector('.portal-core-column-menu');
-            const start = first.getBoundingClientRect().left;
-            const inView = start >= pinned.getBoundingClientRect().right - 2
-              && filter?.getBoundingClientRect().right <= scrollHost.getBoundingClientRect().left + scrollHost.clientWidth;
-            const filterFocused = filter === document.activeElement;
-            scrollHost.scrollLeft = 0;
-            document.activeElement?.blur();
+            const download = toolbar?.querySelector('.portal-table-export-trigger');
+            const search = toolbar?.querySelector('button[aria-label^="Buscar registros —"]');
             return {
               line: toolbar ? parseFloat(getComputedStyle(toolbar).borderTopWidth || '0') : 0,
-              documentColumns: headers.length,
-              inView,
-              filterFocused,
+              documentColumns: section.querySelectorAll('th[data-portal-managed-column="true"]').length,
+              downloadFirst: Boolean(download && search && (download.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING)),
             };
           });
+          const oldShortcutCount = await repository.getByRole('button', {name:'Documentos', exact:true}).count();
           if (repositoryLayout.line > 0) report.errors.push(`master-repositorio-${width}: linha indevida permanece no cabeçalho (${repositoryLayout.line}px).`);
-          if (repositoryLayout.documentColumns !== 8 || !repositoryLayout.inView || !repositoryLayout.filterFocused) {
-            report.errors.push(`master-repositorio-${width}: atalho não levou às colunas de documentos (${JSON.stringify(repositoryLayout)}).`);
+          if (repositoryLayout.documentColumns !== 8 || !repositoryLayout.downloadFirst || oldShortcutCount) {
+            report.errors.push(`master-repositorio-${width}: ordem dos controles ou disponibilidade das colunas de documentos divergente (${JSON.stringify(repositoryLayout)}).`);
           }
+          await download.click();
+          const dialog = page.getByRole('dialog', {name:'Baixar lista', exact:true});
+          await dialog.getByLabel('Data de início').waitFor();
+          await dialog.getByLabel('Data de fim').waitFor();
+          await dialog.getByRole('button', {name:'Baixar Excel', exact:true}).waitFor();
+          await dialog.getByRole('button', {name:'Fechar', exact:true}).click();
         }
         if (tab === 'tutorial') {
           const screenTitle = page.locator('#portal-tutorial-page .portal-guide-screen-title');
