@@ -40,7 +40,7 @@ export function recordedAcademicName(person: AcademicPerson): AcademicPerson {
 export function academicName(person?:AcademicPerson|null,style:'full'|'abbreviated'='full'):string{
  if(!person)return '';
  if(person.tratamento===undefined||person.tratamento===null) person=recordedAcademicName(person);
- if(person.tratamento===undefined||person.tratamento===null)return person.nome.trim();
+ if(person.tratamento==null&&!person.titulacao)return person.nome.trim();
  const name=plainPersonName(person),short=style==='abbreviated';
  const selectedTreatment=COMMITTEE_TREATMENTS.find(treatment=>treatment===person.tratamento);
  const treatment=selectedTreatment&&short?abbreviatedTreatments[selectedTreatment]:selectedTreatment;

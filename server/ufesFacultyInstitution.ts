@@ -25,6 +25,7 @@ const faculty = [
   ['Karolini Zuqui Nunes', 'karolini.nunes@ufes.br'],
   ['Lorena Barros Furieri', 'lorenabarrosfurieri@gmail.com'],
   ['Luciana de Cássia N. Nascimento', 'lcnnascimento@yahoo.com.br'],
+  ['Luciana de Cássia Nunes Nascimento', 'lcnnascimento@yahoo.com.br'],
   ['Luís Carlos Lopes Junior', 'lopesjr.lc@gmail.com'],
   ['Márcia Valéria de Souza Almeida', 'souzamarcia30@yahoo.com.br'],
   ['Mariana Rabello Laignier', 'mariana.laignier@ufes.br'],

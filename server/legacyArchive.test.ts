@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { normalizeAcademicKeyword } from '../src/utils/academicTextCase';
+import { displayParticipantInstitution, normalizeInstitutionInput } from '../src/utils/institutionName';
+import { legacyRepositoryProcess } from '../src/utils/legacyRepository';
+import { academicName } from '../src/utils/personPresentation';
 import {validateLegacyBatch,mergeLegacyBatch,legacyCatalogRevision,publicLegacyAcademicView,privateLegacyAcademicView,canonicalLegacyRecord,legacyFileIsPublic} from './legacyArchive';
 
 export const legacyFixture = () => ({
@@ -74,7 +78,9 @@ test('legacy 011 restores the two documented internal examiners at import and hy
   assert.deepEqual(imported.examinadores, expected);
   const hydrated = canonicalLegacyRecord({ ...imported, examinadores: grouped, provenance: input.provenance });
   assert.deepEqual(hydrated, imported);
-  assert.deepEqual(publicLegacyAcademicView(hydrated).examinadores, expected);
+  assert.deepEqual(publicLegacyAcademicView(hydrated).examinadores, [
+    expected[0], {...expected[1], tratamento:'Professora', titulacao:'Doutora'},
+  ]);
   assert.deepEqual((hydrated.provenance.legacy011BoardCorrection as { originalExaminers: unknown }).originalExaminers, grouped);
   assert.ok(!('provenance' in publicLegacyAcademicView(hydrated)));
   assert.deepEqual(canonicalLegacyRecord(hydrated), hydrated);
@@ -205,4 +211,121 @@ test('legacy faculty display uses the matched catalog row and archived internal 
   const conflicting=publicLegacyAcademicView(correction);
   assert.equal(conflicting.advisorAcademic,undefined);
   assert.equal(conflicting.examinadores[0].instituicao,'');
+});
+
+test('institution labels preserve CAPS service levels and use verified abbreviations', () => {
+  for (const [label, expected] of [
+    ['Caps I', 'CAPS I'],
+    ['CAPS Ii', 'CAPS II'],
+    ['CAPS Iii', 'CAPS III'],
+    ['Caps Ad Iii – Vitória', 'CAPS AD III – Vitória'],
+    ['Hospital Cassiano Antônio de Moraes (UCAM)', 'HUCAM'],
+    ['Hospital Universitário Cassiano Antônio Moraes', 'HUCAM'],
+    ['Hospital Estadual Infantil Nossa Senhora da Glória', 'HEINSG'],
+    ['Hospital Regional Dom Moura', 'HRDM'],
+    ['Universidade Federal de Pelotas', 'UFPel'],
+    ['Secretaria Municipal de Saúde São Mateus - ES', 'SMS – São Mateus'],
+    ['Hospital Dom Malan', 'Hospital Dom Malan'],
+  ]) assert.equal(displayParticipantInstitution(label), expected, label);
+  assert.equal(normalizeInstitutionInput('Caps Ad Iii'), 'CAPS AD III');
+});
+
+test('public keywords correct uppercase phrases while retaining acronyms and original archive values', () => {
+  const keywords = ['SAÚDE MENTAL', 'ACESSO AO SUS', 'SUS E HIV-1', 'VIGILÂNCIA NO CAPS Iii', 'PrEP e covid-19', 'pH sanguíneo', 'e-SUS', 'AVALIAÇÃO COM WHOQOL-BREF'];
+  const expected = ['Saúde mental', 'Acesso ao SUS', 'SUS e HIV-1', 'Vigilância no CAPS III', 'PrEP e COVID-19', 'pH sanguíneo', 'e-SUS', 'Avaliação com WHOQOL-BREF'];
+  assert.deepEqual(keywords.map(normalizeAcademicKeyword), expected);
+  assert.deepEqual(expected.map(normalizeAcademicKeyword), expected);
+  const [record] = validateLegacyBatch([{...legacyFixture(), palavrasChave:keywords}]);
+  assert.deepEqual(publicLegacyAcademicView(record).palavrasChave, expected);
+  assert.deepEqual(privateLegacyAcademicView(record).palavrasChave, keywords);
+  const rowsFromRepository = [
+    {
+      palavrasChave:['câncer de mama', 'ações do enfermeiro', 'educação em saúde'],
+      expected:'Câncer de mama • Ações do enfermeiro • Educação em saúde',
+    },
+    {
+      palavrasChave:['COVID-19', 'RAÇA', 'COR', 'GÊNERO', 'ANÁLISE DE DADOS'],
+      expected:'COVID-19 • Raça • Cor • Gênero • Análise de dados',
+    },
+    {
+      palavrasChave:['INFECÇÃO POR ZIKA VÍRUS', 'ANORMALIDADES CARDIOVASCULARES', 'CARDIOLOGIA'],
+      expected:'Infecção por zika vírus • Anormalidades cardiovasculares • Cardiologia',
+    },
+    {
+      palavrasChave:['COVID- 19', 'Enfermagem', 'Ensino online', 'Pandemia', 'Aprendizagem'],
+      expected:'COVID-19 • Enfermagem • Ensino online • Pandemia • Aprendizagem',
+    },
+  ];
+  for (const {palavrasChave, expected} of rowsFromRepository) {
+    assert.equal(publicLegacyAcademicView({...record, palavrasChave}).palavrasChave.join(' • '), expected);
+  }
+});
+
+test('legacy participants recover verified affiliations and documented treatments', () => {
+  const [record] = validateLegacyBatch([{
+    ...legacyFixture(),
+    orientador:'Marcia Valéria de Souza Almeida',
+    coorientador:'Secretaria Municipal de Saúde São Mateus',
+    examinadores:[
+      {nome:'Luciana de Cássia N. Nascimento', instituicao:''},
+      {nome:'Marcia Valéria de Souza Almeida', instituicao:'Não informado'},
+      {nome:'Nome de Exemplo', instituicao:''},
+      {nome:'Pessoa de Exemplo', instituicao:''},
+      {nome:'Outra Pessoa', instituicao:''},
+    ],
+    provenance:{
+      ...legacyFixture().provenance,
+      repositoryExaminerRoles:[
+        {examinadorExterno:'Sra. Me. Nome de Exemplo; Dr. Pessoa de Exemplo; Prof. Dr. Outra Pessoa'},
+        {examinadorExterno:'Prof. Me. Outra Pessoa'},
+      ],
+    },
+  }]);
+  const process = legacyRepositoryProcess(publicLegacyAcademicView(record));
+  assert.match(academicName(process.orientador, 'abbreviated'), /^Prof\.ª Dr\.ª /);
+  assert.equal(academicName(process.banca[0], 'abbreviated'), 'Prof.ª Dr.ª Luciana de Cássia Nunes Nascimento');
+  assert.equal(academicName(process.banca[1], 'abbreviated'), 'Prof.ª Dr.ª Márcia Valéria de Souza Almeida');
+  assert.deepEqual(process.banca.slice(0,2).map(p => displayParticipantInstitution(p.instituicao || '')), ['UFES', 'UFES']);
+  assert.equal(academicName(process.banca[2], 'abbreviated'), 'Sra. Me. Nome de Exemplo');
+  assert.equal(academicName(process.banca[3], 'abbreviated'), 'Dr. Pessoa de Exemplo');
+  assert.equal(academicName(process.banca[4], 'abbreviated'), 'Prof. Outra Pessoa');
+  assert.equal(process.coorientador?.nome, '');
+  assert.equal(displayParticipantInstitution(process.coorientador?.instituicao || ''), 'SMS – São Mateus');
+  const earlier = legacyRepositoryProcess(publicLegacyAcademicView({...record, dataDefesa:'2015-01-01'}));
+  assert.equal(earlier.banca[0].titulacao, undefined);
+  const external = publicLegacyAcademicView({...record, examinadores:[{nome:record.examinadores[0].nome, instituicao:'UnB'}]});
+  assert.equal(external.examinadores[0].instituicao, 'UnB');
+  const coadvisor = legacyRepositoryProcess(publicLegacyAcademicView({...record, coorientador:'Luciana de Cássia Nunes Nascimento'}));
+  assert.equal(academicName(coadvisor.coorientador, 'abbreviated'), 'Prof.ª Dr.ª Luciana de Cássia Nunes Nascimento');
+});
+
+test('legacy catalog standardizes the department and the auditorium while retaining specific venues', () => {
+  const [record] = validateLegacyBatch([legacyFixture()]);
+  const publicLocation = (localDefesa: string) => publicLegacyAcademicView({...record, localDefesa}).localDefesa;
+  const department = 'Departamento de Enfermagem - CCS UFES';
+  const auditorium = 'Auditório do Prédio do Departamento de Enfermagem - CCS UFES';
+  for (const location of [
+    'Vitória', 'Vitória-ES', 'UFES', 'Departamento de Enfermagem',
+    'Departamento de Enfermagem da Universidade Federal do Espírito Santo',
+    'Universidade Federal do Espírito Santo, Campus Maruípe',
+    'Av. Marechal Campos, nº 1468, Maruípe, Vitória-ES, CEP - Santos Dumont, Vitória - ES, 29047-105',
+    department,
+  ]) assert.equal(publicLocation(location), department, location);
+  for (const location of [
+    'Auditório', 'Auditório de Enfermagem - Departamento de Enfermagem UFES',
+    'Auditório do Departamento de Enfermage/UFES/CCS',
+    'Auditório, Departamento de Enfermagem, Centro de Ciências da Saúde, Universidade Federal do Espírito Santo',
+    'Universidade Federal do Espírito Santo - CCS Maruípe / Auditório Departamento de Enfermagem',
+    'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
+    auditorium,
+  ]) assert.equal(publicLocation(location), auditorium, location);
+  for (const location of [
+    'Sala 2', 'Sala de reuniões do Departamento de Enfermagem', 'Auditório PPGSC',
+    'UFES (via plataforma digital Google Meet)', 'Google Meet', 'Labepi - Departamento de Enfermagem',
+    'Universidade Federal do Espírito Santo - Prédio do Departamento de Enfermagem Sala 01',
+    'Hospital das Clínicas, Avenida Marechal Campos', 'UFES Campus de Alegre', '',
+  ]) assert.equal(publicLocation(location), location);
+  const original = {...record, localDefesa:'UFES'};
+  publicLegacyAcademicView(original);
+  assert.equal(original.localDefesa, 'UFES');
 });

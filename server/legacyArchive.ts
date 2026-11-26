@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { normalizePersonName } from '../src/utils/personNameCase';
+import {repositoryDefenseLocation} from '../src/utils/repositoryDefenseLocation';
+import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
 import { renderTccTitle } from '../src/utils/formatters';
 import { legacyFacultyPresentation } from './legacyFacultyPresentation';
 import type { ProcessData } from '../src/types';
@@ -203,10 +205,10 @@ export function publicLegacyAcademicView(r: LegacyAcademicRecord): PublicLegacyA
   // The introductory catalog text is public metadata. Publication consent applies
   // to the attached full work / expanded abstract PDFs, never to this cell.
   return {id:r.id,protocolo:r.protocolo,titulo:r.titulo,autores:r.autores,
-    orientador:r.orientador,coorientador:r.coorientador,coorientadorInstituicao:r.coorientadorInstituicao,
+    orientador:r.orientador,
     ...legacyFacultyPresentation(r),resumo:r.resumo,
-    palavrasChave:r.palavrasChave.map(word => word.trim()).filter(word => /[\p{L}\p{N}]/u.test(word) && !/^nenhum(?:a)?$/i.test(word)),
-    dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:r.localDefesa,filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
+    palavrasChave:r.palavrasChave.map(normalizeAcademicKeyword).filter(word => /[\p{L}\p{N}]/u.test(word) && !/^nenhum(?:a)?$/i.test(word)),
+    dataDefesa:r.dataDefesa,horaDefesa:r.horaDefesa,localDefesa:repositoryDefenseLocation(r.localDefesa),filesRestricted:!r.attachments.some(file=>legacyFileIsPublic(r,file)),authorizationDecision:legacyAuthorization(r.provenance),
     publicFiles:r.attachments.flatMap((file,index)=>legacyFileIsPublic(r,file)?[{index,kind:file.kind,downloadUrl:`/api/legacy-academic-records/${encodeURIComponent(r.id)}/files/${index}/download`}]:[])};
 }
 

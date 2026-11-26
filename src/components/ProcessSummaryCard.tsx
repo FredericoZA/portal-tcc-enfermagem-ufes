@@ -5,8 +5,10 @@ import { CalendarClock, Mail, MapPin, Pencil, RotateCcw } from 'lucide-react';
 import type { ProcessData } from '../types';
 import { apiClient, ApiRequestError } from '../services/apiClient';
 import { PortalModalShell } from './PortalModalShell';
+import { CapitalizationReview } from './CapitalizationReview';
 import { RegistrationFieldPreview } from './RegistrationFieldPreview';
-import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h, formatTccTitle } from '../utils/formatters';
+import { hasUppercaseTitlePassage, normalizeReviewedTccTitle, UPPERCASE_TCC_TITLE_MESSAGE } from '../utils/reviewedTccTitle';
+import { formatDateWithWeekday, formatDateNumericWithWeekday, formatTime24h } from '../utils/formatters';
 import { isOtherDefenseLocation, OTHER_DEFENSE_LOCATION, renderCustomLocationName } from '../utils/customDefenseLocation';
 import { operationalConfig } from '../utils/operationalConfig';
 import { isManagedDefenseLocation } from '../utils/reservationLocation';
@@ -58,6 +60,7 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   const [titleEditing, setTitleEditing] = useState(false);
   const [title, setTitle] = useState(process.titulo);
   const [titleSaving, setTitleSaving] = useState(false);
+  const titleCaseInvalid = titleEditing && hasUppercaseTitlePassage(title);
   const [titleBaseRevision,setTitleBaseRevision]=useState(process.dataRevision);
   const [reservationOpen, setReservationOpen] = useState(false);
   const [reservationBaseRevision,setReservationBaseRevision]=useState(process.dataRevision);
@@ -102,7 +105,8 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
   useEffect(()=>{onEditingChange?.(titleEditing||reservationOpen);},[titleEditing,reservationOpen,onEditingChange]);
 
   const saveTitle = async () => {
-    const normalized = formatTccTitle(title);
+    const normalized = normalizeReviewedTccTitle(title);
+    if (titleCaseInvalid) { setError(UPPERCASE_TCC_TITLE_MESSAGE); return; }
     if (!normalized.trim()) { setError('Informe o título completo do trabalho.'); return; }
     if (confirmInvitationRevalidation && !await confirmInvitationRevalidation()) return;
     setTitleSaving(true); setError('');
@@ -223,10 +227,11 @@ export const ProcessSummaryCard: React.FC<ProcessSummaryProps> = ({
             </div>
             {titleEditing ? (
               <div className="space-y-1">
-                <input autoFocus type="text" value={title} maxLength={500} onChange={(event) => setTitle(event.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-[11px] text-slate-900" aria-label="Título completo do TCC" />
-                <RegistrationFieldPreview kind="title" value={title}/>
+                <input autoFocus type="text" value={title} maxLength={500} onChange={(event) => setTitle(event.target.value)} className="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-[11px] text-slate-900" aria-label="Título completo do TCC" aria-invalid={titleCaseInvalid || undefined} />
+                <CapitalizationReview kind="title" value={title} onApply={value => { setTitle(value); setError(''); }} />
+                {!titleCaseInvalid && <RegistrationFieldPreview kind="title" value={title} />}
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => void saveTitle()} disabled={titleSaving} className="rounded-full bg-emerald-800 px-3 py-1 text-[10px] font-bold text-white disabled:opacity-50">{titleSaving ? 'Salvando…' : 'Salvar título'}</button>
+                  <button type="button" onClick={() => void saveTitle()} disabled={titleSaving || titleCaseInvalid} className="rounded-full bg-emerald-800 px-3 py-1 text-[10px] font-bold text-white disabled:opacity-50">{titleSaving ? 'Salvando…' : 'Salvar título'}</button>
                   <button type="button" disabled={titleSaving} onClick={() => { setTitleEditing(false); setTitle(process.titulo); setError(''); }} className="rounded-full bg-slate-200 px-3 py-1 text-[10px] font-bold text-slate-800">Cancelar</button>
                 </div>
               </div>

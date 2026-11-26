@@ -17,7 +17,7 @@ const validAnswers = () => ({
   EXAMINADOR_3_NOME: 'Beatriz Ferreira Mendes',
   EXAMINADOR_3_EMAIL: 'BEATRIZ@FIOCRUZ.BR',
   EXAMINADOR_3_INSTITUICAO: 'Fiocruz',
-  TITULO: 'IMPACTO DO CUIDADO DE ENFERMAGEM NA UTI',
+  TITULO: 'Impacto do cuidado de enfermagem na UTI',
   DEFESA_DATA_HORA: '2026-09-21T14:00',
   DEFESA_LOCAL: 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
   LOCAL_ALTERNATIVO: ''
@@ -31,7 +31,7 @@ test('cadastro institucional preserva grafia do título e normaliza os campos pe
   assert.equal(result.orientador.nome, 'João de Souza');
   assert.equal(result.orientador.email, 'joao@ufes.br');
   assert.equal(result.orientador.siape, '');
-  assert.equal(result.titulo, 'IMPACTO DO CUIDADO DE ENFERMAGEM NA UTI');
+  assert.equal(result.titulo, 'Impacto do cuidado de enfermagem na UTI');
   assert.equal(result.banca[1].email, 'beatriz@fiocruz.br');
 });
 
@@ -86,8 +86,8 @@ test('instituição interpreta siglas marcadas no servidor e remove asteriscos d
 
 
 test('cadastro preserva a grafia escolhida para título e instituições sem exigir marcadores',()=>{
- const result=acceptRegistration({registrationAnswers:{...validAnswers(),TITULO:'CUIDADO DE ENFERMAGEM NO SUS E NA UFES',EXAMINADOR_2_INSTITUICAO:'FAESA',EXAMINADOR_3_INSTITUICAO:'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO'}});
- assert.equal(result.titulo,'CUIDADO DE ENFERMAGEM NO SUS E NA UFES');
+ const result=acceptRegistration({registrationAnswers:{...validAnswers(),TITULO:'Avaliação com WHOQOL-BREF no SUS e na UFES',EXAMINADOR_2_INSTITUICAO:'FAESA',EXAMINADOR_3_INSTITUICAO:'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO'}});
+ assert.equal(result.titulo,'Avaliação com WHOQOL-BREF no SUS e na UFES');
  assert.equal(result.banca[0].instituicao,'FAESA');
  assert.equal(result.banca[1].instituicao,'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO');
  assert.equal(result.registrationAnswers.EXAMINADOR_2_INSTITUICAO,'FAESA');

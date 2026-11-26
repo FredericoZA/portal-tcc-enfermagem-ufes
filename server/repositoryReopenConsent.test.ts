@@ -1,3 +1,4 @@
+import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
 import {finalDeliveryBlocker} from '../src/utils/finalDeliveryGate';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -37,7 +38,7 @@ function harness(p:any,jobs:any[],persist:()=>Promise<void>,options:{durable?:bo
  const background:Promise<unknown>[]=[];
  const calls={automatic:0,queued:0,external:0};
  let role='STUDENT',access=true;
- const context:any={Date,Set,Error,structuredClone,setImmediate,process:{env:{VERCEL:'fixture'}},waitUntil:(task:Promise<unknown>)=>background.push(task),beginRuntimeRequestTask:()=>()=>{},finalDeliveryBlocker,processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],requireAuthenticated:'authenticated',remotePersistenceQueue:Promise.resolve(),settlePreviousRuntimeWrites,
+ const context:any={normalizeAcademicKeyword,Date,Set,Error,structuredClone,setImmediate,process:{env:{VERCEL:'fixture'}},waitUntil:(task:Promise<unknown>)=>background.push(task),beginRuntimeRequestTask:()=>()=>{},finalDeliveryBlocker,processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],requireAuthenticated:'authenticated',remotePersistenceQueue:Promise.resolve(),settlePreviousRuntimeWrites,
   getSupabaseRuntimeStatus:()=>({durablePersistenceReady:options.durable===true}),loadPortalRuntimeState:options.read||(async()=>{throw Error('Read not configured');}),applyPersistedState:(remote:any)=>{context.processesStore=structuredClone(remote.processes);context.signatureJobsStore=structuredClone(remote.signatureJobs||[]);context.auditLogsStore=structuredClone(remote.auditLogs||[]);if(remote.access===false)access=false;},inferAstenJobStatus,
   app:{post:(path:string,auth:unknown,handler:any)=>{assert.equal(auth,'authenticated');handlers.set(path,handler);}},getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>access,getActiveProcessRoles:()=>[role],getUserRolesForEmail:()=>({globalRoles:[],memberships:[{roles:[role]}]}),documentSignatureCompleted,ataArchived,declarationReady,publicationRequested,localReviewFilesEnabled:()=>false,
   getGoogleWorkspaceAccessToken:async()=>{calls.external++;return 'fixture-only';},withdrawManyPublicDriveFiles:async()=>{calls.external++;},

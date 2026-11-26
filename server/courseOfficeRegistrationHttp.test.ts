@@ -20,7 +20,7 @@ const validAnswers = () => ({
   EXAMINADOR_3_NOME: 'Beatriz Ferreira Mendes',
   EXAMINADOR_3_EMAIL: 'BEATRIZ@FIOCRUZ.BR',
   EXAMINADOR_3_INSTITUICAO: 'Fiocruz',
-  TITULO: 'IMPACTO DO CUIDADO DE ENFERMAGEM NA UTI',
+  TITULO: 'Impacto do cuidado de enfermagem na UTI',
   DEFESA_DATA_HORA: '2026-09-21T14:00',
   DEFESA_LOCAL: 'Auditório do Prédio do Departamento de Enfermagem - CCS/UFES',
   LOCAL_ALTERNATIVO: ''

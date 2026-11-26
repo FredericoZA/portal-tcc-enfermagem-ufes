@@ -1,3 +1,4 @@
+import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
 import {finalDeliveryBlocker} from '../src/utils/finalDeliveryGate';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -23,7 +24,7 @@ function harness(){
  const calls={persist:0,automatic:[] as string[],events:[] as string[],released:0};
  let firstPersist:()=>Promise<void>=async()=>{};
  let event:(process:any,name:string)=>Promise<any>=async()=>({status:'COMPLETED',actions:[]});
- const context:any={Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
+ const context:any={normalizeAcademicKeyword,Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
   app:{post:(path:string,auth:unknown,callback:any)=>{assert.equal(path,'/api/processes/:id/final-data');assert.equal(auth,'authenticated');handler=callback;}},requireAuthenticated:'authenticated',finalDeliveryBlocker,processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],
   getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],ataArchived,declarationReady,
   safeRepositorySignatureError,queueAutomaticAsten:(process:any,type:string)=>{if(process.signatureProviderPreferences?.[type]!=='GOV_BR')process.astenSignatureIntent={documentType:type,revision:signatureDocumentRevision(process,type),queuedAt:'2026-11-07T12:00:00Z'};},

@@ -1,5 +1,5 @@
 import {CapitalizationReview} from './CapitalizationReview';
-import {suggestSentenceTitle} from '../utils/reviewedTccTitle';
+import {hasUppercaseTitlePassage} from '../utils/reviewedTccTitle';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarCheck, ClipboardCheck, LoaderCircle } from 'lucide-react';
 import type { ProcessData, IntegrationStudioSettings } from '../types';
@@ -123,6 +123,7 @@ export function ProcessDataReviewModal({
     answerKeys,
   );
   const changed = processDataReviewHasChanges(patch);
+  const titleCaseInvalid = Boolean(patch.titulo && hasUppercaseTitlePassage(patch.titulo));
   const config = operationalConfig(studio);
   const locations = [
     ...new Set(
@@ -146,6 +147,7 @@ export function ProcessDataReviewModal({
     if (
       inFlight.current ||
       !changed ||
+      titleCaseInvalid ||
       !confirmed ||
       !defenseValid ||
       !studio
@@ -324,6 +326,7 @@ export function ProcessDataReviewModal({
                 busy ||
                 !studio ||
                 !changed ||
+                titleCaseInvalid ||
                 !confirmed ||
                 !defenseValid
               }

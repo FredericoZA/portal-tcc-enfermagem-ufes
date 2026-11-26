@@ -1,3 +1,4 @@
+import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -23,7 +24,7 @@ function harness(options:{paired?:boolean;rejectDispatch?:boolean}={}){
  const studio:any={revision:7,emailTemplates:[],formTemplates:[],docTemplates:[{id:'tmpl-termo',type:'TERMO'},{id:'tmpl-declaracao',type:'DECLARACAO'}],variables:[],workflowStages:[{id:'repository',triggerEvent:'REPOSITORY_SUBMITTED',actions:[{id:'generate-term',type:'DOCUMENT',refId:'tmpl-termo'}]},{id:'publication',triggerEvent:'PUBLICATION_CLEARED',actions:[{id:'generate-declaration',type:'DOCUMENT',refId:'tmpl-declaracao'}]}]};
  const settings:any={driveRootFolderId:'private-unit-root',commissionPresidentName:'Presidência fictícia',commissionPresidentEmail:'president@example.invalid',integrationStudio:studio};
  const snapshots:any[]=[];const dispatches:any[]=[];const events:any[]=[];const scheduled:Array<()=>void>=[];const background:Promise<void>[]=[];let handler:any;
- const context:any={Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture',ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
+ const context:any={normalizeAcademicKeyword,Date,Promise,Error,console:{error:()=>{}},process:{env:{VERCEL:'fixture',ASTEN_AUTOMATIC_WORKFLOW_ENABLED:'true'}},setImmediate:(callback:()=>void)=>scheduled.push(callback),waitUntil:(task:Promise<void>)=>background.push(task),beginRuntimeRequestTask,
   app:{post:(_path:any,_auth:any,callback:any)=>{handler=callback;}},requireAuthenticated:()=>{},processesStore:[p],signatureJobsStore:jobs,auditLogsStore:[],currentSettings:settings,
   getPortalIdentity:()=>({email:p.aluno1.email}),canAccessProcess:()=>true,getActiveProcessRoles:()=>['STUDENT'],getUserRolesForEmail:()=>({memberships:[{roles:['STUDENT']}]}),missingDocumentModels:()=>[],finalDeliveryBlocker,ataArchived,declarationReady,signatureDocumentRevision,signatureJobMatchesCurrentRevision,publicationRequested,safeRepositorySignatureError,normalizeWorkflowEventCode,operationalDocumentType,
   assertSignatureEligibility:(process:any,type:any)=>assertSignatureEligibility(process,type,jobs),inspectAstenDelivery,

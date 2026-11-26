@@ -1,3 +1,4 @@
+import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
 import {ApiRequestError} from '../src/services/apiClient';
 import {repositorySubmissionConfirmed} from '../src/utils/repositorySubmissionConfirmation';
 import test from 'node:test';
@@ -11,7 +12,7 @@ function fixture(){
  const start=source.indexOf('  const handleReopenRepository=async()=>{'),end=source.indexOf('\n  const canStudentEdit',start);
  assert.ok(start>0&&end>start);
  const state:any={posts:0,confirms:0,notices:[],process:null,busy:false,message:'',refreshes:0,blocking:[],form:{}};
- const context:any={deliveryBlocker:undefined,publicationEditing:false,Error,ApiRequestError,repositorySubmissionConfirmed,userEmail:'author@example.invalid',editingSectionRef:{current:null},canSubmitAcervo:true,readOnly:false,process:{id:'p'},repositoryReopenInFlight:{current:false},repositorySubmitInFlight:{current:false},setEditingSection:()=>{},setRemoteUpdatePending:()=>{},legacyAccessScope:{current:'p|owner'},lastProcessRevision:{current:null},
+ const context:any={normalizeAcademicKeyword,deliveryBlocker:undefined,publicationEditing:false,Error,ApiRequestError,repositorySubmissionConfirmed,userEmail:'author@example.invalid',editingSectionRef:{current:null},canSubmitAcervo:true,readOnly:false,process:{id:'p'},repositoryReopenInFlight:{current:false},repositorySubmitInFlight:{current:false},setEditingSection:()=>{},setRemoteUpdatePending:()=>{},legacyAccessScope:{current:'p|owner'},lastProcessRevision:{current:null},
   portalPrompt:async(_text:string,_initial:string,options:any)=>{state.confirms++;assert.equal(options.tone,'warning');return 'Correção dos arquivos da entrega';},
   portalNotice:(message:string)=>state.notices.push(message),
   apiClient:{reopenRepository:async(_id:string,reason:string)=>{assert.equal(reason,'Correção dos arquivos da entrega');state.posts++;return {id:'p',dataRevision:5,updatedAt:'now',acervo:{publishFullWork:false,publishExpandedAbstract:false,palavrasChave:['saúde'],resumoSintese:'Resumo'}};}},
@@ -125,7 +126,7 @@ test('delivery locks synchronously against duplicate clicks until server confirm
 for(const outcome of ['confirmed','changed','denied']as const)test(`lost delivery reply ${outcome}: one POST and bounded authorized read`,async()=>{
  const f=fixture();f.context.process={id:'p',dataRevision:5,acervo:{trabalhoCompletoFileId:'file'}};let reads=0;
  f.context.apiClient.submitFinalData=async()=>{f.state.posts++;throw new ApiRequestError('Unconfirmed timeout',0,'REQUEST_TIMEOUT');};
- f.context.apiClient.getProcessById=async(_id:string,options:any)=>{reads++;assert.equal(options.timeoutMs,10000);if(outcome==='denied')throw new ApiRequestError('denied',403);return{id:'p',dataRevision:6,updatedAt:'now',acervo:{trabalhoCompletoFileId:'file',submittedBy:'author@example.invalid',submittedAt:'now',resumoSintese:outcome==='changed'?'different':'Resumo',palavrasChave:['um','dois','três','quatro','cinco'],publishFullWork:false,publishExpandedAbstract:false,workType:'MONOGRAFIA'}};};
+ f.context.apiClient.getProcessById=async(_id:string,options:any)=>{reads++;assert.equal(options.timeoutMs,10000);if(outcome==='denied')throw new ApiRequestError('denied',403);return{id:'p',dataRevision:6,updatedAt:'now',acervo:{trabalhoCompletoFileId:'file',submittedBy:'author@example.invalid',submittedAt:'now',resumoSintese:outcome==='changed'?'different':'Resumo',palavrasChave:['Um','Dois','Três','Quatro','Cinco'],publishFullWork:false,publishExpandedAbstract:false,workType:'MONOGRAFIA'}};};
  await finalDelivery(f)({preventDefault:()=>{}});
  assert.equal(f.state.posts,1);assert.equal(reads,1);assert.equal(f.state.busy,false);
  if(outcome==='confirmed'){assert.equal(f.state.process.dataRevision,6);assert.equal(f.state.notices.length,0);}else{assert.equal(f.state.process,null);assert.match(f.state.notices[0],/Unconfirmed timeout/);}

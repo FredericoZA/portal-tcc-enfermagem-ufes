@@ -7,6 +7,10 @@ import {legacyRepositoryProcess} from '../src/utils/legacyRepository';
 import { DEFAULT_INSTALLATION_PROFILE } from '../src/constants/installation';
 import {reservationReceipts} from './reservationReceipts';
 import {publicDefenseReservationStatus} from '../src/utils/defenseReservationState';
+import {correctUppercaseTitlePassages} from '../src/utils/reviewedTccTitle';
+import {repositoryDefenseLocation} from '../src/utils/repositoryDefenseLocation';
+import {normalizeAcademicKeyword} from '../src/utils/academicTextCase';
+import {normalizePersonName} from '../src/utils/personNameCase';
 import type { ProcessData, SignatureJob } from '../src/types';
 import {advisorInstitutionResolver,ufesFacultyInstitution} from './ufesFacultyInstitution';
 
@@ -15,9 +19,19 @@ export type PublicArtifactState = 'NOT_PRESENTED' | 'PRIVATE' | 'PUBLIC';
 const stateLabel = (state: PublicArtifactState): string =>
   state === 'PUBLIC' ? 'Publicado' : state === 'PRIVATE' ? 'Não publicado pelo autor' : 'Não apresentado';
 
+const uppercaseNamePart = /(?<![\p{L}\p{M}])(?:\p{Lu}\p{M}*){2,}(?![\p{L}\p{M}])/u;
+
+function displayPersonName(value?: string) {
+  const name = String(value || '').trim();
+  if (!uppercaseNamePart.test(name)) return name;
+  const normalized = normalizePersonName(name).split(' ');
+  return name.split(/\s+/u).map((part, index) =>
+    uppercaseNamePart.test(part) ? normalized[index] : part).join(' ');
+}
+
 function personName(value: { nome?: string; email?: string; tratamento?: string; titulacao?: string; instituicao?: string } | null | undefined, faculty = false) {
   return value ? {
-    nome: String(value.nome || '').trim(),
+    nome: displayPersonName(value.nome),
     tratamento: value.tratamento,
     titulacao: value.titulacao,
     instituicao: faculty ? ufesFacultyInstitution(value) : value.instituicao,
@@ -33,7 +47,7 @@ export function publicCalendarView(process: ProcessData) {
   return {
     id: process.protocolo,
     protocolo: process.protocolo,
-    titulo: process.titulo,
+    titulo: correctUppercaseTitlePassages(process.titulo || ''),
     etapaAtual: process.etapaAtual,
     status: process.status,
     aluno1: personName(process.aluno1),
@@ -41,7 +55,7 @@ export function publicCalendarView(process: ProcessData) {
     orientador: personName(process.orientador,true),
     coorientador: personName(process.coorientador,true),
     banca: process.banca.map((member) => ({
-      nome: member.nome,
+      nome: displayPersonName(member.nome),
       tratamento: member.tratamento,
       funcao: member.funcao,
       membroTipo: member.membroTipo,
@@ -98,7 +112,7 @@ export function publicRepositoryView(process: ProcessData) {
   return {
     id: process.protocolo,
     protocolo: process.protocolo,
-    titulo: process.titulo,
+    titulo: correctUppercaseTitlePassages(process.titulo || ''),
     etapaAtual: process.etapaAtual,
     status: process.status,
     aluno1: personName(process.aluno1),
@@ -109,7 +123,7 @@ export function publicRepositoryView(process: ProcessData) {
     }),
     coorientador: personName(process.coorientador,true),
     banca: process.banca.map((member) => ({
-      nome: member.nome,
+      nome: displayPersonName(member.nome),
       tratamento: member.tratamento,
       funcao: member.funcao,
       membroTipo: member.membroTipo,
@@ -120,7 +134,7 @@ export function publicRepositoryView(process: ProcessData) {
     defesa: {
       startAt: process.defesa.startAt,
       endAt: process.defesa.endAt,
-      local: process.defesa.local,
+      local: repositoryDefenseLocation(process.defesa.local),
       localStatus: publicDefenseReservationStatus(process),
       hasReservationReceipt: receiptCount > 0,
       reservationReceiptCount: receiptCount,
@@ -128,7 +142,7 @@ export function publicRepositoryView(process: ProcessData) {
     avaliacao: { status: process.avaliacao.status,...(process.avaliacao.status==='CONCLUIDO'?{parecer:process.avaliacao.parecer}:{}) },
     acervo: acervo
       ? {
-          palavrasChave: [...(acervo.palavrasChave || [])],
+          palavrasChave: (acervo.palavrasChave || []).map(normalizeAcademicKeyword),
           resumoSintese: acervo.resumoSintese,
           submittedAt: acervo.submittedAt,
           fullWorkState: workState,
