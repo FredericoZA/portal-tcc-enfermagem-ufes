@@ -19,6 +19,14 @@ export type ManagedColumnChange =
   | {columnKey:string; sort:'asc'|'desc'}
   | {columnKey:string; values:string[]|null};
 
+/** Filtering and pagination share this rule; a different page is still exportable. */
+export function isPortalTableRowFilteredOut(row: HTMLTableRowElement) {
+  return row.classList.contains('portal-core-filter-hidden')
+    || row.dataset.portalFilterHidden === 'true'
+    || row.hidden
+    || row.style.display === 'none';
+}
+
 let activePopup: HTMLElement | null = null;
 let activeButton: HTMLButtonElement | null = null;
 let activePopupCleanup: (() => void) | null = null;

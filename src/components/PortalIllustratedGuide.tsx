@@ -271,9 +271,9 @@ export const guideActivities: GuideActivity[] = [
   },
   {
     id: 'sugestoes', title: 'Informar um problema ou sugerir melhoria', roles: ['aluno', 'orientador', 'examinador', 'visitante'], imageId: 'sugestoes',
-    imageCaption: 'Sugestões fica na parte inferior do menu lateral e recebe relatos sobre o Portal.',
+    imageCaption: 'Enviar sugestão fica em Melhoria contínua, na parte inferior do menu lateral, e recebe relatos sobre o Portal.',
     steps: [
-      'Na parte inferior do menu lateral, clique em Sugestões. O envio também está disponível sem login.',
+      'Na parte inferior do menu lateral, em Melhoria contínua, clique em Enviar sugestão. O envio também está disponível sem login.',
       'Descreva em qual tela estava, o que tentou fazer e o que ocorreu. Informe o protocolo do TCC quando necessário; não inclua códigos de acesso ou credenciais.',
       'Se ajudar, anexe uma imagem PNG, JPEG ou WebP de até 1,5 MB. Remova dados pessoais que não sejam necessários para explicar o problema.',
       'Clique em Enviar sugestão e aguarde a confirmação. O Master acompanha os registros em Configurações → Sugestões.',

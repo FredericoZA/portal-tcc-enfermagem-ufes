@@ -115,7 +115,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
   const sidebarFooterTextColor = isHeaderLight ? '#0f172a' : '#ffffff';
   const sidebarFooterMutedColor = isHeaderLight ? '#64748b' : '#d6d9d7';
   const sidebarAccent = layoutConfig.sidebarSubtitleColor || 'var(--portal-sidebar-active-accent)';
-  const getNavLabel = (id: string, fallback: string) => layoutConfig.sidebarNavLabels?.[id] || fallback;
+  const getNavLabel = (id: string, fallback: string) => {
+    const label = layoutConfig.sidebarNavLabels?.[id] || fallback;
+    return id === 'replicar' && label === 'Replicar Portal' ? 'Replicar portal' : label;
+  };
   const renderNavIcon = (_id: string, Icon: React.ComponentType<{ className?: string }>, _defaultEmoji: string, _isActive: boolean) => (
     <Icon className="h-4 w-4 shrink-0 text-white" aria-hidden="true" />
   );
@@ -156,22 +159,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
             coordenador: { id: 'coordenador', label: getNavLabel('coordenador', 'Área do Presidente'), icon: Award, emoji: '', visible: isCommissionPresident && !isMasterAdmin && !isVisitor },
             configuracoes: { id: 'configuracoes', label: getNavLabel('configuracoes', 'Configurações'), icon: Settings, emoji: '', visible: isMasterAdmin && !isVisitor },
             analise: { id: 'analise', label: getNavLabel('indicadores', 'Indicadores'), icon: BarChart3, emoji: '', visible: true },
-            replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar Portal'), icon: Copy, emoji: '', visible: true },
+            replicar: { id: 'replicar', label: getNavLabel('replicar', 'Replicar portal'), icon: Copy, emoji: '', visible: true },
             'declaracao-comparecimento': { id: 'declaracao-comparecimento', label: 'Declaração de comparecimento', icon: FileDown, emoji: '', visible: true },
-            sugestoes: { id: 'sugestoes', label: 'Sugestões', icon: Lightbulb, emoji: '', visible: true }
+            sugestoes: { id: 'sugestoes', label: 'Enviar sugestão', icon: Lightbulb, emoji: '', visible: true }
           };
           const configuredOrder = layoutConfig.sidebarNavOrder && layoutConfig.sidebarNavOrder.length > 0 ? layoutConfig.sidebarNavOrder.filter((key) => !['acessar-portal', 'assinaturas'].includes(key)).map((key) => key === 'indicadores' ? 'analise' : key) : ['home', 'biblioteca', 'DIVIDER_1', 'meus-processos', 'coordenador', 'configuracoes', 'DIVIDER_2', 'analise', 'como-chegar', 'informacoes-gerais', 'tutorial', 'fluxo-tcc', 'replicar'];
-          const order = [...configuredOrder].filter((key) => key !== 'analise' && key !== 'sugestoes' && key !== 'declaracao-comparecimento');
+          const improvementKeys = ['sugestoes', 'replicar'];
+          const order = [...configuredOrder].filter((key) => key !== 'analise' && key !== 'declaracao-comparecimento' && !improvementKeys.includes(key));
           const indicatorsAnchor = order.indexOf('como-chegar');
           order.splice(indicatorsAnchor >= 0 ? indicatorsAnchor : order.length, 0, 'analise');
           const sanitizedOrder = order.filter((key) => !['logs', 'asten-logs'].includes(key));
           order.splice(0, order.length, ...sanitizedOrder);
           if (!order.includes('como-chegar')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'como-chegar'); }
           if (!order.includes('informacoes-gerais')) { const tutorialIndex = order.indexOf('tutorial'); order.splice(tutorialIndex >= 0 ? tutorialIndex : order.length, 0, 'informacoes-gerais'); }
-          if (!order.includes('fluxo-tcc')) { const replicationIndex = order.indexOf('replicar'); order.splice(replicationIndex >= 0 ? replicationIndex : order.length, 0, 'fluxo-tcc'); }
-          if (!order.includes('replicar')) order.push('replicar');
-          const informationEnd = order.indexOf('replicar');
-          order.splice(informationEnd, 0, 'sugestoes', 'declaracao-comparecimento');
+          if (!order.includes('fluxo-tcc')) order.push('fluxo-tcc');
+          order.push('declaracao-comparecimento');
           const renderNavItem = (itemKey: string, idx: number) => {
             if (itemKey.startsWith('DIVIDER')) { if (layoutConfig.sidebarShowDividers === false || layoutConfig.sidebarDividerStyle === 'none') return null; return <div key={`${itemKey}-${idx}`} className="my-2.5 pt-0.5 border-t transition-colors" style={{ borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider, borderStyle: layoutConfig.sidebarDividerStyle || 'solid' }} />; }
             const item = allNavMap[itemKey]; if (!item || !item.visible) return null; const Icon = item.icon; const isActive = currentTab === item.id || (item.id === 'home' && currentTab === 'calendario');
@@ -186,20 +188,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
           };
           const publicKeys = order.filter((key) => ['home', 'biblioteca'].includes(key));
           const userKeys = order.filter((key) => ['meus-processos', 'coordenador', 'configuracoes'].includes(key));
-          const replicationKeys = order.filter((key) => key === 'replicar');
           const informationKeys = order.filter((key) =>
-            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key) && !replicationKeys.includes(key)
+            !key.startsWith('DIVIDER') && !publicKeys.includes(key) && !userKeys.includes(key)
           );
           const showSectionDividers = layoutConfig.sidebarShowDividers !== false && layoutConfig.sidebarDividerStyle !== 'none';
           const sectionDividerStyle = {
             borderColor: layoutConfig.sidebarDividerColor || PORTAL_THEME.chrome.divider,
             borderStyle: layoutConfig.sidebarDividerStyle || 'solid',
           };
-          const renderSection = (title: string, keys: string[], index: number) => {
+          const renderSection = (title: string, keys: string[], index: number, headingColor = sidebarAccent) => {
             const visibleKeys = keys.filter((key) => allNavMap[key]?.visible);
             if (!visibleKeys.length && title !== 'ÁREA DO USUÁRIO') return null;
             return <section key={title} aria-label={title} className={index > 0 ? `pt-3 ${showSectionDividers ? 'border-t' : ''}` : ''} style={index > 0 && showSectionDividers ? sectionDividerStyle : undefined}>
-              <p className="portal-sidebar-section-heading px-3.5 mb-2 font-extrabold uppercase tracking-widest" style={{ color: sidebarAccent }}>{title}</p>
+              <p className="portal-sidebar-section-heading px-3.5 mb-2 font-extrabold uppercase tracking-widest" style={{ color: headingColor }}>{title}</p>
               <div className="space-y-1">
                 {visibleKeys.length ? visibleKeys.map((key, itemIndex) => renderNavItem(key, itemIndex)) : (
                   <p className="portal-sidebar-section-hint px-3.5 py-2 leading-relaxed" style={{ color: layoutConfig.sidebarTextColor || PORTAL_THEME.text.light }}>
@@ -214,9 +215,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isO
               {renderSection('CONSULTA PÚBLICA', publicKeys, 0)}
               {renderSection('ÁREA DO USUÁRIO', userKeys, 1)}
               {renderSection('INFORMAÇÕES', informationKeys, 2)}
-              {renderSection('REPLICAÇÃO', replicationKeys, 3)}
             </div>
-
+            <div className="portal-sidebar-improvement-group mt-auto shrink-0">
+              {renderSection('MELHORIA CONTÍNUA', improvementKeys, 3, 'var(--portal-text-muted-light)')}
+            </div>
           </>;
         })()}
       </nav>

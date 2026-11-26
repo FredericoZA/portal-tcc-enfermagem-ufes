@@ -1,7 +1,7 @@
 import {tablePreferenceKey} from '../utils/tablePreferences';
 import { useLayoutEffect } from 'react';
 import { PORTAL_TABLE_KEYS, inferManagedTableKey, isPortalProcessHeader, normalizePortalTableText, readPortalHeaderLabel, type PortalTableKey } from '../utils/portalTableIdentity';
-import { cleanupDetachedPortalTableInteractions, cleanupPortalTableInteractions, enhancePortalTable } from '../utils/portalTableDom';
+import { cleanupDetachedPortalTableInteractions, cleanupPortalTableInteractions, enhancePortalTable, isPortalTableRowFilteredOut } from '../utils/portalTableDom';
 
 type TableKey = PortalTableKey;
 type PageSize = 25 | 50 | 100 | 'all';
@@ -246,13 +246,6 @@ function markSpreadsheet(table: HTMLTableElement) {
   });
 }
 
-function rowIsExternallyHidden(row: HTMLTableRowElement) {
-  return row.classList.contains('portal-core-filter-hidden')
-    || row.dataset.portalFilterHidden === 'true'
-    || row.hidden
-    || (row as HTMLElement).style.display === 'none';
-}
-
 function pageList(totalPages: number, current: number) {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
   const pages = new Set<number>([1, totalPages, current - 1, current, current + 1]);
@@ -289,7 +282,7 @@ function applyPagination(table: HTMLTableElement) {
   if (!host) return;
 
   const allRows = Array.from(table.tBodies).flatMap((tbody) => Array.from(tbody.rows));
-  const visibleRows = allRows.filter((row) => !rowIsExternallyHidden(row));
+  const visibleRows = allRows.filter((row) => !isPortalTableRowFilteredOut(row));
 
   if (visibleRows.length === 0) {
     saveCurrentPage(key, 1);
