@@ -489,7 +489,7 @@ export const apiClient = {
   cancelAdministrationTransfer:(id:string)=>fetchApi<any>(`/api/admin/administration-transfers/${encodeURIComponent(id)}/cancel`,{method:'POST'}),
   updateRecoveryEmails:(emails:string[])=>fetchApi<GlobalSettings>('/api/admin/recovery-emails',{method:'PATCH',body:JSON.stringify({emails})}),
   getAdminMetrics:(cycleId?:string)=>fetchApi<any>(`/api/admin/metrics${cycleId?`?cycleId=${encodeURIComponent(cycleId)}`:''}`),
-  getIndicators:(options:Pick<ApiRequestOptions,'signal'>={})=>fetchApi<any>('/api/public/indicators',options),
+  getIndicators:(options:Pick<ApiRequestOptions,'signal'>={})=>fetchApi<any>('/api/public/indicators',{...options,credentials:'omit'}),
   getAdvancedAnalytics:(period='',compare='')=>fetchApi<any>(`/api/admin/analytics/advanced?${new URLSearchParams({period,compare})}`),
   downloadAdvancedAnalytics:(format:'csv'|'pdf',period='',compare='')=>downloadApiFile(`/api/admin/analytics/advanced?${new URLSearchParams({format,period,compare})}`),
   simulateWorkflow:(studio:IntegrationStudioSettings|undefined,scenario:WorkflowSimulationScenario)=>fetchApi<WorkflowSimulationResult>('/api/admin/workflow/simulate',{method:'POST',body:JSON.stringify({studio,scenario})}),

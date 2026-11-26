@@ -111,7 +111,7 @@ const server = createServer(async (req, res) => {
   }
   const name = url.pathname.startsWith('/asset') ? 'runtime-asset'
     : url.pathname.startsWith('/replication') ? 'replication-model'
-      : url.pathname.startsWith('/indicators') ? 'public-indicators' : 'index';
+      : url.pathname === '/api/public/indicators' ? 'public-indicators' : 'index';
   req.query = Object.fromEntries(url.searchParams);
   req.headers['x-real-ip'] = '127.0.0.1';
   res.status = (code) => { res.statusCode = code; return res; };
