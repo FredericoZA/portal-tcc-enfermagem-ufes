@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeReviewedTccTitle,suggestSentenceTitle} from '../src/utils/reviewedTccTitle';
+import {hasUppercaseTitlePassage,normalizeReviewedTccTitle,suggestSentenceTitle} from '../src/utils/reviewedTccTitle';
 
 test('reviewed titles preserve proper names, natural case and mathematical symbols',()=>{
   const title='A convivência em Vitória: Maria e João no CAPS III — cuidado + vínculo';
@@ -31,4 +31,15 @@ test('a caixa alta em um trecho do título é identificada mesmo com subtítulo 
     'Fatores A, B e C no CAPS III',
     'Avaliação em UFES e PEP no SUS',
   ]) assert.equal(suggestSentenceTitle(value), value);
+});
+
+test('academic instrument acronyms retain their hyphenated variant', () => {
+  for (const value of ['WHOQOL-BREF', 'Avaliação com WHOQOL-BREF', 'Aplicação do WHOQOL-OLD e do WHOQOL-100']) {
+    assert.equal(hasUppercaseTitlePassage(value), false);
+    assert.equal(suggestSentenceTitle(value), value);
+  }
+  const uppercase = 'ESTUDO DE QUALIDADE DE VIDA COM WHOQOL-BREF NO SUS';
+  assert.equal(hasUppercaseTitlePassage(uppercase), true);
+  assert.equal(suggestSentenceTitle(uppercase), 'Estudo de qualidade de vida com WHOQOL-BREF no SUS');
+  assert.equal(hasUppercaseTitlePassage('ESTUDO-QUALITATIVO: Uma revisão'), true);
 });

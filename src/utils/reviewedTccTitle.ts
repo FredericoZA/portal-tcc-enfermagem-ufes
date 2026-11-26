@@ -9,6 +9,16 @@ export const normalizeReviewedTccTitle = (title: string): string =>
 const titleWords = /[\p{L}\p{M}]+(?:\p{N}+[\p{L}\p{M}]*)*/gu;
 const titleConnectives = new Set(['a', 'as', 'ao', 'aos', 'o', 'os', 'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'na', 'no', 'nas', 'nos', 'com', 'sem', 'para', 'por']);
 
+function titleAcronym(title: string, word: RegExpMatchArray, previous?: RegExpMatchArray): string | null {
+  const acronym = academicAcronym(word[0]);
+  if (acronym) return acronym;
+  // A recognized instrument may have a short, uppercase variant suffix, such as WHOQOL-BREF.
+  if (previous && /^[A-Z]{2,5}$/u.test(word[0]) && academicAcronym(previous[0]) &&
+      /^[-‐‑]$/u.test(title.slice(previous.index! + previous[0].length, word.index))) return word[0];
+  return null;
+}
+
+
 /** Identify uppercase prose while leaving acronyms and codes in their original case. */
 export function correctUppercaseTitlePassages(title: string): string {
   const clean = normalizeReviewedTccTitle(title);
@@ -29,11 +39,11 @@ export function correctUppercaseTitlePassages(title: string): string {
     run = [];
   };
 
-  for (const word of words) {
+  for (const [index, word] of words.entries()) {
     const token = word[0];
     if (!/\p{Lu}/u.test(token) || /[\p{Ll}\p{Lt}]/u.test(token)) {
       if (!titleConnectives.has(token)) finishRun();
-    } else if (!academicAcronym(token) && !/\p{N}/u.test(token)) {
+    } else if (!titleAcronym(clean, word, words[index - 1]) && !/\p{N}/u.test(token)) {
       run.push(word);
     }
   }
@@ -58,7 +68,12 @@ export function suggestSentenceTitle(title: string): string {
   if (corrected !== clean) return corrected;
   const letters = clean.replace(/[^\p{L}]/gu, '');
   if (letters !== letters.toLocaleUpperCase('pt-BR') && letters !== letters.toLocaleLowerCase('pt-BR')) return clean;
-  const suggestion = clean.replace(/[\p{L}\p{M}\p{N}]+/gu, token =>
-    academicAcronym(token) || token.toLocaleLowerCase('pt-BR'));
+  const words = [...clean.matchAll(titleWords)];
+  let index = 0;
+  const suggestion = clean.replace(titleWords, token => {
+    const acronym = titleAcronym(clean, words[index], words[index - 1]);
+    index += 1;
+    return acronym || token.toLocaleLowerCase('pt-BR');
+  });
   return suggestion.replace(/\p{L}/u, letter => letter.toLocaleUpperCase('pt-BR'));
 }

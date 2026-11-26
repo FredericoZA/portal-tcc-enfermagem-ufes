@@ -86,8 +86,8 @@ test('instituição interpreta siglas marcadas no servidor e remove asteriscos d
 
 
 test('cadastro preserva a grafia escolhida para título e instituições sem exigir marcadores',()=>{
- const result=acceptRegistration({registrationAnswers:{...validAnswers(),TITULO:'Cuidado de enfermagem no SUS e na UFES',EXAMINADOR_2_INSTITUICAO:'FAESA',EXAMINADOR_3_INSTITUICAO:'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO'}});
- assert.equal(result.titulo,'Cuidado de enfermagem no SUS e na UFES');
+ const result=acceptRegistration({registrationAnswers:{...validAnswers(),TITULO:'Avaliação com WHOQOL-BREF no SUS e na UFES',EXAMINADOR_2_INSTITUICAO:'FAESA',EXAMINADOR_3_INSTITUICAO:'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO'}});
+ assert.equal(result.titulo,'Avaliação com WHOQOL-BREF no SUS e na UFES');
  assert.equal(result.banca[0].instituicao,'FAESA');
  assert.equal(result.banca[1].instituicao,'UNIVERSIDADE FEDERAL DO RIO DE JANEIRO');
  assert.equal(result.registrationAnswers.EXAMINADOR_2_INSTITUICAO,'FAESA');

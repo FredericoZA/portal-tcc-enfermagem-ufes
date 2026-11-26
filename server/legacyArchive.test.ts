@@ -231,8 +231,8 @@ test('institution labels preserve CAPS service levels and use verified abbreviat
 });
 
 test('public keywords correct uppercase phrases while retaining acronyms and original archive values', () => {
-  const keywords = ['SAÚDE MENTAL', 'ACESSO AO SUS', 'SUS E HIV-1', 'VIGILÂNCIA NO CAPS Iii', 'PrEP e covid-19', 'pH sanguíneo', 'e-SUS'];
-  const expected = ['Saúde mental', 'Acesso ao SUS', 'SUS e HIV-1', 'Vigilância no CAPS III', 'PrEP e COVID-19', 'pH sanguíneo', 'e-SUS'];
+  const keywords = ['SAÚDE MENTAL', 'ACESSO AO SUS', 'SUS E HIV-1', 'VIGILÂNCIA NO CAPS Iii', 'PrEP e covid-19', 'pH sanguíneo', 'e-SUS', 'AVALIAÇÃO COM WHOQOL-BREF'];
+  const expected = ['Saúde mental', 'Acesso ao SUS', 'SUS e HIV-1', 'Vigilância no CAPS III', 'PrEP e COVID-19', 'pH sanguíneo', 'e-SUS', 'Avaliação com WHOQOL-BREF'];
   assert.deepEqual(keywords.map(normalizeAcademicKeyword), expected);
   assert.deepEqual(expected.map(normalizeAcademicKeyword), expected);
   const [record] = validateLegacyBatch([{...legacyFixture(), palavrasChave:keywords}]);
